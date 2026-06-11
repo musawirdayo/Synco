@@ -82,20 +82,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PeerGraph — Find the classmates you work best with" },
+      { title: "Synco — Find the classmates you work best with" },
       {
         name: "description",
         content:
           "Private class collaboration tool. Better groups through honest answers, not guesswork.",
       },
-      { property: "og:title", content: "PeerGraph — Find the classmates you work best with" },
+      { property: "og:title", content: "Synco — Find the classmates you work best with" },
       {
         property: "og:description",
         content:
           "Private class collaboration tool. Better groups through honest answers, not guesswork.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "PeerGraph — Find the classmates you work best with" },
+      { name: "twitter:title", content: "Synco — Find the classmates you work best with" },
       {
         name: "twitter:description",
         content:

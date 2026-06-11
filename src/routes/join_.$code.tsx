@@ -190,7 +190,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
             <div className="h-7 w-7 rounded-lg bg-primary-foreground grid place-items-center text-primary font-display text-sm">
               P
             </div>
-            <span className="font-display text-lg">PeerGraph</span>
+            <span className="font-display text-lg">Synco</span>
           </Link>
           <div>
             <h2 className="font-display text-4xl leading-tight mb-4">
@@ -246,7 +246,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           <div className="h-7 w-7 rounded-lg bg-primary-foreground grid place-items-center text-primary font-display text-sm">
             P
           </div>
-          <span className="font-display text-lg">PeerGraph</span>
+          <span className="font-display text-lg">Synco</span>
         </Link>
         <div>
           <h2 className="font-display text-4xl leading-tight mb-4">

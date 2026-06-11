@@ -6,7 +6,7 @@ import {
   privacyMode,
   archetype,
   type Answers,
-} from "@/lib/peergraph";
+} from "@/lib/synco";
 
 export type Member = { student_id: string; display_name: string; identifier: string | null };
 export type Resp = {

@@ -166,7 +166,7 @@ function Landing() {
                 Three simple steps to assign teams.
               </h2>
               <p className="mt-3 text-muted">
-                No complex setup. Just capture what matters: schedules, work style, and academic goals. PeerGraph handles the matching.
+                No complex setup. Just capture what matters: schedules, work style, and academic goals. Synco handles the matching.
               </p>
             </div>
 
@@ -209,7 +209,7 @@ function Landing() {
           >
             <motion.div variants={fadeUp} className="mb-14 text-center max-w-2xl mx-auto">
               <span className="text-xs uppercase tracking-widest text-primary font-semibold bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
-                Why Instructors Choose PeerGraph
+                Why Instructors Choose Synco
               </span>
               <h2 className="mt-4 text-3xl font-display md:text-4xl">
                 Built for classroom success.
@@ -246,7 +246,7 @@ function Landing() {
               <HelpCircle className="h-5 w-5" />
             </div>
             <h2 className="text-3xl font-display">Frequently Asked Questions</h2>
-            <p className="text-muted mt-2 text-sm">Everything you need to know about PeerGraph.</p>
+            <p className="text-muted mt-2 text-sm">Everything you need to know about Synco.</p>
           </div>
           <Accordion type="single" collapsible className="w-full space-y-3">
             <AccordionItem value="item-1" className="border border-border bg-card rounded-xl px-5">
@@ -340,7 +340,7 @@ function LandingHeader() {
           <div className="grid h-9 w-9 place-items-center rounded-[8px] bg-primary text-sm text-primary-foreground font-display group-hover:scale-105 transition-transform">
             P
           </div>
-          <span className="text-lg font-display tracking-tight">PeerGraph</span>
+          <span className="text-lg font-display tracking-tight">Synco</span>
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm text-muted md:flex font-medium">
@@ -453,7 +453,7 @@ function LandingFooter() {
         <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-xs text-primary-foreground font-display">
           P
         </div>
-        <span>PeerGraph</span>
+        <span>Synco</span>
       </Link>
       <div className="flex flex-wrap gap-6 text-xs">
         <Link to="/auth/login" className="transition-colors hover:text-foreground">

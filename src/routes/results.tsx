@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { archetypeBlurb } from "@/lib/peergraph";
-import type { MatchBreakdown } from "@/lib/peergraph";
+import { archetypeBlurb } from "@/lib/synco";
+import type { MatchBreakdown } from "@/lib/synco";
 import { Users, Activity, Info, AlertCircle } from "lucide-react";
 import {
   clearActiveClassId,
@@ -617,7 +617,7 @@ function Results() {
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
             P
           </div>
-          <span className="font-display text-lg">PeerGraph</span>
+          <span className="font-display text-lg">Synco</span>
         </Link>
       </header>
 

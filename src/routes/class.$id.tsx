@@ -27,7 +27,7 @@ import {
   type Answers,
   type MatchBreakdown,
   type MatchingPlan,
-} from "@/lib/peergraph";
+} from "@/lib/synco";
 import { copyText } from "@/lib/clipboard";
 import { normalizeStudentIdentifier } from "@/lib/class-flow";
 import {
@@ -406,7 +406,7 @@ function ClassPage() {
   async function copyReminder() {
     if (!cls) return;
     const reminder = [
-      `Reminder: please complete the PeerGraph survey for ${cls.name}.`,
+      `Reminder: please complete the Synco survey for ${cls.name}.`,
       `Join or return here: ${window.location.origin}/join/${cls.invite_code}`,
       "It takes a few focused minutes. Your answers help classmates get more useful matches, and raw answers stay private.",
     ].join("\n\n");
@@ -581,7 +581,7 @@ function ClassPage() {
     const html = `<!doctype html>
       <html>
         <head>
-          <title>${escapeHtml(cls.name)} PeerGraph report</title>
+          <title>${escapeHtml(cls.name)} Synco report</title>
           <style>
             body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1a1a; margin: 32px; line-height: 1.45; }
             h1, h2 { margin-bottom: 8px; }
@@ -596,7 +596,7 @@ function ClassPage() {
         <body>
           <button onclick="window.print()">Print or save PDF</button>
           <h1>${escapeHtml(cls.name)}</h1>
-          <p class="muted">PeerGraph decision report · version ${nextVersion} preview</p>
+          <p class="muted">Synco decision report · version ${nextVersion} preview</p>
           <div class="grid">
             <div class="card"><strong>Expected</strong><br>${cls.expected_count}</div>
             <div class="card"><strong>Submitted</strong><br>${submitted}</div>

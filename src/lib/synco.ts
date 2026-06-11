@@ -1,4 +1,4 @@
-// Transparent compatibility scoring for PeerGraph.
+// Transparent compatibility scoring for Synco.
 export type AnswerValue = number | string | string[] | boolean | null | undefined;
 export type Answers = Record<string, AnswerValue>;
 

@@ -67,7 +67,7 @@ function Roster() {
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
             P
           </div>
-          <span className="font-display text-lg">PeerGraph</span>
+          <span className="font-display text-lg">Synco</span>
         </Link>
       </header>
       <main className="max-w-2xl mx-auto px-6 py-12">

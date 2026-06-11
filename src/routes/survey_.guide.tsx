@@ -42,7 +42,7 @@ function Guide() {
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
             P
           </div>
-          <span className="font-display text-lg">PeerGraph</span>
+          <span className="font-display text-lg">Synco</span>
         </Link>
       </header>
       <main className="flex-1 px-6 md:px-12 py-8">

@@ -11,7 +11,7 @@ import {
   setActiveClassId,
 } from "@/lib/class-flow";
 import { QUESTIONS } from "@/lib/questions";
-import type { Answers, AnswerValue } from "@/lib/peergraph";
+import type { Answers, AnswerValue } from "@/lib/synco";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 
