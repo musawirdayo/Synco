@@ -24,27 +24,38 @@ function Signup() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
-    });
-    setLoading(false);
-    if (error) {
-      setErrors({ form: error.message });
-      return;
-    }
-    const pendingCode = getPendingJoinCode();
-    if (pendingCode) {
-      if (data.user) {
-        await supabase
-          .from("profiles")
-          .upsert({ id: data.user.id, role: "student", full_name: fullName });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        setErrors({ form: error.message });
+        return;
       }
-      navigate({ to: "/join/$code", params: { code: pendingCode } });
-      return;
+      const pendingCode = getPendingJoinCode();
+      if (pendingCode) {
+        if (data.user) {
+          await supabase
+            .from("profiles")
+            .upsert({ id: data.user.id, role: "student", full_name: fullName });
+        }
+        navigate({ to: "/join/$code", params: { code: pendingCode } });
+        return;
+      }
+      navigate({ to: "/onboarding/role" });
+    } catch (err) {
+      console.error("Signup failed:", err);
+      setErrors({
+        form:
+          err instanceof Error
+            ? err.message
+            : "We couldn't reach Synco's auth service. Check your connection and try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-    navigate({ to: "/onboarding/role" });
   }
 
   return (

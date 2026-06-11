@@ -17,39 +17,50 @@ function Login() {
     e.preventDefault();
     setErrors({});
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setErrors({ form: "That email or password didn't match. Try again." });
-      return;
-    }
-    const pendingCode = getPendingJoinCode();
-    if (pendingCode) {
-      navigate({ to: "/join/$code", params: { code: pendingCode } });
-      return;
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setErrors({ form: "That email or password didn't match. Try again." });
+        return;
+      }
+      const pendingCode = getPendingJoinCode();
+      if (pendingCode) {
+        navigate({ to: "/join/$code", params: { code: pendingCode } });
+        return;
+      }
 
-    const userId = data.user?.id;
-    if (!userId) {
-      navigate({ to: "/onboarding/role" });
-      return;
+      const userId = data.user?.id;
+      if (!userId) {
+        navigate({ to: "/onboarding/role" });
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+      if (profile?.role === "lead") {
+        navigate({ to: "/dashboard" });
+        return;
+      }
+      const classId = await getLatestMembershipClassId(userId);
+      if (classId) {
+        setActiveClassId(classId);
+        navigate({ to: "/c/$id", params: { id: classId } });
+        return;
+      }
+      navigate({ to: profile?.role === "student" ? "/join" : "/onboarding/role" });
+    } catch (err) {
+      console.error("Login failed:", err);
+      setErrors({
+        form:
+          err instanceof Error
+            ? err.message
+            : "We couldn't reach Synco's auth service. Check your connection and try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-    if (profile?.role === "lead") {
-      navigate({ to: "/dashboard" });
-      return;
-    }
-    const classId = await getLatestMembershipClassId(userId);
-    if (classId) {
-      setActiveClassId(classId);
-      navigate({ to: "/c/$id", params: { id: classId } });
-      return;
-    }
-    navigate({ to: profile?.role === "student" ? "/join" : "/onboarding/role" });
   }
 
   return (
