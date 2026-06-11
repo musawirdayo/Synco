@@ -3,8 +3,13 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthShell, Field, PrimaryButton, inputClass } from "@/components/auth-shell";
 import { getLatestMembershipClassId, getPendingJoinCode, setActiveClassId } from "@/lib/class-flow";
+import { withTimeout } from "@/lib/async";
 
 export const Route = createFileRoute("/auth/login")({ component: Login });
+
+const AUTH_TIMEOUT_MS = 15000;
+const AUTH_TIMEOUT_MESSAGE =
+  "Synco could not reach Supabase Auth. Check the Vercel Supabase environment variables and try again.";
 
 function Login() {
   const navigate = useNavigate();
@@ -18,7 +23,11 @@ function Login() {
     setErrors({});
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        AUTH_TIMEOUT_MS,
+        AUTH_TIMEOUT_MESSAGE,
+      );
       if (error) {
         setErrors({ form: "That email or password didn't match. Try again." });
         return;
@@ -34,16 +43,20 @@ function Login() {
         navigate({ to: "/onboarding/role" });
         return;
       }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: profile } = await withTimeout(
+        supabase.from("profiles").select("role").eq("id", userId).maybeSingle(),
+        AUTH_TIMEOUT_MS,
+        AUTH_TIMEOUT_MESSAGE,
+      );
       if (profile?.role === "lead") {
         navigate({ to: "/dashboard" });
         return;
       }
-      const classId = await getLatestMembershipClassId(userId);
+      const classId = await withTimeout(
+        getLatestMembershipClassId(userId),
+        AUTH_TIMEOUT_MS,
+        AUTH_TIMEOUT_MESSAGE,
+      );
       if (classId) {
         setActiveClassId(classId);
         navigate({ to: "/c/$id", params: { id: classId } });

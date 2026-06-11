@@ -4,8 +4,13 @@ import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthShell, Field, PrimaryButton, inputClass } from "@/components/auth-shell";
 import { getPendingJoinCode } from "@/lib/class-flow";
+import { withTimeout } from "@/lib/async";
 
 export const Route = createFileRoute("/auth/signup")({ component: Signup });
+
+const AUTH_TIMEOUT_MS = 15000;
+const AUTH_TIMEOUT_MESSAGE =
+  "Synco could not reach Supabase Auth. Check the Vercel Supabase environment variables and try again.";
 
 function Signup() {
   const navigate = useNavigate();
@@ -25,11 +30,15 @@ function Signup() {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+        }),
+        AUTH_TIMEOUT_MS,
+        AUTH_TIMEOUT_MESSAGE,
+      );
       if (error) {
         setErrors({ form: error.message });
         return;
@@ -37,9 +46,15 @@ function Signup() {
       const pendingCode = getPendingJoinCode();
       if (pendingCode) {
         if (data.user) {
-          await supabase
-            .from("profiles")
-            .upsert({ id: data.user.id, role: "student", full_name: fullName });
+          await withTimeout(
+            supabase.from("profiles").upsert({
+              id: data.user.id,
+              role: "student",
+              full_name: fullName,
+            }),
+            AUTH_TIMEOUT_MS,
+            AUTH_TIMEOUT_MESSAGE,
+          );
         }
         navigate({ to: "/join/$code", params: { code: pendingCode } });
         return;
