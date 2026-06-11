@@ -1,5 +1,10 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
-  <g fill="currentColor">
-    <path d="M42 12C48 12 52 16 52 22C52 26 49 30 45 31C50 32 53 36 53 41C53 48 48 52 42 52C38 52 34 50 32 47L38 42C39 44 41 45 43 45C46 45 48 43 48 40C48 37 46 35 43 35H38V28H43C46 28 48 26 48 23C48 20 46 18 43 18C41 18 39 19 38 21L32 16C34 13 38 12 42 12Z"/>
+<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg">
+  <!-- S Mark -->
+  <g transform="translate(100, 50)">
+    <path d="M -35 -20 Q -20 -28 5 -28 Q 28 -28 32 -15 Q 35 -5 20 0 Q 0 8 -25 12 Q -45 16 -48 28 Q -50 38 -25 45 Q 0 50 30 45"
+          stroke="currentColor" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
+
+  <!-- SYNCO Text -->
+  <text x="100" y="180" font-family="Arial, sans-serif" font-size="42" font-weight="300" text-anchor="middle" fill="currentColor" letter-spacing="6">SYNCO</text>
 </svg>
