@@ -15,12 +15,26 @@ if (supabasePublishableKey) {
     JSON.stringify(supabasePublishableKey);
 }
 
+const isVitest = process.env.VITEST === "true";
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
   vite: {
     define: supabaseEnvDefines,
-    plugins: [nitro()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            tanstack: ["@tanstack/react-router", "@tanstack/react-query"],
+            supabase: ["@supabase/supabase-js"],
+            motion: ["framer-motion"],
+            icons: ["lucide-react"],
+          },
+        },
+      },
+    },
+    plugins: isVitest ? [] : [nitro()],
   },
 });
