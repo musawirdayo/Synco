@@ -15,22 +15,22 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="px-6 md:px-12 py-6">
-        <Link to="/" className="font-display text-lg hover:opacity-80 transition-opacity">
+      <header className="px-4 sm:px-6 md:px-12 py-5 sm:py-6">
+        <Link to="/" className="font-display text-base sm:text-lg hover:opacity-80 transition-opacity">
           Synco
         </Link>
       </header>
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="w-full max-w-md"
         >
-          <h1 className="font-display text-3xl md:text-4xl mb-2">{title}</h1>
-          {subtitle && <p className="text-muted mb-8">{subtitle}</p>}
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mb-2">{title}</h1>
+          {subtitle && <p className="text-xs sm:text-sm text-muted mb-6 sm:mb-8">{subtitle}</p>}
           {children}
-          {footer && <div className="mt-6 text-sm text-muted text-center">{footer}</div>}
+          {footer && <div className="mt-6 text-xs sm:text-sm text-muted text-center">{footer}</div>}
         </motion.div>
       </main>
     </div>
@@ -50,7 +50,7 @@ export function Field({
 }) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium">{label}</label>
+      <label className="block text-xs sm:text-sm font-medium">{label}</label>
       {children}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -68,7 +68,7 @@ export function PrimaryButton({
       {...props}
       disabled={loading || props.disabled}
       className={
-        "w-full h-12 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-[color:var(--color-primary-hover)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed " +
+        "w-full h-11 sm:h-12 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-[color:var(--color-primary-hover)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed " +
         (props.className ?? "")
       }
     >
@@ -78,4 +78,4 @@ export function PrimaryButton({
 }
 
 export const inputClass =
-  "w-full h-11 px-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200";
+  "w-full h-11 px-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200 text-sm";

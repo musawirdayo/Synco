@@ -87,8 +87,8 @@ function Landing() {
 
       <main className="relative z-10">
         {/* HERO SECTION */}
-        <section className="border-b border-border/40 pb-16 pt-8 md:pb-24 md:pt-14">
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <section className="border-b border-border/40 pb-12 pt-6 sm:pb-16 md:pb-24 md:pt-14">
+          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 md:px-8 lg:px-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <motion.div initial="hide" animate="show" variants={stagger} className="max-w-2xl">
               <motion.div
                 variants={fadeUp}
@@ -99,7 +99,7 @@ function Landing() {
               </motion.div>
               <motion.h1
                 variants={fadeUp}
-                className="mt-6 font-display text-4xl leading-[1.06] sm:text-5xl md:text-6xl tracking-tight"
+                className="mt-5 font-display text-2xl leading-[1.06] sm:text-3xl md:text-5xl lg:text-6xl tracking-tight"
               >
                 Smart team formation{" "}
                 <span className="bg-gradient-to-tr from-primary via-primary to-accent bg-clip-text text-transparent block sm:inline">
@@ -108,22 +108,22 @@ function Landing() {
               </motion.h1>
               <motion.p
                 variants={fadeUp}
-                className="mt-5 text-lg text-muted md:text-xl leading-relaxed"
+                className="mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-muted leading-relaxed"
               >
                 Create a class, collect student work-style preferences, and automatically form balanced teams optimized for compatibility and shared schedules.
               </motion.p>
 
-              <motion.div variants={fadeUp} className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <motion.div variants={fadeUp} className="mt-6 sm:mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   to="/auth/signup"
-                  className="motion-lift group inline-flex h-12 items-center justify-center gap-3 rounded-[8px] bg-primary px-6 font-medium text-primary-foreground shadow-[0_14px_34px_rgba(28,61,46,0.16)] hover:bg-[color:var(--color-primary-hover)]"
+                  className="motion-lift group inline-flex h-11 sm:h-12 items-center justify-center gap-3 rounded-[8px] bg-primary px-6 font-medium text-primary-foreground shadow-[0_14px_34px_rgba(28,61,46,0.16)] hover:bg-[color:var(--color-primary-hover)]"
                 >
                   Create a class
                   <ArrowRight className="motion-icon h-4 w-4" />
                 </Link>
                 <Link
                   to="/join"
-                  className="motion-lift inline-flex h-12 items-center justify-center gap-3 rounded-[8px] border border-border bg-card px-6 font-medium hover:border-primary/40 hover:bg-muted"
+                  className="motion-lift inline-flex h-11 sm:h-12 items-center justify-center gap-3 rounded-[8px] border border-border bg-card px-6 font-medium hover:border-primary/40 hover:bg-muted"
                 >
                   <LogIn className="h-4 w-4" />
                   Join with a code
@@ -132,7 +132,7 @@ function Landing() {
 
               <motion.div
                 variants={stagger}
-                className="mt-8 grid gap-4 text-sm text-muted sm:grid-cols-3 border-t border-border/40 pt-6"
+                className="mt-6 sm:mt-8 grid gap-3 sm:gap-4 text-xs sm:text-sm text-muted grid-cols-1 sm:grid-cols-3 border-t border-border/40 pt-6"
               >
                 {["Private responses", "Invite-code onboarding", "Explainable matches"].map(
                   (item) => (
@@ -150,27 +150,27 @@ function Landing() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-20 bg-card/20 border-b border-border/40">
+        <section id="how-it-works" className="py-12 sm:py-16 md:py-20 bg-card/20 border-b border-border/40">
           <motion.div
             initial="hide"
             whileInView="show"
             viewport={sectionViewport}
             variants={stagger}
-            className="mx-auto max-w-7xl px-5 md:px-8"
+            className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12"
           >
-            <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
               <span className="text-xs uppercase tracking-widest text-accent font-semibold bg-accent-light px-3 py-1 rounded-full">
                 The Process
               </span>
-              <h2 className="mt-4 text-3xl font-display md:text-4xl">
+              <h2 className="mt-4 text-2xl sm:text-3xl font-display md:text-4xl">
                 Three simple steps to assign teams.
               </h2>
-              <p className="mt-3 text-muted">
+              <p className="mt-3 text-xs sm:text-sm text-muted">
                 No complex setup. Just capture what matters: schedules, work style, and academic goals. Synco handles the matching.
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {workflow.map((step, index) => {
                 const Icon = step.icon;
                 return (
@@ -199,24 +199,24 @@ function Landing() {
         </section>
 
         {/* FEATURES showcase */}
-        <section id="features" className="py-20">
+        <section id="features" className="py-12 sm:py-16 md:py-20">
           <motion.div
             initial="hide"
             whileInView="show"
             viewport={sectionViewport}
             variants={stagger}
-            className="mx-auto max-w-7xl px-5 md:px-8"
+            className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12"
           >
-            <motion.div variants={fadeUp} className="mb-14 text-center max-w-2xl mx-auto">
+            <motion.div variants={fadeUp} className="mb-10 sm:mb-14 text-center max-w-2xl mx-auto">
               <span className="text-xs uppercase tracking-widest text-primary font-semibold bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
                 Why Instructors Choose Synco
               </span>
-              <h2 className="mt-4 text-3xl font-display md:text-4xl">
+              <h2 className="mt-4 text-2xl sm:text-3xl font-display md:text-4xl">
                 Built for classroom success.
               </h2>
             </motion.div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {strengths.map((strength) => {
                 const Icon = strength.icon;
                 return (
@@ -230,8 +230,8 @@ function Landing() {
                     <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--color-accent-light)]">
                       <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <h3 className="font-semibold text-lg">{strength.title}</h3>
-                    <p className="mt-2 text-sm text-muted leading-relaxed">{strength.text}</p>
+                    <h3 className="font-semibold text-base sm:text-lg">{strength.title}</h3>
+                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">{strength.text}</p>
                   </motion.div>
                 );
               })}
@@ -240,13 +240,13 @@ function Landing() {
         </section>
 
         {/* INTERACTIVE FAQ SECTION */}
-        <section className="mx-auto max-w-4xl px-5 py-20 md:px-8">
-          <div className="text-center mb-12">
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20">
+          <div className="text-center mb-10 sm:mb-12">
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/5 text-primary mb-3">
               <HelpCircle className="h-5 w-5" />
             </div>
-            <h2 className="text-3xl font-display">Frequently Asked Questions</h2>
-            <p className="text-muted mt-2 text-sm">Everything you need to know about Synco.</p>
+            <h2 className="text-2xl sm:text-3xl font-display md:text-4xl">Frequently Asked Questions</h2>
+            <p className="text-muted mt-2 text-xs sm:text-sm">Everything you need to know about Synco.</p>
           </div>
           <Accordion type="single" collapsible className="w-full space-y-3">
             <AccordionItem value="item-1" className="border border-border bg-card rounded-xl px-5">
@@ -442,17 +442,17 @@ function MockMatchCard() {
 
 function LandingFooter() {
   return (
-    <footer className="mx-auto flex max-w-7xl flex-col gap-6 border-t border-border/40 px-5 py-10 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
-      <div className="flex flex-col gap-2">
+    <footer className="mx-auto flex max-w-7xl flex-col gap-6 border-t border-border/40 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 text-xs sm:text-sm text-muted md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-1 sm:gap-2">
         <Link
           to="/"
-          className="font-display text-base hover:opacity-80 transition-opacity w-fit"
+          className="font-display text-sm sm:text-base hover:opacity-80 transition-opacity w-fit"
         >
           Synco
         </Link>
         <p className="text-xs text-muted">Sync your way to success</p>
       </div>
-      <div className="flex flex-wrap gap-6 text-xs">
+      <div className="flex flex-wrap gap-4 sm:gap-6 text-xs">
         <Link to="/auth/login" className="transition-colors hover:text-foreground">
           Sign in
         </Link>
