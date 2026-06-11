@@ -1,0 +1,8 @@
+<svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- S Logo -->
+  <path d="M 60 50 Q 85 50 95 65 Q 100 75 90 85 Q 70 95 60 95 Q 45 95 45 110 Q 45 125 60 125 Q 80 125 95 135 Q 110 145 110 160 Q 110 180 90 190 Q 70 200 50 200 Q 30 200 20 185"
+        stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- SYNCO Text -->
+  <text x="100" y="250" font-family="Arial, sans-serif" font-size="36" font-weight="300" text-anchor="middle" fill="currentColor" letter-spacing="8">SYNCO</text>
+</svg>

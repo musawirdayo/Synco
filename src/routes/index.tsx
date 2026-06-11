@@ -92,6 +92,16 @@ function Landing() {
             <motion.div initial="hide" animate="show" variants={stagger} className="max-w-2xl">
               <motion.div
                 variants={fadeUp}
+                className="inline-flex items-center gap-3 mb-6"
+              >
+                <img src="/logo.svg" alt="Synco" className="h-12 w-12" />
+                <div>
+                  <h3 className="font-display text-sm font-semibold">SYNCO</h3>
+                  <p className="text-xs text-muted italic">Sync your way to success</p>
+                </div>
+              </motion.div>
+              <motion.div
+                variants={fadeUp}
                 className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary"
               >
                 <Users className="h-3.5 w-3.5" />
@@ -336,10 +346,8 @@ function LandingHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-        <Link to="/" className="inline-flex items-center gap-3 group">
-          <div className="grid h-9 w-9 place-items-center rounded-[8px] bg-primary text-sm text-primary-foreground font-display group-hover:scale-105 transition-transform">
-            P
-          </div>
+        <Link to="/" className="inline-flex items-center gap-3 group hover:opacity-80 transition-opacity">
+          <img src="/logo.svg" alt="Synco" className="h-8 w-8" />
           <span className="text-lg font-display tracking-tight">Synco</span>
         </Link>
 
@@ -446,15 +454,16 @@ function MockMatchCard() {
 function LandingFooter() {
   return (
     <footer className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-border/40 px-5 py-10 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-foreground font-display text-base"
-      >
-        <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-xs text-primary-foreground font-display">
-          P
-        </div>
-        <span>Synco</span>
-      </Link>
+      <div className="flex flex-col gap-1">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-foreground font-display text-base w-fit"
+        >
+          <img src="/logo.svg" alt="Synco" className="h-6 w-6" />
+          <span>Synco</span>
+        </Link>
+        <p className="text-xs text-muted italic">Sync your way to success</p>
+      </div>
       <div className="flex flex-wrap gap-6 text-xs">
         <Link to="/auth/login" className="transition-colors hover:text-foreground">
           Sign in
