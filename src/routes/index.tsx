@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -9,8 +8,6 @@ import {
   ShieldCheck,
   Users,
   HelpCircle,
-  Clock,
-  BookOpen,
   FileText,
   Lightbulb,
   TrendingUp,

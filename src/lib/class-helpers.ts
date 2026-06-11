@@ -4,7 +4,6 @@ import {
   matchBreakdown,
   pairInsight,
   privacyMode,
-  archetype,
   type Answers,
 } from "@/lib/synco";
 

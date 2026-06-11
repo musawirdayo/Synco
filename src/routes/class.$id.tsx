@@ -20,13 +20,9 @@ import {
   pairFrictionInsight,
   confidence,
   matchBreakdown,
-  maximumWeightMatching,
   pairBlocked,
-  pairKey,
-  privacyMode,
   type Answers,
   type MatchBreakdown,
-  type MatchingPlan,
 } from "@/lib/synco";
 import { copyText } from "@/lib/clipboard";
 import { normalizeStudentIdentifier } from "@/lib/class-flow";
@@ -36,9 +32,7 @@ import {
   publicInsightForPeer,
   publicFrictionForPeer,
   buildReadinessCard,
-  roleSuggestion,
   downloadCsv,
-  csvCell,
   slug,
   escapeHtml,
 } from "@/lib/class-helpers";
@@ -200,17 +194,6 @@ function ClassPage() {
   const nextVersion = Math.max(1, resultMeta.version + 1);
   const canGenerate = submitted >= 2 && !hasIdentityConflicts;
   const publishVerb = cls.is_published ? "Republish" : "Publish";
-  const teamSize = 4;
-  const fullGroups = Math.floor(submitted / teamSize);
-  const remainder = submitted % teamSize;
-  const teamReadiness =
-    submitted < 2
-      ? "Need at least 2 submissions to compare students."
-      : submitted < teamSize
-        ? "Enough for pair recommendations, not enough for a full 4-person team."
-        : remainder === 0
-          ? `${fullGroups} full groups of ${teamSize} are possible.`
-          : `${fullGroups} full groups of ${teamSize}, with ${remainder} student${remainder === 1 ? "" : "s"} needing a smaller group or manual placement.`;
   const riskPairs = buildRiskPairs(completed, members).slice(0, 3);
   const publishOutcome = cls.is_published
     ? `Republishing will create version ${nextVersion}, refresh every completed student's matches, and include ${submitted} submitted students.`
@@ -1119,15 +1102,6 @@ function DecisionTile({ label, value, detail }: { label: string; value: string; 
       <div className="text-xs font-medium uppercase tracking-wider text-muted mb-2">{label}</div>
       <div className="font-display text-2xl">{value}</div>
       <p className="mt-2 text-xs text-muted">{detail}</p>
-    </div>
-  );
-}
-
-function FactorMini({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-md bg-background px-1.5 py-1 text-center">
-      <div className="font-mono text-[10px] text-foreground">{value}</div>
-      <div>{label}</div>
     </div>
   );
 }
