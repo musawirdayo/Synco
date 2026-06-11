@@ -636,22 +636,22 @@ function ClassPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60">
-        <Link to="/dashboard" className="text-sm text-muted hover:text-foreground">
+      <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60">
+        <Link to="/dashboard" className="text-xs sm:text-sm text-muted hover:text-foreground">
           ← Dashboard
         </Link>
       </header>
-      <main className="max-w-5xl mx-auto px-6 py-10 md:py-14">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
           <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
-            <h1 className="font-display text-3xl md:text-4xl">{cls.name}</h1>
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl">{cls.name}</h1>
             <button
               onClick={copyLink}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border bg-card hover:bg-muted text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border bg-card hover:bg-muted text-xs sm:text-sm font-medium transition-colors"
             >
               {copied === "invite" ? (
                 <>
@@ -660,7 +660,7 @@ function ClassPage() {
               ) : (
                 <>
                   <Copy className="h-3.5 w-3.5" /> Invite ·{" "}
-                  <span className="font-mono">{cls.invite_code}</span>
+                  <span className="font-mono text-xs">{cls.invite_code}</span>
                 </>
               )}
             </button>

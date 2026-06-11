@@ -76,26 +76,23 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60 flex items-center justify-between">
-        <Link to="/" className="inline-flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
-            P
-          </div>
-          <span className="font-display text-lg">Synco</span>
+      <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60 flex items-center justify-between gap-4 flex-wrap">
+        <Link to="/" className="font-display text-base sm:text-lg hover:opacity-80 transition-opacity">
+          Synco
         </Link>
         <button
           onClick={async () => {
             await supabase.auth.signOut();
             navigate({ to: "/" });
           }}
-          className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm text-muted hover:text-foreground transition-colors"
         >
           <LogOut className="h-4 w-4" /> Sign out
         </button>
       </header>
-      <main className="px-6 md:px-12 py-10 md:py-14 max-w-5xl mx-auto">
-        <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
-          <h1 className="font-display text-3xl md:text-4xl">Welcome back, {name}.</h1>
+      <main className="px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14 max-w-5xl mx-auto">
+        <div className="flex items-end justify-between mb-8 sm:mb-10 flex-wrap gap-4">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl">Welcome back, {name}.</h1>
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={async () => {

@@ -93,15 +93,12 @@ function ClassHub() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60">
-        <Link to="/" className="inline-flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
-            P
-          </div>
-          <span className="font-display text-lg">Synco</span>
+      <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60">
+        <Link to="/" className="font-display text-base sm:text-lg hover:opacity-80 transition-opacity">
+          Synco
         </Link>
       </header>
-      <main className="max-w-2xl mx-auto px-6 py-12 md:py-16">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -110,8 +107,8 @@ function ClassHub() {
           <div className="text-xs font-medium uppercase tracking-wider text-muted mb-2">
             You're in
           </div>
-          <h1 className="font-display text-4xl md:text-5xl mb-3">{state.className}</h1>
-          <p className="text-muted mb-10">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-3">{state.className}</h1>
+          <p className="text-xs sm:text-sm text-muted mb-8 sm:mb-10">
             {state.published
               ? `Results are live · ${state.submitted} of ${state.expected} students included.`
               : `${state.submitted} of ${state.expected} students have submitted. Results unlock once your class lead publishes them.`}
