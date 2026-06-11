@@ -106,7 +106,7 @@ function NewClass() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60">
+      <header className="px-4 sm:px-6 md:px-12 py-5 border-b border-border/60">
         <Link to="/dashboard" className="text-sm text-muted hover:text-foreground">
           ← Dashboard
         </Link>

@@ -37,7 +37,7 @@ function Guide() {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="px-6 md:px-12 py-6">
+      <header className="px-4 sm:px-6 md:px-12 py-6">
         <Link to="/" className="inline-flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
             P
@@ -45,7 +45,7 @@ function Guide() {
           <span className="font-display text-lg">Synco</span>
         </Link>
       </header>
-      <main className="flex-1 px-6 md:px-12 py-8">
+      <main className="flex-1 px-4 sm:px-6 md:px-12 py-8">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ function Guide() {
           <span className="text-xs font-medium uppercase tracking-wider text-muted">
             Before you start
           </span>
-          <h1 className="font-display text-3xl md:text-4xl mt-3 mb-10">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mt-3 mb-10">
             A few things before you start.
           </h1>
 

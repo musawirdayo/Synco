@@ -191,7 +191,7 @@ function Survey() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="px-6 md:px-12 pt-6 pb-4">
+      <div className="px-4 sm:px-6 md:px-12 pt-6 pb-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-wider text-muted">
@@ -200,7 +200,7 @@ function Survey() {
             {idx > 0 && (
               <button
                 onClick={back}
-                className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground transition-colors"
+                className="inline-flex items-center gap-1 text-xs sm:text-sm text-muted hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
@@ -216,7 +216,7 @@ function Survey() {
         </div>
       </div>
 
-      <main className="flex-1 px-6 md:px-12 py-8 overflow-hidden">
+      <main className="flex-1 px-4 sm:px-6 md:px-12 py-6 sm:py-8 overflow-hidden">
         <div className="max-w-2xl mx-auto relative">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -249,7 +249,7 @@ function Survey() {
         </div>
       </main>
 
-      <div className="px-6 md:px-12 pb-8">
+      <div className="px-4 sm:px-6 md:px-12 pb-8">
         <div className="max-w-2xl mx-auto">
           <button
             onClick={advance}
@@ -289,7 +289,7 @@ function QuestionStep({
   return (
     <>
       <p className="text-sm text-muted mb-3">{framing}</p>
-      <h2 className="font-display text-2xl md:text-3xl mb-10 leading-snug">{question}</h2>
+      <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-10 leading-snug">{question}</h2>
 
       <div className="space-y-6">
         <input
@@ -345,7 +345,7 @@ function DetailStep({
     return (
       <div>
         <p className="text-sm text-muted mb-3">Match quality starts with real meeting times.</p>
-        <h2 className="font-display text-2xl md:text-3xl mb-8 leading-snug">
+        <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
           When can you usually study with someone?
         </h2>
         <OptionGrid
@@ -364,7 +364,7 @@ function DetailStep({
           <p className="text-sm text-muted mb-3">
             Pick the course areas that matter for this class.
           </p>
-          <h2 className="font-display text-2xl md:text-3xl mb-8 leading-snug">
+          <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
             What should matching pay attention to academically?
           </h2>
           <FieldLabel>Subjects or topics you want to study</FieldLabel>
@@ -401,7 +401,7 @@ function DetailStep({
           <p className="text-sm text-muted mb-3">
             These answers keep matches practical after class ends.
           </p>
-          <h2 className="font-display text-2xl md:text-3xl mb-8 leading-snug">
+          <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
             How do you want a study partnership to work?
           </h2>
           <FieldLabel>Preferred study style</FieldLabel>
@@ -480,7 +480,7 @@ function DetailStep({
         <p className="text-sm text-muted mb-3">
           Optional boundaries help the lead avoid awkward or unsafe pairings.
         </p>
-        <h2 className="font-display text-2xl md:text-3xl mb-8 leading-snug">
+        <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
           Anything the matching process should respect?
         </h2>
         <ChoiceStack

@@ -59,7 +59,7 @@ function Roster() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60 flex items-center justify-between">
+      <header className="px-4 sm:px-6 md:px-12 py-5 border-b border-border/60 flex items-center justify-between">
         <Link to="/c/$id" params={{ id }} className="text-sm text-muted hover:text-foreground">
           ← Back
         </Link>
@@ -76,7 +76,7 @@ function Roster() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <h1 className="font-display text-3xl md:text-4xl mb-2">{className}</h1>
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mb-2">{className}</h1>
           <p className="text-muted mb-8">
             {published
               ? "Tap your name to open your detailed profile. You can only open your own — everyone else's results are private to them."

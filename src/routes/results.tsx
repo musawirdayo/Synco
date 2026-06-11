@@ -612,7 +612,7 @@ function Results() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="px-6 md:px-12 py-5 border-b border-border/60 bg-background sticky top-0 z-50">
+      <header className="px-4 sm:px-6 md:px-12 py-5 border-b border-border/60 bg-background sticky top-0 z-50">
         <Link to="/" className="inline-flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
             P
@@ -630,7 +630,7 @@ function Results() {
           className="text-center sm:text-left"
         >
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start mb-3">
-            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
               {state.name || "Your results"}
             </h1>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-xs font-semibold text-accent">

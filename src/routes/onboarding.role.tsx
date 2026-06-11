@@ -40,7 +40,7 @@ function Role() {
         className="w-full max-w-3xl"
       >
         <div className="text-center mb-12">
-          <h1 className="font-display text-3xl md:text-4xl mb-3">What brings you to Synco?</h1>
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mb-3">What brings you to Synco?</h1>
           <p className="text-muted">Pick one — you can always switch later.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
