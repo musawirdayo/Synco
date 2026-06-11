@@ -92,16 +92,6 @@ function Landing() {
             <motion.div initial="hide" animate="show" variants={stagger} className="max-w-2xl">
               <motion.div
                 variants={fadeUp}
-                className="inline-flex items-center gap-3 mb-6"
-              >
-                <img src="/logo.svg" alt="Synco" className="h-12 w-12" />
-                <div>
-                  <h3 className="font-display text-sm font-semibold">SYNCO</h3>
-                  <p className="text-xs text-muted italic">Sync your way to success</p>
-                </div>
-              </motion.div>
-              <motion.div
-                variants={fadeUp}
                 className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary"
               >
                 <Users className="h-3.5 w-3.5" />
@@ -453,16 +443,16 @@ function MockMatchCard() {
 
 function LandingFooter() {
   return (
-    <footer className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-border/40 px-5 py-10 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
-      <div className="flex flex-col gap-1">
+    <footer className="mx-auto flex max-w-7xl flex-col gap-6 border-t border-border/40 px-5 py-10 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
+      <div className="flex flex-col gap-2">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-foreground font-display text-base w-fit"
+          className="inline-flex items-center gap-2 text-foreground font-display text-base w-fit hover:opacity-80 transition-opacity"
         >
           <img src="/logo.svg" alt="Synco" className="h-6 w-6" />
           <span>Synco</span>
         </Link>
-        <p className="text-xs text-muted italic">Sync your way to success</p>
+        <p className="text-xs text-muted">Sync your way to success</p>
       </div>
       <div className="flex flex-wrap gap-6 text-xs">
         <Link to="/auth/login" className="transition-colors hover:text-foreground">
