@@ -188,7 +188,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         <div className="hidden md:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
           <Link to="/" className="inline-flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-primary-foreground grid place-items-center text-primary font-display text-sm">
-              P
+              S
             </div>
             <span className="font-display text-lg">Synco</span>
           </Link>
@@ -244,7 +244,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
       <div className="hidden md:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
         <Link to="/" className="inline-flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-primary-foreground grid place-items-center text-primary font-display text-sm">
-            P
+            S
           </div>
           <span className="font-display text-lg">Synco</span>
         </Link>

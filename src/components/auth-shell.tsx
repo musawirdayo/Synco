@@ -16,7 +16,10 @@ export function AuthShell({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-4 sm:px-6 md:px-12 py-5 sm:py-6">
-        <Link to="/" className="font-display text-base sm:text-lg hover:opacity-80 transition-opacity">
+        <Link
+          to="/"
+          className="font-display text-lg sm:text-xl md:text-2xl tracking-tight hover:opacity-80 transition-opacity"
+        >
           Synco
         </Link>
       </header>

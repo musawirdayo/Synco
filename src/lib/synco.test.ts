@@ -15,7 +15,7 @@ import {
   MATCH_WEIGHTS,
   type Answers,
   type MatchStudent,
-} from "./peergraph";
+} from "./synco";
 
 // ─── Test fixtures ───
 

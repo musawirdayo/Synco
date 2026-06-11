@@ -289,7 +289,9 @@ function QuestionStep({
   return (
     <>
       <p className="text-sm text-muted mb-3">{framing}</p>
-      <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-10 leading-snug">{question}</h2>
+      <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-10 leading-snug">
+        {question}
+      </h2>
 
       <div className="space-y-6">
         <input

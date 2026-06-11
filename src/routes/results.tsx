@@ -615,7 +615,7 @@ function Results() {
       <header className="px-4 sm:px-6 md:px-12 py-5 border-b border-border/60 bg-background sticky top-0 z-50">
         <Link to="/" className="inline-flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-primary grid place-items-center text-primary-foreground font-display text-sm">
-            P
+            S
           </div>
           <span className="font-display text-lg">Synco</span>
         </Link>

@@ -237,6 +237,10 @@ export type Database = {
         Args: { _identifier: string };
         Returns: string | null;
       };
+      setup_demo_class: {
+        Args: { _lead_id: string };
+        Returns: string;
+      };
     };
     Enums: {
       app_role: "lead" | "student";

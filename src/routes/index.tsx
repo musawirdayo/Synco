@@ -110,10 +110,14 @@ function Landing() {
                 variants={fadeUp}
                 className="mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-muted leading-relaxed"
               >
-                Create a class, collect student work-style preferences, and automatically form balanced teams optimized for compatibility and shared schedules.
+                Create a class, collect student work-style preferences, and automatically form
+                balanced teams optimized for compatibility and shared schedules.
               </motion.p>
 
-              <motion.div variants={fadeUp} className="mt-6 sm:mt-8 flex flex-col gap-3 sm:flex-row">
+              <motion.div
+                variants={fadeUp}
+                className="mt-6 sm:mt-8 flex flex-col gap-3 sm:flex-row"
+              >
                 <Link
                   to="/auth/signup"
                   className="motion-lift group inline-flex h-11 sm:h-12 items-center justify-center gap-3 rounded-[8px] bg-primary px-6 font-medium text-primary-foreground shadow-[0_14px_34px_rgba(28,61,46,0.16)] hover:bg-[color:var(--color-primary-hover)]"
@@ -150,7 +154,10 @@ function Landing() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-12 sm:py-16 md:py-20 bg-card/20 border-b border-border/40">
+        <section
+          id="how-it-works"
+          className="py-12 sm:py-16 md:py-20 bg-card/20 border-b border-border/40"
+        >
           <motion.div
             initial="hide"
             whileInView="show"
@@ -166,7 +173,8 @@ function Landing() {
                 Three simple steps to assign teams.
               </h2>
               <p className="mt-3 text-xs sm:text-sm text-muted">
-                No complex setup. Just capture what matters: schedules, work style, and academic goals. Synco handles the matching.
+                No complex setup. Just capture what matters: schedules, work style, and academic
+                goals. Synco handles the matching.
               </p>
             </div>
 
@@ -231,7 +239,9 @@ function Landing() {
                       <Icon className="h-5 w-5 text-primary" />
                     </div>
                     <h3 className="font-semibold text-base sm:text-lg">{strength.title}</h3>
-                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">{strength.text}</p>
+                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
+                      {strength.text}
+                    </p>
                   </motion.div>
                 );
               })}
@@ -245,8 +255,12 @@ function Landing() {
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/5 text-primary mb-3">
               <HelpCircle className="h-5 w-5" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-display md:text-4xl">Frequently Asked Questions</h2>
-            <p className="text-muted mt-2 text-xs sm:text-sm">Everything you need to know about Synco.</p>
+            <h2 className="text-2xl sm:text-3xl font-display md:text-4xl">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-muted mt-2 text-xs sm:text-sm">
+              Everything you need to know about Synco.
+            </p>
           </div>
           <Accordion type="single" collapsible className="w-full space-y-3">
             <AccordionItem value="item-1" className="border border-border bg-card rounded-xl px-5">
@@ -336,7 +350,10 @@ function LandingHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-        <Link to="/" className="font-display text-lg tracking-tight hover:opacity-80 transition-opacity">
+        <Link
+          to="/"
+          className="font-display text-lg sm:text-xl md:text-2xl tracking-tight hover:opacity-80 transition-opacity"
+        >
           Synco
         </Link>
 
@@ -380,8 +397,12 @@ function MockMatchCard() {
           <h3 className="mt-2 text-2xl font-display font-bold">Maya & Noor</h3>
         </div>
         <div className="text-right">
-          <div className="text-4xl font-display font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">92%</div>
-          <span className="block text-[9px] font-medium uppercase text-muted tracking-wider">Compatible</span>
+          <div className="text-4xl font-display font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
+            92%
+          </div>
+          <span className="block text-[9px] font-medium uppercase text-muted tracking-wider">
+            Compatible
+          </span>
         </div>
       </div>
 
@@ -391,7 +412,8 @@ function MockMatchCard() {
             Why this pairing works
           </h4>
           <p className="text-sm text-foreground leading-relaxed font-medium">
-            Both prefer regular check-ins, active communication, and high academic standards. Noor's API design expertise complements Maya's needs.
+            Both prefer regular check-ins, active communication, and high academic standards. Noor's
+            API design expertise complements Maya's needs.
           </p>
         </div>
 
@@ -401,18 +423,14 @@ function MockMatchCard() {
               📅 Shared Hours
             </span>
             <span className="font-semibold text-sm text-foreground">4 slots</span>
-            <span className="block text-[10px] text-muted-foreground mt-0.5">
-              Mon, Wed, Fri
-            </span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">Mon, Wed, Fri</span>
           </div>
           <div className="border border-border/60 rounded-lg p-3 bg-muted/30">
             <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
               ⚡ Work Rhythm
             </span>
             <span className="font-semibold text-sm text-foreground">Structured</span>
-            <span className="block text-[10px] text-muted-foreground mt-0.5">
-              Early starts
-            </span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">Early starts</span>
           </div>
         </div>
 

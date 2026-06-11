@@ -13,8 +13,6 @@ function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
 
-  console.log("Active Supabase URL in browser:", import.meta.env.VITE_SUPABASE_URL);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});

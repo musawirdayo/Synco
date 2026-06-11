@@ -74,10 +74,41 @@ function Dashboard() {
     })();
   }, [user]);
 
+  async function setupDemoClass() {
+    if (!user) {
+      navigate({ to: "/auth/login" });
+      return;
+    }
+    if (
+      !window.confirm(
+        "Set up a brand new demo class populated with 6 test student responses? This is perfect for exploring the platform's matches, coordinates ecosystem map, and synergy simulator instantly.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc("setup_demo_class", {
+        _lead_id: user.id,
+      });
+      if (error) throw error;
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to create demo class:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(
+        `Failed to create demo class.\n\nError: ${msg}\n\nMake sure to apply the setup_demo_class SQL migration on your Supabase dashboard first!`,
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60 flex items-center justify-between gap-4 flex-wrap">
-        <Link to="/" className="font-display text-base sm:text-lg hover:opacity-80 transition-opacity">
+        <Link
+          to="/"
+          className="font-display text-lg sm:text-xl md:text-2xl tracking-tight hover:opacity-80 transition-opacity"
+        >
           Synco
         </Link>
         <button
@@ -95,33 +126,7 @@ function Dashboard() {
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl">Welcome back, {name}.</h1>
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={async () => {
-                if (
-                  window.confirm(
-                    "Set up a brand new demo class populated with 6 test student responses? This is perfect for exploring the platform's matches, coordinates ecosystem map, and synergy simulator instantly.",
-                  )
-                ) {
-                  try {
-                    const supabaseClient = supabase as unknown as {
-                      rpc: (
-                        name: string,
-                        args: { _lead_id?: string },
-                      ) => Promise<{ data: unknown; error: Error | null }>;
-                    };
-                    const { error } = await supabaseClient.rpc("setup_demo_class", {
-                      _lead_id: user?.id,
-                    });
-                    if (error) throw error;
-                    window.location.reload();
-                  } catch (err) {
-                    console.error("Failed to create demo class:", err);
-                    const msg = err instanceof Error ? err.message : String(err);
-                    alert(
-                      `Failed to create demo class.\n\nError: ${msg}\n\nMake sure to apply the setup_demo_class SQL migration on your Supabase dashboard first!`,
-                    );
-                  }
-                }
-              }}
+              onClick={setupDemoClass}
               className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="h-4 w-4 text-accent" /> Set up demo class
@@ -151,33 +156,7 @@ function Dashboard() {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <button
-                onClick={async () => {
-                  if (
-                    window.confirm(
-                      "Set up a brand new demo class populated with 6 test student responses? This is perfect for exploring the platform's matches, coordinates ecosystem map, and synergy simulator instantly.",
-                    )
-                  ) {
-                    try {
-                      const supabaseClient = supabase as unknown as {
-                        rpc: (
-                          name: string,
-                          args: { _lead_id?: string },
-                        ) => Promise<{ data: unknown; error: Error | null }>;
-                      };
-                      const { error } = await supabaseClient.rpc("setup_demo_class", {
-                        _lead_id: user?.id,
-                      });
-                      if (error) throw error;
-                      window.location.reload();
-                    } catch (err) {
-                      console.error("Failed to create demo class:", err);
-                      const msg = err instanceof Error ? err.message : String(err);
-                      alert(
-                        `Failed to create demo class.\n\nError: ${msg}\n\nMake sure to apply the setup_demo_class SQL migration on your Supabase dashboard first!`,
-                      );
-                    }
-                  }
-                }}
+                onClick={setupDemoClass}
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all"
               >
                 Set up demo class
