@@ -1,10 +1,31 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { nitro } from "nitro/vite";
 
+const supabaseUrlEnvKeys = [
+  "VITE_SUPABASE_URL",
+  "SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "PUBLIC_SUPABASE_URL",
+] as const;
+
+const supabaseKeyEnvKeys = [
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "VITE_SUPABASE_ANON_KEY",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_ANON_KEY",
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "PUBLIC_SUPABASE_ANON_KEY",
+] as const;
+
+function firstEnv(keys: readonly string[]) {
+  return keys.map((key) => process.env[key]).find(Boolean);
+}
+
 const supabaseEnvDefines: Record<string, string> = {};
-const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
-const supabasePublishableKey =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = firstEnv(supabaseUrlEnvKeys);
+const supabasePublishableKey = firstEnv(supabaseKeyEnvKeys);
 
 if (supabaseUrl) {
   supabaseEnvDefines["import.meta.env.VITE_SUPABASE_URL"] = JSON.stringify(supabaseUrl);

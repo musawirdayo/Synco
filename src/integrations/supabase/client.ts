@@ -2,21 +2,49 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
+const supabaseUrlEnvKeys = [
+  "VITE_SUPABASE_URL",
+  "SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "PUBLIC_SUPABASE_URL",
+] as const;
+
+const supabaseKeyEnvKeys = [
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "VITE_SUPABASE_ANON_KEY",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_ANON_KEY",
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  "PUBLIC_SUPABASE_ANON_KEY",
+] as const;
+
+function readEnv(keys: readonly string[]) {
+  const viteEnv = import.meta.env as Record<string, string | undefined>;
   const serverEnv =
-    typeof process !== "undefined" && typeof process.env !== "undefined" ? process.env : {};
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || serverEnv.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || serverEnv.SUPABASE_PUBLISHABLE_KEY;
+    typeof process !== "undefined" && typeof process.env !== "undefined"
+      ? (process.env as Record<string, string | undefined>)
+      : {};
+
+  for (const key of keys) {
+    const value = viteEnv[key] ?? serverEnv[key];
+    if (value) return value;
+  }
+}
+
+function createSupabaseClient() {
+  const SUPABASE_URL = readEnv(supabaseUrlEnvKeys);
+  const SUPABASE_PUBLISHABLE_KEY = readEnv(supabaseKeyEnvKeys);
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
-      ...(!SUPABASE_URL ? ["VITE_SUPABASE_URL"] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ["VITE_SUPABASE_PUBLISHABLE_KEY"] : []),
+      ...(!SUPABASE_URL ? ["VITE_SUPABASE_URL or SUPABASE_URL"] : []),
+      ...(!SUPABASE_PUBLISHABLE_KEY
+        ? ["VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_ANON_KEY, or SUPABASE_ANON_KEY"]
+        : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Add them to your deployment environment and rebuild.`;
+    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Add them to your Vercel environment variables for Production and Preview, then redeploy.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
