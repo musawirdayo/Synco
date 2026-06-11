@@ -16,9 +16,8 @@ export function AuthShell({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-6 md:px-12 py-6">
-        <Link to="/" className="inline-flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <img src="/logo.svg" alt="Synco" className="h-7 w-7" />
-          <span className="font-display text-lg">Synco</span>
+        <Link to="/" className="font-display text-lg hover:opacity-80 transition-opacity">
+          Synco
         </Link>
       </header>
       <main className="flex-1 flex items-center justify-center px-6 py-12">

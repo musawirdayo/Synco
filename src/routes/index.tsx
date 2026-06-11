@@ -336,9 +336,8 @@ function LandingHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-        <Link to="/" className="inline-flex items-center gap-3 group hover:opacity-80 transition-opacity">
-          <img src="/logo.svg" alt="Synco" className="h-8 w-8" />
-          <span className="text-lg font-display tracking-tight">Synco</span>
+        <Link to="/" className="font-display text-lg tracking-tight hover:opacity-80 transition-opacity">
+          Synco
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm text-muted md:flex font-medium">
@@ -447,10 +446,9 @@ function LandingFooter() {
       <div className="flex flex-col gap-2">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-foreground font-display text-base w-fit hover:opacity-80 transition-opacity"
+          className="font-display text-base hover:opacity-80 transition-opacity w-fit"
         >
-          <img src="/logo.svg" alt="Synco" className="h-6 w-6" />
-          <span>Synco</span>
+          Synco
         </Link>
         <p className="text-xs text-muted">Sync your way to success</p>
       </div>
