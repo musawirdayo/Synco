@@ -9,8 +9,10 @@ import {
   confidence,
   pairInsight,
   pairFrictionInsight,
+  friendRiskInsight,
   maximumWeightMatching,
   formTeams,
+  isFlaggedFriend,
   mutualRequest,
   pairBlocked,
   pairKey,
@@ -491,6 +493,55 @@ describe("pairFrictionInsight", () => {
     const friction = pairFrictionInsight(studentA(), studentC());
     // A and C have zero overlapping availability and different everything
     expect(friction.why.length).toBeGreaterThan(20);
+  });
+});
+
+// ─── friend risk tests ───
+
+describe("friendRiskInsight", () => {
+  it("detects a one-direction flagged friend", () => {
+    const a: MatchStudent = {
+      id: "a",
+      answers: { ...studentA(), friendsInClass: "Charlie" },
+      name: "Alice",
+    };
+    const b: MatchStudent = { id: "b", answers: studentC(), name: "Charlie" };
+
+    expect(isFlaggedFriend(a, b)).toBe(true);
+    expect(isFlaggedFriend(b, a)).toBe(false);
+  });
+
+  it("fires for a flagged friend with a low score", () => {
+    const a: MatchStudent = {
+      id: "a",
+      answers: { ...studentA(), friendsInClass: "Charlie" },
+      name: "Alice",
+    };
+    const b: MatchStudent = { id: "b", answers: studentC(), name: "Charlie" };
+
+    const message = friendRiskInsight(a, b);
+    expect(message).toContain("You flagged Charlie as a friend");
+    expect(message).toContain("The numbers disagree");
+    expect(message).toContain("Friendship doesn't");
+  });
+
+  it("does not fire for a flagged friend with a high score", () => {
+    const a: MatchStudent = {
+      id: "a",
+      answers: { ...studentA(), friendsInClass: "Bob" },
+      name: "Alice",
+    };
+    const b: MatchStudent = { id: "b", answers: studentB(), name: "Bob" };
+
+    expect(friendRiskInsight(a, b)).toBeNull();
+  });
+
+  it("leaves an unflagged low-score peer on the normal friction path", () => {
+    const a: MatchStudent = { id: "a", answers: studentA(), name: "Alice" };
+    const b: MatchStudent = { id: "b", answers: studentC(), name: "Charlie" };
+
+    expect(friendRiskInsight(a, b)).toBeNull();
+    expect(pairFrictionInsight(a.answers, b.answers).why).toMatch(/^Why this is hard:/);
   });
 });
 

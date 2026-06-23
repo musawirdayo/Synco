@@ -46,6 +46,8 @@ type Avoid = {
   name: string;
   archetype: string;
   score: number;
+  friendFlagged?: boolean;
+  friendRisk?: string | null;
   confidence?: "High" | "Moderate" | "Low";
   breakdown?: MatchBreakdown;
   why: string;
@@ -1044,6 +1046,11 @@ function Results() {
                                 <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-[10px] font-bold text-destructive uppercase tracking-wider">
                                   {peer.archetype}
                                 </span>
+                                {peer.friendFlagged && (
+                                  <span className="ml-2 inline-block mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                                    Friend flagged
+                                  </span>
+                                )}
                               </div>
                               <div className="text-right shrink-0">
                                 <span className="font-display text-2xl font-extrabold text-destructive">
@@ -1061,12 +1068,21 @@ function Results() {
                                 </strong>{" "}
                                 {peer.why}
                               </p>
-                              <div className="text-destructive/90 bg-destructive/[0.02] border border-destructive/10 rounded-lg p-3">
-                                <strong className="text-destructive text-[10px] block mb-0.5">
-                                  Watch out:
-                                </strong>{" "}
-                                {peer.watch}
-                              </div>
+                              {peer.friendRisk ? (
+                                <div className="text-amber-900 dark:text-amber-100 bg-amber-500/[0.08] border border-amber-500/20 rounded-lg p-3">
+                                  <strong className="text-amber-700 dark:text-amber-300 text-[10px] block mb-0.5">
+                                    Friend risk:
+                                  </strong>{" "}
+                                  {peer.friendRisk}
+                                </div>
+                              ) : (
+                                <div className="text-destructive/90 bg-destructive/[0.02] border border-destructive/10 rounded-lg p-3">
+                                  <strong className="text-destructive text-[10px] block mb-0.5">
+                                    Watch out:
+                                  </strong>{" "}
+                                  {peer.watch}
+                                </div>
+                              )}
                             </div>
                           </div>
 

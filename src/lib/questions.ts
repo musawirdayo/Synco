@@ -7,7 +7,7 @@ export type SurveyQuestion = {
 };
 
 export type OptionalTextSurveyField = {
-  id: "wantToWorkWith" | "doNotPairWith";
+  id: "wantToWorkWith" | "friendsInClass" | "doNotPairWith";
   label: string;
   placeholder: string;
   hint: string;
@@ -19,6 +19,12 @@ export const OPTIONAL_TEXT_SURVEY_FIELDS: OptionalTextSurveyField[] = [
     label: "Would like to work with (optional)",
     placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
     hint: "Mutual requests are prioritized when teams are formed.",
+  },
+  {
+    id: "friendsInClass",
+    label: "Friends in this class",
+    placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
+    hint: "We'll check if the data agrees with you.",
   },
   {
     id: "doNotPairWith",

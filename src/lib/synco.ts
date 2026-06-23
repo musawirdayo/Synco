@@ -51,6 +51,7 @@ export type TeamMatchingPlan = {
 export type TeamFormationPlan = MatchingPlan | TeamMatchingPlan;
 
 const ONE_SIDED_REQUEST_BONUS = 12;
+const FRIEND_RISK_SCORE_THRESHOLD = 65;
 
 // Final match score = weighted sum of 5 sub-scores.
 // Weights reflect real-world team success factors:
@@ -593,7 +594,10 @@ export function pairInsight(a: Answers, b: Answers) {
   };
 }
 
-export function pairFrictionInsight(a: Answers, b: Answers) {
+type FrictionFactor = "Availability" | "Academic fit" | "Complementary skills" | "Study style";
+type FrictionFactorWithGoals = FrictionFactor | "Goal match";
+
+function pairFrictionDetails(a: Answers, b: Answers) {
   const breakdown = matchBreakdown(a, b);
   const risks: string[] = [];
   if (breakdown.availability < 45) risks.push("few shared free slots");
@@ -607,15 +611,17 @@ export function pairFrictionInsight(a: Answers, b: Answers) {
   if (Math.abs(num(a, "q3") - num(b, "q3")) >= 3) risks.push("opposite deadline rhythm");
   if (!risks.length) risks.push("expectations may still be unclear");
 
-  const lowest = (
-    [
-      ["Availability", breakdown.availability],
-      ["Academic fit", breakdown.academic],
-      ["Complementary skills", breakdown.complementary],
-      ["Study style", breakdown.studyStyle],
-      ["Goal match", breakdown.goals],
-    ] as [string, number][]
-  ).sort((left, right) => left[1] - right[1])[0]?.[0];
+  const factors: Array<[FrictionFactorWithGoals, number]> = [
+    ["Availability", breakdown.availability],
+    ["Academic fit", breakdown.academic],
+    ["Complementary skills", breakdown.complementary],
+    ["Study style", breakdown.studyStyle],
+    ["Goal match", breakdown.goals],
+  ];
+  const lowest = [...factors].sort((left, right) => left[1] - right[1])[0]?.[0];
+  const lowestFriendFactor = [...factors.slice(0, 4)].sort(
+    (left, right) => left[1] - right[1],
+  )[0]?.[0] as FrictionFactor | undefined;
 
   const watch =
     lowest === "Availability"
@@ -628,6 +634,11 @@ export function pairFrictionInsight(a: Answers, b: Answers) {
             ? "Working rhythm. One person may want quiet review while the other wants active discussion."
             : "Motivation. Expectations around effort and target grade may differ.";
 
+  return { breakdown, risks, lowest, lowestFriendFactor, watch };
+}
+
+export function pairFrictionInsight(a: Answers, b: Answers) {
+  const { breakdown, risks, watch } = pairFrictionDetails(a, b);
   const move =
     "If this pairing is needed, set meeting times and task ownership before any real work starts.";
   return {
@@ -661,6 +672,10 @@ function requestEntries(student: MatchStudent) {
   return textEntries(student, "wantToWorkWith");
 }
 
+function friendEntries(student: MatchStudent) {
+  return textEntries(student, "friendsInClass");
+}
+
 function textEntries(student: MatchStudent, field: string) {
   const raw = text(student.answers, field);
   return raw
@@ -689,6 +704,49 @@ export function pairBlocked(a: MatchStudent, b: MatchStudent) {
 
 export function mutualRequest(a: MatchStudent, b: MatchStudent) {
   return requestedBy(a, b) && requestedBy(b, a);
+}
+
+export function isFlaggedFriend(a: MatchStudent, b: MatchStudent) {
+  return matchesTarget(friendEntries(a), blockTargets(b));
+}
+
+export function friendRiskInsight(a: MatchStudent, b: MatchStudent) {
+  if (!isFlaggedFriend(a, b)) return null;
+
+  const details = pairFrictionDetails(a.answers, b.answers);
+  if (details.breakdown.final >= FRIEND_RISK_SCORE_THRESHOLD) return null;
+
+  const friendName = b.name?.trim() || "this classmate";
+  const risk = friendRiskForFactor(details.lowestFriendFactor, details.risks);
+  const cost = friendCostForFactor(details.lowestFriendFactor);
+
+  return `You flagged ${friendName} as a friend. The numbers disagree: ${risk}. ${cost}`;
+}
+
+function friendRiskForFactor(factor: FrictionFactor | undefined, risks: string[]) {
+  if (factor === "Availability") return "you have few shared free slots";
+  if (factor === "Academic fit") return "you are preparing for different course or topic needs";
+  if (factor === "Complementary skills") return "the strengths do not cover the weak areas";
+  if (factor === "Study style") {
+    return "your study or communication styles pull in different directions";
+  }
+  return risks[0] ?? "the fit signals are weak";
+}
+
+function friendCostForFactor(factor: FrictionFactor | undefined) {
+  if (factor === "Availability") {
+    return "Friendship doesn't create meeting time - this pairing will cost you time you don't have.";
+  }
+  if (factor === "Academic fit") {
+    return "Friendship doesn't make you study the same material - this pairing will cost you time you don't have.";
+  }
+  if (factor === "Complementary skills") {
+    return "Friendship doesn't cover missing skills - this pairing will cost you time you don't have.";
+  }
+  if (factor === "Study style") {
+    return "Friendship doesn't fix work rhythm - this pairing will cost you time you don't have.";
+  }
+  return "Friendship doesn't fix the mismatch - this pairing will cost you time you don't have.";
 }
 
 export function maximumWeightMatching(

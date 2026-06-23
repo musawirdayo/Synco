@@ -22,6 +22,8 @@ import {
   matchBreakdown,
   pairBlocked,
   formTeams,
+  friendRiskInsight,
+  isFlaggedFriend,
   type Answers,
   type MatchBreakdown,
   type MatchStudent,
@@ -66,6 +68,8 @@ type RankedPeer = {
   breakdown: MatchBreakdown;
   insight: ReturnType<typeof pairInsight>;
   friction: ReturnType<typeof pairFrictionInsight>;
+  friendFlagged: boolean;
+  friendRisk: string | null;
   answers: Answers;
   identifier: string | null;
 };
@@ -239,6 +243,12 @@ function ClassPage() {
       .map((o) => {
         const otherMember = memberByStudent.get(o.student_id);
         const actualName = otherMember?.display_name ?? nameOf(o.student_id);
+        const otherCandidate = {
+          id: o.student_id,
+          answers: o.answers,
+          name: actualName,
+          identifier: otherMember?.identifier ?? null,
+        };
         const breakdown = matchBreakdown(self.answers, o.answers);
         return {
           student_id: o.student_id,
@@ -249,6 +259,8 @@ function ClassPage() {
           breakdown,
           insight: pairInsight(self.answers, o.answers),
           friction: pairFrictionInsight(self.answers, o.answers),
+          friendFlagged: isFlaggedFriend(selfCandidate, otherCandidate),
+          friendRisk: friendRiskInsight(selfCandidate, otherCandidate),
           answers: o.answers,
           identifier: otherMember?.identifier ?? null,
         };
@@ -271,7 +283,16 @@ function ClassPage() {
         .slice(0, 5)
         .map(
           (
-            { insight, friction: _f, answers, identifier: _id, publicName: _p, ...rest },
+            {
+              insight,
+              friction: _f,
+              friendFlagged: _ff,
+              friendRisk: _fr,
+              answers,
+              identifier: _id,
+              publicName: _p,
+              ...rest
+            },
             index,
           ) => ({
             ...rest,
@@ -285,13 +306,30 @@ function ClassPage() {
         .reverse()
         .map(
           (
-            { friction, insight: _i, answers, identifier: _id, publicName: _p, ...rest },
+            {
+              friction,
+              friendRisk,
+              insight: _i,
+              answers,
+              identifier: _id,
+              publicName: _p,
+              ...rest
+            },
             index,
-          ) => ({
-            ...rest,
-            name: publicPeerName(answers, rest.name, index),
-            ...publicFrictionForPeer(answers, friction),
-          }),
+          ) => {
+            const displayName = publicPeerName(answers, rest.name, index);
+            const safeFriendRisk =
+              friendRisk && displayName !== rest.name
+                ? friendRisk.replace(`flagged ${rest.name}`, `flagged ${displayName}`)
+                : friendRisk;
+
+            return {
+              ...rest,
+              name: displayName,
+              friendRisk: safeFriendRisk,
+              ...publicFrictionForPeer(answers, friction),
+            };
+          },
         );
 
       return {

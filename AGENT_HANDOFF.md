@@ -24,6 +24,7 @@ This sync set adds:
 - Teacher team view on the class page after publishing.
 - Student team view on the results page while preserving top-5 and bottom-5 peer results.
 - Unit tests for new team formation and request behavior.
+- Optional `friendsInClass` survey field and flagged-friend risk warnings on avoid result cards.
 
 ## Verification Already Run
 
@@ -33,6 +34,7 @@ These passed after the feature work:
 - `npm run lint`
 - `npm test`
 - `npm run build`
+- 2026-06-24 follow-up: `npm test` reports 75 passing tests after flagged-friend risk tests.
 - `npm exec --yes supabase -- migration list --linked` shows every local migration version matched on remote.
 - `npm exec --yes supabase -- db push --linked --dry-run` reports `Remote database is up to date.`
 
