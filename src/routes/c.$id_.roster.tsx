@@ -5,10 +5,21 @@ import { ArrowRight, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { setActiveClassId } from "@/lib/class-flow";
+import { publicPeerName } from "@/lib/class-helpers";
+import type { Answers } from "@/lib/synco";
 
 export const Route = createFileRoute("/c/$id_/roster")({ component: Roster });
 
-type Row = { student_id: string; display_name: string; submitted: boolean };
+type Row = {
+  student_id: string;
+  display_name: string;
+  submitted: boolean | null;
+  answers: Answers | null;
+  displayIndex: number;
+  publicName: string | null;
+};
+
+type PublicRosterPeer = { student_id: string; name: string };
 
 function Roster() {
   const { id } = useParams({ from: "/c/$id_/roster" });
@@ -16,6 +27,7 @@ function Roster() {
   const navigate = useNavigate();
   const [className, setClassName] = useState("");
   const [published, setPublished] = useState(false);
+  const [isLead, setIsLead] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [search, setSearch] = useState("");
 
@@ -29,12 +41,14 @@ function Roster() {
       setActiveClassId(id);
       const { data: cls } = await supabase
         .from("classes")
-        .select("name,is_published")
+        .select("name,is_published,lead_id")
         .eq("id", id)
         .maybeSingle();
       if (!cls) return;
+      const viewerIsLead = cls.lead_id === user.id;
       setClassName(cls.name);
       setPublished(cls.is_published);
+      setIsLead(viewerIsLead);
       const { data: members } = await supabase
         .from("class_members")
         .select("student_id,display_name")
@@ -42,20 +56,73 @@ function Roster() {
         .order("display_name");
       const { data: resps } = await supabase
         .from("survey_responses")
-        .select("student_id,completed")
+        .select("student_id,completed,answers")
         .eq("class_id", id);
-      const done = new Set((resps ?? []).filter((r) => r.completed).map((r) => r.student_id));
+      const responseByStudent = new Map((resps ?? []).map((r) => [r.student_id, r]));
+      const publicNameByStudent = new Map<string, string>();
+      if (!viewerIsLead && cls.is_published) {
+        const { data: result } = await supabase
+          .from("match_results")
+          .select("result_data")
+          .eq("class_id", id)
+          .eq("student_id", user.id)
+          .maybeSingle();
+        const resultData = result?.result_data as
+          | { matches?: PublicRosterPeer[]; avoid?: PublicRosterPeer[] }
+          | null
+          | undefined;
+        [...(resultData?.matches ?? []), ...(resultData?.avoid ?? [])].forEach((peer) => {
+          publicNameByStudent.set(peer.student_id, peer.name);
+        });
+      }
       setRows(
-        (members ?? []).map((m) => ({
-          student_id: m.student_id,
-          display_name: m.display_name,
-          submitted: done.has(m.student_id),
-        })),
+        (members ?? []).map((m, index) => {
+          const response = responseByStudent.get(m.student_id);
+          const publicName = publicNameByStudent.get(m.student_id) ?? null;
+          return {
+            student_id: m.student_id,
+            display_name: m.display_name,
+            submitted: response
+              ? response.completed
+              : publicName
+                ? true
+                : viewerIsLead
+                  ? false
+                  : null,
+            answers: response?.answers ? (response.answers as Answers) : null,
+            displayIndex: index,
+            publicName,
+          };
+        }),
       );
     })();
   }, [user, id]);
 
-  const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.toLowerCase()));
+  const visibleRows = rows.map((r) => {
+    const isMe = r.student_id === user?.id;
+    const canSeeDetails =
+      isLead ||
+      isMe ||
+      r.publicName === r.display_name ||
+      Boolean(
+        r.answers && publicPeerName(r.answers, r.display_name, r.displayIndex) === r.display_name,
+      );
+    return {
+      ...r,
+      visibleName: canSeeDetails
+        ? r.display_name
+        : (r.publicName ??
+          publicPeerName(
+            r.answers ?? { privacyPreference: "Lead introduction only" },
+            r.display_name,
+            r.displayIndex,
+          )),
+      canSeeDetails,
+    };
+  });
+  const filtered = visibleRows.filter((r) =>
+    r.visibleName.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div className="min-h-screen">
@@ -102,7 +169,7 @@ function Roster() {
                 <div className="flex items-center justify-between gap-4 p-4 border-b border-border last:border-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{r.display_name}</span>
+                      <span className="font-medium truncate">{r.visibleName}</span>
                       {isMe && (
                         <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[color:var(--color-accent-light)] text-accent font-medium">
                           You
@@ -110,7 +177,11 @@ function Roster() {
                       )}
                     </div>
                     <div className="text-xs text-muted mt-0.5">
-                      {r.submitted ? "Submitted" : "Hasn't submitted yet"}
+                      {r.canSeeDetails
+                        ? r.submitted
+                          ? "Submitted"
+                          : "Hasn't submitted yet"
+                        : "Submission status hidden"}
                     </div>
                   </div>
                   {canOpen || canTakeSurvey ? (

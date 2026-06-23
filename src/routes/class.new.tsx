@@ -10,6 +10,15 @@ import { normalizeStudentIdentifier } from "@/lib/class-flow";
 
 export const Route = createFileRoute("/class/new")({ component: NewClass });
 
+const TEAM_SIZE_OPTIONS = [2, 3, 4, 5, 6] as const;
+
+type ClassBasics = {
+  name: string;
+  institution: string;
+  expected: number;
+  teamSize: number;
+};
+
 function genCode() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let s = "";
@@ -21,10 +30,12 @@ function NewClass() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [name, setName] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [expected, setExpected] = useState(20);
-  const [teamSize, setTeamSize] = useState(4);
+  const [classBasics, setClassBasics] = useState<ClassBasics>({
+    name: "",
+    institution: "",
+    expected: 20,
+    teamSize: 4,
+  });
   const [rosterLock, setRosterLock] = useState(false);
   const [rosterText, setRosterText] = useState("");
   const [identType, setIdentType] = useState<"roll" | "email" | "id">("roll");
@@ -54,10 +65,10 @@ function NewClass() {
         .from("classes")
         .insert({
           lead_id: user.id,
-          name,
-          institution: institution || null,
-          expected_count: expected,
-          team_size: teamSize,
+          name: classBasics.name,
+          institution: classBasics.institution || null,
+          expected_count: classBasics.expected,
+          team_size: classBasics.teamSize,
           invite_code: code,
           roster_lock_enabled: rosterLock,
           identifier_type: identType,
@@ -143,16 +154,20 @@ function NewClass() {
                 <Field label="Class name">
                   <input
                     required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={classBasics.name}
+                    onChange={(e) =>
+                      setClassBasics((current) => ({ ...current, name: e.target.value }))
+                    }
                     className={inputClass}
                     placeholder="CS 2025 — Software Engineering"
                   />
                 </Field>
                 <Field label="Institution or course (optional)">
                   <input
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
+                    value={classBasics.institution}
+                    onChange={(e) =>
+                      setClassBasics((current) => ({ ...current, institution: e.target.value }))
+                    }
                     className={inputClass}
                     placeholder="FAST NUCES"
                   />
@@ -163,21 +178,40 @@ function NewClass() {
                     min={2}
                     max={500}
                     required
-                    value={expected}
-                    onChange={(e) => setExpected(Number(e.target.value))}
+                    value={classBasics.expected}
+                    onChange={(e) =>
+                      setClassBasics((current) => ({
+                        ...current,
+                        expected: Number(e.target.value),
+                      }))
+                    }
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Team size">
-                  <input
-                    type="number"
-                    min={2}
-                    max={6}
-                    required
-                    value={teamSize}
-                    onChange={(e) => setTeamSize(Number(e.target.value))}
-                    className={inputClass}
-                  />
+                <Field label="Team size" hint="Pick the target size for automatic team assignment.">
+                  <div className="grid grid-cols-5 gap-2" role="group" aria-label="Team size">
+                    {TEAM_SIZE_OPTIONS.map((size) => {
+                      const selected = classBasics.teamSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() =>
+                            setClassBasics((current) => ({ ...current, teamSize: size }))
+                          }
+                          className={
+                            "h-11 rounded-lg border text-sm font-medium transition-all " +
+                            (selected
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                              : "border-border bg-card hover:bg-muted hover:border-primary")
+                          }
+                          aria-pressed={selected}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </Field>
                 <PrimaryButton type="submit">Continue</PrimaryButton>
               </form>

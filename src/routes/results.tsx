@@ -613,6 +613,15 @@ function Results() {
     ...(d.matches || []).map((m) => ({ ...m, isAvoid: false })),
     ...(d.avoid || []).map((a) => ({ ...a, isAvoid: true })),
   ];
+  const orderedAvoid = (d.avoid || [])
+    .map((peer, index) => ({ peer, index }))
+    .sort((left, right) => {
+      if (left.peer.friendFlagged !== right.peer.friendFlagged) {
+        return left.peer.friendFlagged ? -1 : 1;
+      }
+      return left.index - right.index;
+    })
+    .map(({ peer }) => peer);
   const assignedTeam = state.assignedTeam ?? null;
   const assignmentSnapshot = state.assignmentSnapshot ?? null;
   const isUnmatchedFromTeams =
@@ -683,19 +692,34 @@ function Results() {
         </motion.section>
 
         {assignmentSnapshot && (
-          <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <h2 className="text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-1">
-              <Users className="h-5 w-5 text-accent" />
-              Assigned Team
-            </h2>
+          <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-accent">
+                  Headline result
+                </span>
+                <h2 className="mt-1 text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
+                  <Users className="h-5 w-5 text-accent" />
+                  Your Team
+                </h2>
+              </div>
+            </div>
             {assignedTeam ? (
               <>
-                <p className="text-sm text-muted-foreground mb-6">
+                <p className="text-sm text-muted-foreground mb-5">
                   Team {Number(assignedTeam.id.replace("team-", "")) || ""} ·{" "}
                   {assignedTeam.members.length} member
                   {assignedTeam.members.length === 1 ? "" : "s"} · {assignedTeam.average_score}%
                   average compatibility
                 </p>
+                {assignedTeam.teammates.length > 0 && (
+                  <p className="mb-5 rounded-xl border border-accent/20 bg-accent/[0.04] p-4 text-sm text-muted-foreground">
+                    Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
+                    <span className="font-semibold text-foreground">
+                      {assignedTeam.teammates.map((member) => member.name).join(", ")}
+                    </span>
+                  </p>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2 mb-5">
                   {assignedTeam.members.map((member) => {
                     const isSelf = member.student_id === user?.id;
@@ -723,17 +747,9 @@ function Results() {
                     );
                   })}
                 </div>
-                {assignedTeam.teammates.length > 0 && (
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
-                    <span className="font-medium text-foreground">
-                      {assignedTeam.teammates.map((member) => member.name).join(", ")}
-                    </span>
-                  </p>
-                )}
                 <div className="rounded-xl border border-border/40 bg-background/40 p-5">
                   <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-2">
-                    Team rationale
+                    Why this team
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {assignedTeam.rationale}
@@ -1029,7 +1045,7 @@ function Results() {
                 </div>
 
                 {/* Pairs to watch */}
-                {d.avoid && d.avoid.length > 0 && (
+                {orderedAvoid.length > 0 && (
                   <div className="space-y-4 pt-6 border-t border-border/40">
                     <div>
                       <h3 className="text-lg font-display font-semibold tracking-tight text-destructive/90 flex items-center gap-2">
@@ -1042,25 +1058,37 @@ function Results() {
                     </div>
 
                     <div className="grid gap-5 md:grid-cols-2">
-                      {d.avoid.map((peer) => (
+                      {orderedAvoid.map((peer) => (
                         <div
                           key={peer.student_id}
-                          className="rounded-xl border border-destructive/20 bg-destructive/[0.01] p-5 hover:border-destructive/40 transition-colors flex flex-col justify-between"
+                          className={
+                            "rounded-xl border p-5 transition-colors flex flex-col justify-between " +
+                            (peer.friendFlagged
+                              ? "border-amber-500/40 bg-amber-500/[0.04] hover:border-amber-500/60"
+                              : "border-destructive/20 bg-destructive/[0.01] hover:border-destructive/40")
+                          }
                         >
                           <div className="space-y-3">
                             <div className="flex items-start justify-between gap-3 pb-3 border-b border-border/20">
                               <div>
-                                <h4 className="font-semibold text-lg text-foreground">
-                                  {peer.name}
-                                </h4>
-                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-[10px] font-bold text-destructive uppercase tracking-wider">
-                                  {peer.archetype}
-                                </span>
                                 {peer.friendFlagged && (
-                                  <span className="ml-2 inline-block mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                                  <span className="mb-2 inline-block px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                                     Friend flagged
                                   </span>
                                 )}
+                                <h4 className="font-semibold text-lg text-foreground">
+                                  {peer.name}
+                                </h4>
+                                <span
+                                  className={
+                                    "inline-block mt-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider " +
+                                    (peer.friendFlagged
+                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                                      : "bg-destructive/10 border-destructive/20 text-destructive")
+                                  }
+                                >
+                                  {peer.archetype}
+                                </span>
                               </div>
                               <div className="text-right shrink-0">
                                 <span className="font-display text-2xl font-extrabold text-destructive">

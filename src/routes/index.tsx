@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { animate, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -34,6 +35,15 @@ const stagger = {
 const fadeUp = {
   hide: { opacity: 0, y: 18 },
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: motionEase } },
+};
+
+const cardPieceReveal = {
+  hide: { opacity: 0, y: 14 },
+  show: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, delay, ease: motionEase },
+  }),
 };
 
 const workflow = [
@@ -73,12 +83,34 @@ const strengths = [
 ];
 
 function Landing() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Sleek background dynamic blur glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(ellipse_at_top,_oklch(0.96_0.05_90/0.45)_0%,_transparent_65%)] pointer-events-none z-0" />
-      <div className="absolute top-[20%] left-[10%] w-[380px] h-[380px] rounded-full bg-accent/3 blur-[120px] pointer-events-none z-0" />
-      <div className="absolute top-[40%] right-[10%] w-[420px] h-[420px] rounded-full bg-primary/4 blur-[130px] pointer-events-none z-0" />
+      <motion.div
+        animate={
+          prefersReducedMotion ? undefined : { opacity: [0.9, 1, 0.9], scale: [0.98, 1.03, 0.98] }
+        }
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(ellipse_at_top,_oklch(0.96_0.05_90/0.45)_0%,_transparent_65%)] pointer-events-none z-0"
+      />
+      <motion.div
+        animate={
+          prefersReducedMotion
+            ? undefined
+            : { opacity: [0.85, 0.95, 0.85], scale: [0.96, 1.04, 0.96] }
+        }
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-[20%] left-[10%] w-[380px] h-[380px] rounded-full bg-accent/3 blur-[120px] pointer-events-none z-0"
+      />
+      <motion.div
+        animate={
+          prefersReducedMotion ? undefined : { opacity: [0.88, 1, 0.88], scale: [1.02, 0.96, 1.02] }
+        }
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-[40%] right-[10%] w-[420px] h-[420px] rounded-full bg-primary/4 blur-[130px] pointer-events-none z-0"
+      />
 
       <LandingHeader />
 
@@ -247,7 +279,10 @@ function Landing() {
         </section>
 
         {/* INTERACTIVE FAQ SECTION */}
-        <section className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20">
+        <section
+          id="faq"
+          className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20"
+        >
           <div className="text-center mb-10 sm:mb-12">
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/5 text-primary mb-3">
               <HelpCircle className="h-5 w-5" />
@@ -265,10 +300,9 @@ function Landing() {
                 How is student privacy maintained?
               </AccordionTrigger>
               <AccordionContent className="text-muted leading-relaxed pb-4">
-                Students' raw survey responses are completely confidential. Match results are only
-                presented to classmates as overall compatibility percentages and general, anonymized
-                work-style guidance. The instructor is the only person with full visibility over raw
-                compatibility rationales.
+                Students' raw survey answers stay private. Classmates see their own compatibility
+                percentages plus specific match reasoning, such as why a pairing works and what to
+                discuss first, without exposing another student's raw answers.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2" className="border border-border bg-card rounded-xl px-5">
@@ -298,9 +332,10 @@ function Landing() {
                 What if the number of students in my class is odd?
               </AccordionTrigger>
               <AccordionContent className="text-muted leading-relaxed pb-4">
-                If there is an odd student, they will remain unmatched in the draft pairing preview.
-                The dashboard highlights them clearly so the instructor can manually place them in a
-                compatible trio or larger working group.
+                Synco automatically places students into the best-fitting team it can. If the class
+                size does not divide evenly by the chosen team size, remaining students are assigned
+                into compatible existing teams when the pairing rules allow it, without manual
+                placement by the instructor.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -361,6 +396,9 @@ function LandingHeader() {
           <a href="#features" className="transition-colors hover:text-foreground">
             Features
           </a>
+          <a href="#faq" className="transition-colors hover:text-foreground">
+            FAQ
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -384,8 +422,54 @@ function LandingHeader() {
 }
 
 function MockMatchCard() {
+  const prefersReducedMotion = useReducedMotion();
+  const [started, setStarted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [factorCount, setFactorCount] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setScore(92);
+      setFactorCount(5);
+      return;
+    }
+    if (!started || hasAnimated.current) return;
+
+    hasAnimated.current = true;
+    const scoreControls = animate(0, 92, {
+      duration: 1.15,
+      ease: motionEase,
+      onUpdate: (latest) => setScore(Math.round(latest)),
+    });
+    const factorControls = animate(0, 5, {
+      duration: 0.9,
+      delay: 0.25,
+      ease: motionEase,
+      onUpdate: (latest) => setFactorCount(Math.round(latest)),
+    });
+
+    return () => {
+      scoreControls.stop();
+      factorControls.stop();
+    };
+  }, [prefersReducedMotion, started]);
+
+  const visible = Boolean(prefersReducedMotion || started);
+  const displayScore = prefersReducedMotion ? 92 : score;
+  const displayFactorCount = prefersReducedMotion ? 5 : factorCount;
+  const initialState = prefersReducedMotion ? false : "hide";
+  const animateState = visible ? "show" : "hide";
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl p-8 relative z-10 max-w-lg mx-auto w-full hover:shadow-3xl transition-shadow">
+    <motion.div
+      initial={prefersReducedMotion ? false : "hide"}
+      whileInView="show"
+      viewport={sectionViewport}
+      variants={fadeUp}
+      onViewportEnter={() => setStarted(true)}
+      className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl p-8 relative z-10 max-w-lg mx-auto w-full hover:shadow-3xl transition-shadow"
+    >
       <div className="flex items-center justify-between border-b border-border pb-6 mb-6">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
@@ -395,7 +479,11 @@ function MockMatchCard() {
         </div>
         <div className="text-right">
           <div className="text-4xl font-display font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
-            92%
+            {displayScore > 0 ? (
+              `${displayScore}%`
+            ) : (
+              <span className="inline-block h-9 w-20 rounded-md border border-dashed border-primary/25" />
+            )}
           </div>
           <span className="block text-[9px] font-medium uppercase text-muted tracking-wider">
             Compatible
@@ -404,54 +492,99 @@ function MockMatchCard() {
       </div>
 
       <div className="space-y-5">
-        <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
+        <motion.div
+          initial={initialState}
+          animate={animateState}
+          custom={0.95}
+          variants={cardPieceReveal}
+          className="bg-primary/5 rounded-lg p-4 border border-primary/10"
+        >
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">
             Why this pairing works
+            <span className="ml-2 text-[10px] font-bold text-muted normal-case tracking-normal">
+              {displayFactorCount} factors compared
+            </span>
           </h4>
           <p className="text-sm text-foreground leading-relaxed font-medium">
             Both prefer regular check-ins, active communication, and high academic standards. Noor's
             API design expertise complements Maya's needs.
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="border border-border/60 rounded-lg p-3 bg-muted/30">
+          <motion.div
+            initial={initialState}
+            animate={animateState}
+            custom={1.25}
+            variants={cardPieceReveal}
+            className="border border-border/60 rounded-lg p-3 bg-muted/30"
+          >
             <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
               📅 Shared Hours
             </span>
             <span className="font-semibold text-sm text-foreground">4 slots</span>
             <span className="block text-[10px] text-muted-foreground mt-0.5">Mon, Wed, Fri</span>
-          </div>
-          <div className="border border-border/60 rounded-lg p-3 bg-muted/30">
+          </motion.div>
+          <motion.div
+            initial={initialState}
+            animate={animateState}
+            custom={1.4}
+            variants={cardPieceReveal}
+            className="border border-border/60 rounded-lg p-3 bg-muted/30"
+          >
             <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
               ⚡ Work Rhythm
             </span>
             <span className="font-semibold text-sm text-foreground">Structured</span>
             <span className="block text-[10px] text-muted-foreground mt-0.5">Early starts</span>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="bg-accent/5 rounded-lg p-4 border border-accent/10">
+        <motion.div
+          initial={initialState}
+          animate={animateState}
+          custom={1.7}
+          variants={cardPieceReveal}
+          className="bg-accent/5 rounded-lg p-4 border border-accent/10"
+        >
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-accent mb-3">
             First meeting checklist
           </h4>
           <ul className="text-xs text-foreground space-y-2">
-            <li className="flex items-center gap-2">
+            <motion.li
+              initial={initialState}
+              animate={animateState}
+              custom={1.85}
+              variants={cardPieceReveal}
+              className="flex items-center gap-2"
+            >
               <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
               <span>Confirm preferred communication channel</span>
-            </li>
-            <li className="flex items-center gap-2">
+            </motion.li>
+            <motion.li
+              initial={initialState}
+              animate={animateState}
+              custom={1.98}
+              variants={cardPieceReveal}
+              className="flex items-center gap-2"
+            >
               <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
               <span>Set meeting frequency before task allocation</span>
-            </li>
-            <li className="flex items-center gap-2">
+            </motion.li>
+            <motion.li
+              initial={initialState}
+              animate={animateState}
+              custom={2.11}
+              variants={cardPieceReveal}
+              className="flex items-center gap-2"
+            >
               <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
               <span>Establish shared deadline expectations</span>
-            </li>
+            </motion.li>
           </ul>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -473,6 +606,12 @@ function LandingFooter() {
         </Link>
         <Link to="/join" className="transition-colors hover:text-foreground">
           Join
+        </Link>
+        <Link to="/privacy" className="transition-colors hover:text-foreground">
+          Privacy
+        </Link>
+        <Link to="/terms" className="transition-colors hover:text-foreground">
+          Terms
         </Link>
         <span>private / honest / useful</span>
       </div>

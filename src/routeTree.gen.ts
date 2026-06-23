@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SurveyRouteImport } from './routes/survey'
 import { Route as ResultsRouteImport } from './routes/results'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
@@ -27,6 +29,11 @@ import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as CIdRosterRouteImport } from './routes/c.$id_.roster'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SurveyRoute = SurveyRouteImport.update({
   id: '/survey',
   path: '/survey',
@@ -35,6 +42,11 @@ const SurveyRoute = SurveyRouteImport.update({
 const ResultsRoute = ResultsRouteImport.update({
   id: '/results',
   path: '/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinRoute = JoinRouteImport.update({
@@ -117,8 +129,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/results': typeof ResultsRoute
   '/survey': typeof SurveyRoute
+  '/terms': typeof TermsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
@@ -136,8 +150,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/results': typeof ResultsRoute
   '/survey': typeof SurveyRoute
+  '/terms': typeof TermsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
@@ -156,8 +172,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
+  '/privacy': typeof PrivacyRoute
   '/results': typeof ResultsRoute
   '/survey': typeof SurveyRoute
+  '/terms': typeof TermsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
@@ -177,8 +195,10 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/join'
+    | '/privacy'
     | '/results'
     | '/survey'
+    | '/terms'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
@@ -196,8 +216,10 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/join'
+    | '/privacy'
     | '/results'
     | '/survey'
+    | '/terms'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
@@ -215,8 +237,10 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/join'
+    | '/privacy'
     | '/results'
     | '/survey'
+    | '/terms'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
@@ -235,8 +259,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   JoinRoute: typeof JoinRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResultsRoute: typeof ResultsRoute
   SurveyRoute: typeof SurveyRoute
+  TermsRoute: typeof TermsRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
@@ -253,6 +279,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/survey': {
       id: '/survey'
       path: '/survey'
@@ -265,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/results'
       fullPath: '/results'
       preLoaderRoute: typeof ResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join': {
@@ -379,8 +419,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   JoinRoute: JoinRoute,
+  PrivacyRoute: PrivacyRoute,
   ResultsRoute: ResultsRoute,
   SurveyRoute: SurveyRoute,
+  TermsRoute: TermsRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,

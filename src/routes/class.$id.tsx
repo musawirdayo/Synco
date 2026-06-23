@@ -900,10 +900,12 @@ function ClassPage() {
           </section>
 
           {cls.is_published && cls.team_assignments && (
-            <section className="mb-12 rounded-xl border border-border bg-card p-5">
-              <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
+            <section className="mb-12">
+              <div className="flex items-end justify-between mb-5 flex-wrap gap-2">
                 <div>
-                  <h2 className="text-xl font-medium">Assigned teams</h2>
+                  <h2 className="font-display text-2xl font-semibold tracking-tight">
+                    Assigned Teams
+                  </h2>
                   <p className="text-sm text-muted mt-1">
                     Team size target {cls.team_assignments.team_size} ·{" "}
                     {cls.team_assignments.teams.length} team
@@ -918,13 +920,10 @@ function ClassPage() {
               {cls.team_assignments.teams.length ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {cls.team_assignments.teams.map((team, index) => (
-                    <div
-                      key={team.id}
-                      className="rounded-lg border border-border bg-background p-4"
-                    >
+                    <div key={team.id} className="rounded-2xl border border-border bg-card p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-medium">Team {index + 1}</h3>
+                          <h3 className="font-medium text-lg">Team {index + 1}</h3>
                           <p className="text-xs text-muted">
                             {team.members.length} member{team.members.length === 1 ? "" : "s"}
                           </p>
@@ -937,14 +936,13 @@ function ClassPage() {
                         {team.members.map((member) => (
                           <div
                             key={member.student_id}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2"
+                            className="rounded-lg border border-border/60 bg-background px-3 py-2"
                           >
                             <span className="text-sm font-medium truncate">{member.name}</span>
-                            <span className="text-xs text-muted truncate">{member.archetype}</span>
                           </div>
                         ))}
                       </div>
-                      <p className="mt-3 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted">
+                      <p className="mt-4 border-t border-border/60 pt-3 text-sm text-muted truncate">
                         {team.rationale}
                       </p>
                     </div>
