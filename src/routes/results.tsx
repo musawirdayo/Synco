@@ -13,6 +13,12 @@ import {
   getPendingJoinCode,
   setActiveClassId,
 } from "@/lib/class-flow";
+import {
+  studentIsUnmatched,
+  teamAssignmentForStudent,
+  type StudentTeamAssignment,
+  type TeamAssignmentSnapshot,
+} from "@/lib/team-assignments";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -383,6 +389,8 @@ function Results() {
     submitted?: number;
     expected?: number;
     name?: string;
+    assignedTeam?: StudentTeamAssignment | null;
+    assignmentSnapshot?: TeamAssignmentSnapshot | null;
   }>({ status: "loading" });
 
   const [activeTab, setActiveTab] = useState<"details" | "list">("details");
@@ -412,7 +420,7 @@ function Results() {
       setActiveClassId(cid);
       let { data: cls } = await supabase
         .from("classes")
-        .select("name,is_published,expected_count")
+        .select("name,is_published,expected_count,team_assignments")
         .eq("id", cid)
         .single();
       if (!cls) {
@@ -426,7 +434,7 @@ function Results() {
         setActiveClassId(cid);
         const { data } = await supabase
           .from("classes")
-          .select("name,is_published,expected_count")
+          .select("name,is_published,expected_count,team_assignments")
           .eq("id", cid)
           .single();
         cls = data;
@@ -465,6 +473,8 @@ function Results() {
         });
         return;
       }
+      const assignmentSnapshot = cls.team_assignments as TeamAssignmentSnapshot | null;
+      const assignedTeam = teamAssignmentForStudent(assignmentSnapshot, user.id);
       const { data: res } = await supabase
         .from("match_results")
         .select("result_data")
@@ -481,6 +491,8 @@ function Results() {
           submitted: count ?? 0,
           expected: cls.expected_count,
           name: prof?.full_name ?? "",
+          assignedTeam,
+          assignmentSnapshot,
         });
         return;
       }
@@ -491,6 +503,8 @@ function Results() {
         className: cls.name,
         published: true,
         name: prof?.full_name ?? "",
+        assignedTeam,
+        assignmentSnapshot,
       });
     })();
   }, [user, navigate, refreshKey]);
@@ -596,6 +610,10 @@ function Results() {
     ...(d.matches || []).map((m) => ({ ...m, isAvoid: false })),
     ...(d.avoid || []).map((a) => ({ ...a, isAvoid: true })),
   ];
+  const assignedTeam = state.assignedTeam ?? null;
+  const assignmentSnapshot = state.assignmentSnapshot ?? null;
+  const isUnmatchedFromTeams =
+    Boolean(user) && studentIsUnmatched(assignmentSnapshot, user?.id ?? "");
 
   async function sendFeedback(choice: string) {
     if (!state.classId || !user || feedbackBusy || !state.data) return;
@@ -651,6 +669,74 @@ function Results() {
             </div>
           )}
         </motion.section>
+
+        {assignmentSnapshot && (
+          <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+            <h2 className="text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-1">
+              <Users className="h-5 w-5 text-accent" />
+              Assigned Team
+            </h2>
+            {assignedTeam ? (
+              <>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Team {Number(assignedTeam.id.replace("team-", "")) || ""} ·{" "}
+                  {assignedTeam.members.length} member
+                  {assignedTeam.members.length === 1 ? "" : "s"} · {assignedTeam.average_score}%
+                  average compatibility
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 mb-5">
+                  {assignedTeam.members.map((member) => {
+                    const isSelf = member.student_id === user?.id;
+                    return (
+                      <div
+                        key={member.student_id}
+                        className="rounded-xl border border-border/60 bg-background/50 p-5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-base text-foreground">
+                              {isSelf ? "You" : member.name}
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {member.archetype}
+                            </div>
+                          </div>
+                          {isSelf && (
+                            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                              You
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {assignedTeam.teammates.length > 0 && (
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
+                    <span className="font-medium text-foreground">
+                      {assignedTeam.teammates.map((member) => member.name).join(", ")}
+                    </span>
+                  </p>
+                )}
+                <div className="rounded-xl border border-border/40 bg-background/40 p-5">
+                  <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-2">
+                    Team rationale
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {assignedTeam.rationale}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {isUnmatchedFromTeams
+                  ? "You were included in published results, but Synco could not place you into a team without breaking hard constraints or team size limits."
+                  : "Your class lead has not published a team assignment for you yet."}
+              </p>
+            )}
+          </section>
+        )}
 
         {/* Suggested team */}
         {readiness.suggestedGroup.length > 0 && (

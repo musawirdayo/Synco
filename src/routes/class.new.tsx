@@ -24,6 +24,7 @@ function NewClass() {
   const [name, setName] = useState("");
   const [institution, setInstitution] = useState("");
   const [expected, setExpected] = useState(20);
+  const [teamSize, setTeamSize] = useState(4);
   const [rosterLock, setRosterLock] = useState(false);
   const [rosterText, setRosterText] = useState("");
   const [identType, setIdentType] = useState<"roll" | "email" | "id">("roll");
@@ -56,6 +57,7 @@ function NewClass() {
           name,
           institution: institution || null,
           expected_count: expected,
+          team_size: teamSize,
           invite_code: code,
           roster_lock_enabled: rosterLock,
           identifier_type: identType,
@@ -163,6 +165,17 @@ function NewClass() {
                     required
                     value={expected}
                     onChange={(e) => setExpected(Number(e.target.value))}
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Team size">
+                  <input
+                    type="number"
+                    min={2}
+                    max={6}
+                    required
+                    value={teamSize}
+                    onChange={(e) => setTeamSize(Number(e.target.value))}
                     className={inputClass}
                   />
                 </Field>

@@ -35,6 +35,23 @@ export type MatchingPlan = {
   totalScore: number;
 };
 
+export type TeamMatchingPlan = {
+  algorithm: "greedy-clustering";
+  teamSize: number;
+  teams: Array<{
+    memberIds: string[];
+    averageScore: number;
+    pairScoreTotal: number;
+    pairs: MatchingPlan["pairs"];
+  }>;
+  unmatchedIds: string[];
+  totalScore: number;
+};
+
+export type TeamFormationPlan = MatchingPlan | TeamMatchingPlan;
+
+const ONE_SIDED_REQUEST_BONUS = 12;
+
 // Final match score = weighted sum of 5 sub-scores.
 // Weights reflect real-world team success factors:
 //   - Availability (30%): Can they actually meet? Blocks everything else.
@@ -637,11 +654,29 @@ function blockTargets(student: MatchStudent) {
 }
 
 function blockEntries(student: MatchStudent) {
-  const raw = text(student.answers, "doNotPairWith");
+  return textEntries(student, "doNotPairWith");
+}
+
+function requestEntries(student: MatchStudent) {
+  return textEntries(student, "wantToWorkWith");
+}
+
+function textEntries(student: MatchStudent, field: string) {
+  const raw = text(student.answers, field);
   return raw
     .split(/[,;\n]+/)
     .map(key)
     .filter((entry) => entry.length >= 2);
+}
+
+function matchesTarget(entries: string[], targets: string[]) {
+  return entries.some((entry) =>
+    targets.some((target) => target.includes(entry) || entry.includes(target)),
+  );
+}
+
+function requestedBy(requester: MatchStudent, target: MatchStudent) {
+  return matchesTarget(requestEntries(requester), blockTargets(target));
 }
 
 export function pairBlocked(a: MatchStudent, b: MatchStudent) {
@@ -649,14 +684,11 @@ export function pairBlocked(a: MatchStudent, b: MatchStudent) {
   const bBlocks = blockEntries(b);
   const aTargets = blockTargets(a);
   const bTargets = blockTargets(b);
-  return (
-    aBlocks.some((entry) =>
-      bTargets.some((target) => target.includes(entry) || entry.includes(target)),
-    ) ||
-    bBlocks.some((entry) =>
-      aTargets.some((target) => target.includes(entry) || entry.includes(target)),
-    )
-  );
+  return matchesTarget(aBlocks, bTargets) || matchesTarget(bBlocks, aTargets);
+}
+
+export function mutualRequest(a: MatchStudent, b: MatchStudent) {
+  return requestedBy(a, b) && requestedBy(b, a);
 }
 
 export function maximumWeightMatching(
@@ -667,8 +699,307 @@ export function maximumWeightMatching(
   return greedyMatching(students, blockedPairKeys);
 }
 
+export function formTeams(
+  students: MatchStudent[],
+  teamSize: number,
+  blockedPairKeys = new Set<string>(),
+): TeamFormationPlan {
+  if (teamSize === 2) return maximumWeightMatching(students, blockedPairKeys);
+
+  const targetTeamSize = Number.isFinite(teamSize) ? Math.max(3, Math.floor(teamSize)) : 3;
+  const unassigned = [...students];
+  const teamMembers = forcedRequestSubgroups(unassigned, targetTeamSize, blockedPairKeys);
+
+  for (const team of teamMembers) {
+    while (team.length < targetTeamSize) {
+      const next = bestFitStudentForTeam(unassigned, team, blockedPairKeys);
+      if (!next) break;
+      team.push(next.student);
+      removeStudent(unassigned, next.student.id);
+    }
+  }
+
+  while (unassigned.length >= targetTeamSize) {
+    const seed = bestSeedPair(unassigned, blockedPairKeys);
+    if (!seed) break;
+
+    const team = [seed.left, seed.right];
+    removeStudent(unassigned, seed.left.id);
+    removeStudent(unassigned, seed.right.id);
+
+    while (team.length < targetTeamSize) {
+      const next = bestFitStudentForTeam(unassigned, team, blockedPairKeys);
+      if (!next) break;
+      team.push(next.student);
+      removeStudent(unassigned, next.student.id);
+    }
+
+    teamMembers.push(team);
+  }
+
+  for (const student of [...unassigned]) {
+    const fit = bestFitExistingTeam(student, teamMembers, targetTeamSize, blockedPairKeys);
+    if (!fit) continue;
+    teamMembers[fit.teamIndex]?.push(student);
+    removeStudent(unassigned, student.id);
+  }
+
+  const teams = teamMembers.map((team) => summarizeTeam(team));
+
+  return {
+    algorithm: "greedy-clustering",
+    teamSize: targetTeamSize,
+    teams,
+    unmatchedIds: unassigned.map((student) => student.id),
+    totalScore: teams.reduce((sum, team) => sum + team.pairScoreTotal, 0),
+  };
+}
+
 function pairAllowed(a: MatchStudent, b: MatchStudent, blockedPairKeys: Set<string>) {
   return !blockedPairKeys.has(pairKey(a.id, b.id)) && !pairBlocked(a, b);
+}
+
+function oneSidedRequest(a: MatchStudent, b: MatchStudent) {
+  return requestedBy(a, b) !== requestedBy(b, a);
+}
+
+function buildPair(
+  a: MatchStudent,
+  b: MatchStudent,
+  blockedPairKeys: Set<string>,
+  requestBonus = false,
+): MatchingPlan["pairs"][number] | null {
+  if (!pairAllowed(a, b, blockedPairKeys)) return null;
+  const breakdown = matchBreakdown(a.answers, b.answers);
+  const score =
+    requestBonus && oneSidedRequest(a, b)
+      ? clampScore(breakdown.final + ONE_SIDED_REQUEST_BONUS)
+      : breakdown.final;
+  return {
+    aId: a.id,
+    bId: b.id,
+    score,
+    breakdown,
+  };
+}
+
+function betterPair(
+  candidate: MatchingPlan["pairs"][number],
+  current: MatchingPlan["pairs"][number] | null,
+) {
+  if (!current) return true;
+  if (candidate.score !== current.score) return candidate.score > current.score;
+  return pairKey(candidate.aId, candidate.bId) < pairKey(current.aId, current.bId);
+}
+
+function bestSeedPair(students: MatchStudent[], blockedPairKeys: Set<string>) {
+  let best: {
+    left: MatchStudent;
+    right: MatchStudent;
+    pair: MatchingPlan["pairs"][number];
+  } | null = null;
+
+  for (let i = 0; i < students.length; i += 1) {
+    for (let j = i + 1; j < students.length; j += 1) {
+      const left = students[i];
+      const right = students[j];
+      if (!left || !right) continue;
+      const pair = buildPair(left, right, blockedPairKeys, true);
+      if (!pair || !betterPair(pair, best?.pair ?? null)) continue;
+      best = { left, right, pair };
+    }
+  }
+
+  return best;
+}
+
+function averageFitForTeam(
+  student: MatchStudent,
+  team: MatchStudent[],
+  blockedPairKeys: Set<string>,
+) {
+  if (!team.length) return null;
+  let total = 0;
+
+  for (const teammate of team) {
+    const pair = buildPair(student, teammate, blockedPairKeys, true);
+    if (!pair) return null;
+    total += pair.score;
+  }
+
+  return total / team.length;
+}
+
+function bestFitStudentForTeam(
+  candidates: MatchStudent[],
+  team: MatchStudent[],
+  blockedPairKeys: Set<string>,
+) {
+  let best: { student: MatchStudent; averageScore: number } | null = null;
+
+  for (const student of candidates) {
+    const averageScore = averageFitForTeam(student, team, blockedPairKeys);
+    if (averageScore === null) continue;
+    if (
+      !best ||
+      averageScore > best.averageScore ||
+      (averageScore === best.averageScore && student.id < best.student.id)
+    ) {
+      best = { student, averageScore };
+    }
+  }
+
+  return best;
+}
+
+function forcedRequestSubgroups(
+  unassigned: MatchStudent[],
+  targetTeamSize: number,
+  blockedPairKeys: Set<string>,
+) {
+  const groups: MatchStudent[][] = [];
+
+  while (true) {
+    const seed = bestMutualSeedPair(unassigned, blockedPairKeys);
+    if (!seed) break;
+
+    const group = [seed.left, seed.right];
+    removeStudent(unassigned, seed.left.id);
+    removeStudent(unassigned, seed.right.id);
+
+    while (group.length < targetTeamSize) {
+      const next = bestMutualFitStudentForGroup(unassigned, group, blockedPairKeys);
+      if (!next) break;
+      group.push(next.student);
+      removeStudent(unassigned, next.student.id);
+    }
+
+    groups.push(group);
+  }
+
+  return groups;
+}
+
+function bestMutualSeedPair(students: MatchStudent[], blockedPairKeys: Set<string>) {
+  let best: {
+    left: MatchStudent;
+    right: MatchStudent;
+    pair: MatchingPlan["pairs"][number];
+  } | null = null;
+
+  for (let i = 0; i < students.length; i += 1) {
+    for (let j = i + 1; j < students.length; j += 1) {
+      const left = students[i];
+      const right = students[j];
+      if (!left || !right || !mutualRequest(left, right)) continue;
+      const pair = buildPair(left, right, blockedPairKeys);
+      if (!pair || !betterPair(pair, best?.pair ?? null)) continue;
+      best = { left, right, pair };
+    }
+  }
+
+  return best;
+}
+
+function bestMutualFitStudentForGroup(
+  candidates: MatchStudent[],
+  group: MatchStudent[],
+  blockedPairKeys: Set<string>,
+) {
+  let best: { student: MatchStudent; averageScore: number } | null = null;
+
+  for (const student of candidates) {
+    if (!group.some((member) => mutualRequest(student, member))) continue;
+    const averageScore = rawAverageFitForTeam(student, group, blockedPairKeys);
+    if (averageScore === null) continue;
+    if (
+      !best ||
+      averageScore > best.averageScore ||
+      (averageScore === best.averageScore && student.id < best.student.id)
+    ) {
+      best = { student, averageScore };
+    }
+  }
+
+  return best;
+}
+
+function rawAverageFitForTeam(
+  student: MatchStudent,
+  team: MatchStudent[],
+  blockedPairKeys: Set<string>,
+) {
+  if (!team.length) return null;
+  let total = 0;
+
+  for (const teammate of team) {
+    const pair = buildPair(student, teammate, blockedPairKeys);
+    if (!pair) return null;
+    total += pair.score;
+  }
+
+  return total / team.length;
+}
+
+function bestFitExistingTeam(
+  student: MatchStudent,
+  teams: MatchStudent[][],
+  targetTeamSize: number,
+  blockedPairKeys: Set<string>,
+) {
+  let best: { teamIndex: number; averageScore: number } | null = null;
+
+  for (let teamIndex = 0; teamIndex < teams.length; teamIndex += 1) {
+    const team = teams[teamIndex];
+    if (!team || team.length >= targetTeamSize + 1) continue;
+    if (team.length >= targetTeamSize && team.some((member) => mutualRequest(student, member))) {
+      continue;
+    }
+    const averageScore = averageFitForTeam(student, team, blockedPairKeys);
+    if (averageScore === null) continue;
+    if (
+      !best ||
+      averageScore > best.averageScore ||
+      (averageScore === best.averageScore && teamIndex < best.teamIndex)
+    ) {
+      best = { teamIndex, averageScore };
+    }
+  }
+
+  return best;
+}
+
+function removeStudent(students: MatchStudent[], id: string) {
+  const index = students.findIndex((student) => student.id === id);
+  if (index >= 0) students.splice(index, 1);
+}
+
+function summarizeTeam(team: MatchStudent[]): TeamMatchingPlan["teams"][number] {
+  const pairs: MatchingPlan["pairs"] = [];
+
+  for (let i = 0; i < team.length; i += 1) {
+    for (let j = i + 1; j < team.length; j += 1) {
+      const left = team[i];
+      const right = team[j];
+      if (!left || !right) continue;
+      const breakdown = matchBreakdown(left.answers, right.answers);
+      pairs.push({
+        aId: left.id,
+        bId: right.id,
+        score: breakdown.final,
+        breakdown,
+      });
+    }
+  }
+
+  const pairScoreTotal = pairs.reduce((sum, pair) => sum + pair.score, 0);
+
+  return {
+    memberIds: team.map((student) => student.id),
+    averageScore: pairs.length ? Math.round(pairScoreTotal / pairs.length) : 0,
+    pairScoreTotal,
+    pairs,
+  };
 }
 
 function exactMaximumWeightMatching(

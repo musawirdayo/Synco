@@ -10,7 +10,7 @@ import {
   getPendingJoinCode,
   setActiveClassId,
 } from "@/lib/class-flow";
-import { QUESTIONS } from "@/lib/questions";
+import { OPTIONAL_TEXT_SURVEY_FIELDS, QUESTIONS } from "@/lib/questions";
 import type { Answers, AnswerValue } from "@/lib/synco";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
@@ -500,19 +500,19 @@ function DetailStep({
         onChange={(option) => updateAnswer("genderPreference", option)}
       />
 
-      <div>
-        <FieldLabel htmlFor="doNotPairWith">Do not pair me with</FieldLabel>
-        <textarea
-          id="doNotPairWith"
-          value={answerString(answers, "doNotPairWith")}
-          onChange={(e) => updateAnswer("doNotPairWith", e.target.value)}
-          placeholder="Names or identifiers, separated by commas. Leave blank if none."
-          className="min-h-28 w-full resize-none rounded-lg border border-border bg-card px-3 py-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
-        />
-        <p className="mt-2 text-xs text-muted">
-          This is treated as a hard constraint before scores are calculated.
-        </p>
-      </div>
+      {OPTIONAL_TEXT_SURVEY_FIELDS.map((field) => (
+        <div key={field.id}>
+          <FieldLabel htmlFor={field.id}>{field.label}</FieldLabel>
+          <textarea
+            id={field.id}
+            value={answerString(answers, field.id)}
+            onChange={(e) => updateAnswer(field.id, e.target.value)}
+            placeholder={field.placeholder}
+            className="min-h-28 w-full resize-none rounded-lg border border-border bg-card px-3 py-3 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
+          />
+          <p className="mt-2 text-xs text-muted">{field.hint}</p>
+        </div>
+      ))}
     </div>
   );
 }

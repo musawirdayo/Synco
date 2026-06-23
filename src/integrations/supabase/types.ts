@@ -55,6 +55,8 @@ export type Database = {
           lead_id: string;
           name: string;
           roster_lock_enabled: boolean;
+          team_assignments: Json | null;
+          team_size: number;
         };
         Insert: {
           created_at?: string;
@@ -67,6 +69,8 @@ export type Database = {
           lead_id: string;
           name: string;
           roster_lock_enabled?: boolean;
+          team_assignments?: Json | null;
+          team_size?: number;
         };
         Update: {
           created_at?: string;
@@ -79,6 +83,8 @@ export type Database = {
           lead_id?: string;
           name?: string;
           roster_lock_enabled?: boolean;
+          team_assignments?: Json | null;
+          team_size?: number;
         };
         Relationships: [];
       };

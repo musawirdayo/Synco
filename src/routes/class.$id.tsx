@@ -21,8 +21,10 @@ import {
   confidence,
   matchBreakdown,
   pairBlocked,
+  formTeams,
   type Answers,
   type MatchBreakdown,
+  type MatchStudent,
 } from "@/lib/synco";
 import { copyText } from "@/lib/clipboard";
 import { normalizeStudentIdentifier } from "@/lib/class-flow";
@@ -36,6 +38,7 @@ import {
   slug,
   escapeHtml,
 } from "@/lib/class-helpers";
+import { buildTeamAssignmentSnapshot, type TeamAssignmentSnapshot } from "@/lib/team-assignments";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,18 +74,21 @@ type PublishedResultData = {
   generated_at?: string;
   submitted_count?: number;
 };
+type ClassRow = {
+  name: string;
+  expected_count: number;
+  invite_code: string;
+  is_published: boolean;
+  roster_lock_enabled: boolean;
+  team_size: number;
+  team_assignments: TeamAssignmentSnapshot | null;
+};
 
 function ClassPage() {
   const { id } = useParams({ from: "/class/$id" });
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [cls, setCls] = useState<{
-    name: string;
-    expected_count: number;
-    invite_code: string;
-    is_published: boolean;
-    roster_lock_enabled: boolean;
-  } | null>(null);
+  const [cls, setCls] = useState<ClassRow | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [responses, setResponses] = useState<Resp[]>([]);
   const [rosterEntries, setRosterEntries] = useState<RosterEntry[]>([]);
@@ -105,10 +111,12 @@ function ClassPage() {
   const load = useCallback(async () => {
     const { data: c } = await supabase
       .from("classes")
-      .select("name,expected_count,invite_code,is_published,roster_lock_enabled")
+      .select(
+        "name,expected_count,invite_code,is_published,roster_lock_enabled,team_size,team_assignments",
+      )
       .eq("id", id)
       .single();
-    if (c) setCls(c);
+    if (c) setCls(c as ClassRow);
     const { data: m } = await supabase
       .from("class_members")
       .select("student_id,display_name,identifier")
@@ -307,9 +315,33 @@ function ClassPage() {
         } as never,
       };
     });
+    const teamStudents: Array<
+      MatchStudent & { name: string; archetype: string; identifier: string | null }
+    > = completed.map((response) => {
+      const member = memberByStudent.get(response.student_id);
+      const name = member?.display_name ?? nameOf(response.student_id);
+      return {
+        id: response.student_id,
+        answers: response.answers,
+        name,
+        archetype: archetype(response.answers),
+        identifier: member?.identifier ?? null,
+      };
+    });
+    const teamPlan = formTeams(teamStudents, cls.team_size);
+    const teamAssignments = buildTeamAssignmentSnapshot({
+      plan: teamPlan,
+      students: teamStudents,
+      teamSize: cls.team_size,
+      version: nextVersion,
+      generatedAt,
+    });
     if (rows.length)
       await supabase.from("match_results").upsert(rows, { onConflict: "class_id,student_id" });
-    await supabase.from("classes").update({ is_published: true }).eq("id", id);
+    await supabase
+      .from("classes")
+      .update({ is_published: true, team_assignments: teamAssignments as never })
+      .eq("id", id);
     setBusy(false);
     setConfirming(false);
     load();
@@ -828,6 +860,86 @@ function ClassPage() {
               </div>
             )}
           </section>
+
+          {cls.is_published && cls.team_assignments && (
+            <section className="mb-12 rounded-xl border border-border bg-card p-5">
+              <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
+                <div>
+                  <h2 className="text-xl font-medium">Assigned teams</h2>
+                  <p className="text-sm text-muted mt-1">
+                    Team size target {cls.team_assignments.team_size} ·{" "}
+                    {cls.team_assignments.teams.length} team
+                    {cls.team_assignments.teams.length === 1 ? "" : "s"} assigned
+                  </p>
+                </div>
+                <span className="text-xs text-muted">
+                  Version {cls.team_assignments.results_version}
+                </span>
+              </div>
+
+              {cls.team_assignments.teams.length ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {cls.team_assignments.teams.map((team, index) => (
+                    <div
+                      key={team.id}
+                      className="rounded-lg border border-border bg-background p-4"
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-medium">Team {index + 1}</h3>
+                          <p className="text-xs text-muted">
+                            {team.members.length} member{team.members.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium">
+                          {team.average_score}% avg
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {team.members.map((member) => (
+                          <div
+                            key={member.student_id}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2"
+                          >
+                            <span className="text-sm font-medium truncate">{member.name}</span>
+                            <span className="text-xs text-muted truncate">{member.archetype}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-3 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted">
+                        {team.rationale}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-border bg-background p-4 text-sm text-muted">
+                  No complete teams could be assigned yet. Republish after more students submit or
+                  review hard pairing constraints.
+                </p>
+              )}
+
+              {cls.team_assignments.unmatched.length > 0 && (
+                <div className="mt-4 rounded-lg border border-accent/35 bg-[color:var(--color-accent-light)] p-4">
+                  <h3 className="text-sm font-medium">Unassigned students</h3>
+                  <p className="mt-1 text-xs text-muted">
+                    These students could not be placed without breaking hard constraints or team
+                    size limits.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {cls.team_assignments.unmatched.map((member) => (
+                      <span
+                        key={member.student_id}
+                        className="rounded-full border border-border bg-card px-3 py-1 text-xs"
+                      >
+                        {member.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {cls.is_published &&
             (() => {

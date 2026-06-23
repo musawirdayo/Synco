@@ -10,6 +10,8 @@ import {
   pairInsight,
   pairFrictionInsight,
   maximumWeightMatching,
+  formTeams,
+  mutualRequest,
   pairBlocked,
   pairKey,
   MATCH_WEIGHTS,
@@ -170,6 +172,33 @@ function studentMinimal(): Answers {
 /** Empty answers */
 function studentEmpty(): Answers {
   return {};
+}
+
+function teamStudent(id: string, topic: string): MatchStudent {
+  return {
+    id,
+    answers: {
+      ...studentMinimal(),
+      availability: [`${topic} lab`],
+      topics: [topic],
+      strengths: [topic],
+      weakAreas: [],
+      studyStyle: "Quiet co-working",
+      seriousness: 4,
+      targetGrade: "A range",
+      communicationPreference: "WhatsApp/text",
+      meetingMode: "Hybrid",
+      preferredLanguage: "English",
+      energyStyle: "Ambivert",
+      accountabilityPreference: "Regular check-ins",
+    },
+  };
+}
+
+function expectTeamPlan(plan: ReturnType<typeof formTeams>) {
+  expect(plan.algorithm).toBe("greedy-clustering");
+  if (plan.algorithm !== "greedy-clustering") throw new Error("Expected a team plan");
+  return plan;
 }
 
 // ─── matchBreakdown tests ───
@@ -636,6 +665,160 @@ describe("maximumWeightMatching", () => {
     const plan = maximumWeightMatching([{ id: "a", answers: studentA() }]);
     expect(plan.pairs).toHaveLength(0);
     expect(plan.unmatchedIds).toHaveLength(1);
+  });
+});
+
+// ─── formTeams tests ───
+
+describe("formTeams", () => {
+  it("groups a mutual request pair before greedy filling", () => {
+    const aliceBase = teamStudent("a", "calculus");
+    const bobBase = teamStudent("b", "design");
+    const students: MatchStudent[] = [
+      {
+        ...aliceBase,
+        name: "Alice",
+        answers: { ...aliceBase.answers, wantToWorkWith: "Bob" },
+      },
+      {
+        ...bobBase,
+        name: "Bob",
+        answers: { ...bobBase.answers, wantToWorkWith: "Alice" },
+      },
+      { ...teamStudent("c", "calculus"), name: "Cara" },
+      { ...teamStudent("d", "design"), name: "Dana" },
+    ];
+
+    expect(mutualRequest(students[0], students[1])).toBe(true);
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(
+      plan.teams.some((team) => team.memberIds.includes("a") && team.memberIds.includes("b")),
+    ).toBe(true);
+  });
+
+  it("does not force a one-sided request into the same team", () => {
+    const students: MatchStudent[] = [
+      {
+        id: "a",
+        name: "Alice",
+        answers: { ...studentA(), wantToWorkWith: "Bob" },
+      },
+      { id: "b", name: "Bob", answers: studentC() },
+      { id: "c", name: "Cara", answers: studentB() },
+      { id: "d", name: "Dana", answers: studentA() },
+      { id: "e", name: "Eli", answers: studentC() },
+      { id: "f", name: "Finn", answers: { ...studentC(), q1: 5 } },
+    ];
+
+    expect(mutualRequest(students[0], students[1])).toBe(false);
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(
+      plan.teams.some((team) => team.memberIds.includes("a") && team.memberIds.includes("b")),
+    ).toBe(false);
+  });
+
+  it("caps a mutual request chain longer than team size", () => {
+    const aliceBase = teamStudent("a", "calculus");
+    const bobBase = teamStudent("b", "calculus");
+    const caraBase = teamStudent("c", "calculus");
+    const danaBase = teamStudent("d", "calculus");
+    const students: MatchStudent[] = [
+      {
+        ...aliceBase,
+        name: "Alice",
+        answers: { ...aliceBase.answers, wantToWorkWith: "Bob" },
+      },
+      {
+        ...bobBase,
+        name: "Bob",
+        answers: { ...bobBase.answers, wantToWorkWith: "Alice, Cara" },
+      },
+      {
+        ...caraBase,
+        name: "Cara",
+        answers: { ...caraBase.answers, wantToWorkWith: "Bob, Dana" },
+      },
+      {
+        ...danaBase,
+        name: "Dana",
+        answers: { ...danaBase.answers, wantToWorkWith: "Cara" },
+      },
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(plan.teams.every((team) => team.memberIds.length <= 3)).toBe(true);
+    expect(plan.teams.flatMap((team) => team.memberIds)).toHaveLength(3);
+    expect(plan.unmatchedIds).toHaveLength(1);
+  });
+
+  it("forms even teams when students divide evenly", () => {
+    const students: MatchStudent[] = [
+      teamStudent("a", "calculus"),
+      teamStudent("b", "calculus"),
+      teamStudent("c", "calculus"),
+      teamStudent("d", "design"),
+      teamStudent("e", "design"),
+      teamStudent("f", "design"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(plan.teams).toHaveLength(2);
+    expect(plan.teams.every((team) => team.memberIds.length === 3)).toBe(true);
+    expect(plan.unmatchedIds).toHaveLength(0);
+    expect(plan.teams.flatMap((team) => team.memberIds).sort()).toEqual(
+      students.map((student) => student.id).sort(),
+    );
+  });
+
+  it("places an uneven remainder into the best-fitting existing team", () => {
+    const students: MatchStudent[] = [
+      teamStudent("a", "calculus"),
+      teamStudent("b", "calculus"),
+      teamStudent("c", "calculus"),
+      teamStudent("d", "design"),
+      teamStudent("e", "design"),
+      teamStudent("f", "design"),
+      teamStudent("g", "calculus"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(plan.teams).toHaveLength(2);
+    expect(plan.teams.map((team) => team.memberIds.length).sort((a, b) => a - b)).toEqual([3, 4]);
+    expect(plan.teams.every((team) => team.memberIds.length <= 4)).toBe(true);
+    expect(plan.unmatchedIds).toHaveLength(0);
+    expect(plan.teams.flatMap((team) => team.memberIds).sort()).toEqual(
+      students.map((student) => student.id).sort(),
+    );
+  });
+
+  it("never places a blocked pair in the same team", () => {
+    const students: MatchStudent[] = [
+      {
+        ...teamStudent("a", "calculus"),
+        name: "Alice",
+        answers: { ...teamStudent("a", "calculus").answers, doNotPairWith: "Bob" },
+      },
+      { ...teamStudent("b", "calculus"), name: "Bob" },
+      { ...teamStudent("c", "calculus"), name: "Cara" },
+      { ...teamStudent("d", "calculus"), name: "Dana" },
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    for (const team of plan.teams) {
+      expect(team.memberIds.includes("a") && team.memberIds.includes("b")).toBe(false);
+    }
+  });
+
+  it("delegates teamSize 2 to maximumWeightMatching", () => {
+    const students: MatchStudent[] = [
+      { id: "a", answers: studentA() },
+      { id: "b", answers: studentB() },
+      { id: "c", answers: studentC() },
+      { id: "d", answers: studentMinimal() },
+    ];
+    const blocked = new Set([pairKey("a", "b")]);
+
+    expect(formTeams(students, 2, blocked)).toEqual(maximumWeightMatching(students, blocked));
   });
 });
 

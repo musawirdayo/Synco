@@ -6,6 +6,28 @@ export type SurveyQuestion = {
   high: string;
 };
 
+export type OptionalTextSurveyField = {
+  id: "wantToWorkWith" | "doNotPairWith";
+  label: string;
+  placeholder: string;
+  hint: string;
+};
+
+export const OPTIONAL_TEXT_SURVEY_FIELDS: OptionalTextSurveyField[] = [
+  {
+    id: "wantToWorkWith",
+    label: "Would like to work with (optional)",
+    placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
+    hint: "Mutual requests are prioritized when teams are formed.",
+  },
+  {
+    id: "doNotPairWith",
+    label: "Do not pair me with",
+    placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
+    hint: "This is treated as a hard constraint before scores are calculated.",
+  },
+];
+
 export const QUESTIONS: SurveyQuestion[] = [
   {
     id: "q1",
