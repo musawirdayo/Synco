@@ -13,14 +13,8 @@ import {
   Lightbulb,
   TrendingUp,
   Settings,
+  ChevronDown,
 } from "lucide-react";
-
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -79,6 +73,33 @@ const strengths = [
     icon: BarChart3,
     title: "Data-driven matching",
     text: "Algorithm weights availability (30%), academic goals (25%), strengths (20%), work style (15%), and personal goals (10%) for optimal teams.",
+  },
+];
+
+const faqs = [
+  {
+    id: "privacy",
+    question: "How is student privacy maintained?",
+    answer:
+      "Students' raw survey answers stay private. Classmates see their own compatibility percentages plus specific match reasoning, such as why a pairing works and what to discuss first, without exposing another student's raw answers.",
+  },
+  {
+    id: "roster",
+    question: "Can I import my existing class roster?",
+    answer:
+      "Yes! When creating a class, you can enable roster lock and paste your students' roll numbers, emails, or student IDs. Students must match these identifiers to join, preventing unlisted users or duplicates.",
+  },
+  {
+    id: "algorithm",
+    question: "How does the matching algorithm work?",
+    answer:
+      "We compute a mutual work-style score using a balanced set of weighted criteria: 30% availability, 25% academic focus, 20% complementary strengths, 15% study style, and 10% goals. For cohorts up to 20 students, an exact bitmask solver finds the absolute optimal non-conflicting match plan. Larger cohorts use a highly optimized greedy matcher.",
+  },
+  {
+    id: "odd",
+    question: "What if the number of students in my class is odd?",
+    answer:
+      "Synco automatically places students into the best-fitting team it can. If the class size does not divide evenly by the chosen team size, remaining students are assigned into compatible existing teams when the pairing rules allow it, without manual placement by the instructor.",
   },
 ];
 
@@ -289,51 +310,7 @@ function Landing() {
               Everything you need to know about Synco.
             </p>
           </div>
-          <Accordion type="single" collapsible className="w-full space-y-3">
-            <AccordionItem value="item-1" className="border border-border bg-card rounded-xl px-5">
-              <AccordionTrigger className="font-medium text-base hover:no-underline py-4">
-                How is student privacy maintained?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted leading-relaxed pb-4">
-                Students' raw survey answers stay private. Classmates see their own compatibility
-                percentages plus specific match reasoning, such as why a pairing works and what to
-                discuss first, without exposing another student's raw answers.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2" className="border border-border bg-card rounded-xl px-5">
-              <AccordionTrigger className="font-medium text-base hover:no-underline py-4">
-                Can I import my existing class roster?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted leading-relaxed pb-4">
-                Yes! When creating a class, you can enable roster lock and paste your students' roll
-                numbers, emails, or student IDs. Students must match these identifiers to join,
-                preventing unlisted users or duplicates.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3" className="border border-border bg-card rounded-xl px-5">
-              <AccordionTrigger className="font-medium text-base hover:no-underline py-4">
-                How does the matching algorithm work?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted leading-relaxed pb-4">
-                We compute a mutual work-style score using a balanced set of weighted criteria: 30%
-                availability, 25% academic focus, 20% complementary strengths, 15% study style, and
-                10% goals. For cohorts up to 20 students, an exact bitmask solver finds the absolute
-                optimal non-conflicting match plan. Larger cohorts use a highly optimized greedy
-                matcher.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-4" className="border border-border bg-card rounded-xl px-5">
-              <AccordionTrigger className="font-medium text-base hover:no-underline py-4">
-                What if the number of students in my class is odd?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted leading-relaxed pb-4">
-                Synco automatically places students into the best-fitting team it can. If the class
-                size does not divide evenly by the chosen team size, remaining students are assigned
-                into compatible existing teams when the pairing rules allow it, without manual
-                placement by the instructor.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <LandingFaq />
         </section>
 
         {/* CTA BOTTOM SECTION */}
@@ -369,6 +346,43 @@ function Landing() {
       </main>
 
       <LandingFooter />
+    </div>
+  );
+}
+
+function LandingFaq() {
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
+
+  return (
+    <div className="w-full space-y-3">
+      {faqs.map((faq) => {
+        const isOpen = openFaq === faq.id;
+
+        return (
+          <div key={faq.id} className="rounded-xl border border-border bg-card px-5">
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={`faq-panel-${faq.id}`}
+              onClick={() => setOpenFaq(isOpen ? null : faq.id)}
+              className="flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left text-base font-medium transition-colors hover:text-primary"
+            >
+              <span>{faq.question}</span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                  isOpen ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+            {isOpen && (
+              <div id={`faq-panel-${faq.id}`} className="pb-4 text-sm leading-relaxed text-muted">
+                {faq.answer}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
