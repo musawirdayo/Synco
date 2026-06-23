@@ -22,6 +22,7 @@ import { Route as ClassNewRouteImport } from './routes/class.new'
 import { Route as ClassIdRouteImport } from './routes/class.$id'
 import { Route as CIdRouteImport } from './routes/c.$id'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as CIdRosterRouteImport } from './routes/c.$id_.roster'
@@ -91,6 +92,11 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/survey': typeof SurveyRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
   '/c/$id': typeof CIdRoute
   '/class/$id': typeof ClassIdRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/survey': typeof SurveyRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
   '/c/$id': typeof CIdRoute
   '/class/$id': typeof ClassIdRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/survey': typeof SurveyRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
   '/c/$id': typeof CIdRoute
   '/class/$id': typeof ClassIdRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/survey'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/reset-password'
     | '/auth/signup'
     | '/c/$id'
     | '/class/$id'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/survey'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/reset-password'
     | '/auth/signup'
     | '/c/$id'
     | '/class/$id'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/survey'
     | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/reset-password'
     | '/auth/signup'
     | '/c/$id'
     | '/class/$id'
@@ -227,6 +239,7 @@ export interface RootRouteChildren {
   SurveyRoute: typeof SurveyRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSignupRoute: typeof AuthSignupRoute
   CIdRoute: typeof CIdRoute
   ClassIdRoute: typeof ClassIdRoute
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -363,6 +383,7 @@ const rootRouteChildren: RootRouteChildren = {
   SurveyRoute: SurveyRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSignupRoute: AuthSignupRoute,
   CIdRoute: CIdRoute,
   ClassIdRoute: ClassIdRoute,
