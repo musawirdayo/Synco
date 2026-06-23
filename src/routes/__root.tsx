@@ -48,11 +48,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
 
-        <div className="text-left bg-destructive/5 border border-destructive/20 rounded-lg p-4 font-mono text-xs overflow-auto max-h-72 max-w-xl mx-auto space-y-2">
-          <p className="font-semibold text-destructive">{error.message || String(error)}</p>
-          {error.stack && (
-            <pre className="text-muted-foreground whitespace-pre-wrap">{error.stack}</pre>
-          )}
+        <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+          We could not show this page safely. Please try again in a moment.
         </div>
 
         <div className="mt-6 flex flex-wrap justify-center gap-2">
