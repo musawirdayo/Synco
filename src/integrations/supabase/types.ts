@@ -247,6 +247,10 @@ export type Database = {
         Args: { _lead_id: string };
         Returns: string;
       };
+      submit_match_feedback: {
+        Args: { class_id: string; choice: string };
+        Returns: Json;
+      };
     };
     Enums: {
       app_role: "lead" | "student";

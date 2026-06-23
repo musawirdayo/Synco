@@ -381,6 +381,7 @@ function Results() {
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
   const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [state, setState] = useState<{
     status: "loading" | "waiting" | "ready";
     classId?: string;
@@ -620,14 +621,23 @@ function Results() {
   async function sendFeedback(choice: string) {
     if (!state.classId || !user || feedbackBusy || !state.data) return;
     setFeedbackBusy(true);
-    const nextData: ResultData = { ...state.data, feedback_after_week: choice };
-    await supabase
-      .from("match_results")
-      .update({ result_data: nextData as never })
-      .eq("class_id", state.classId)
-      .eq("student_id", user.id);
-    setState((current) => (current.status === "ready" ? { ...current, data: nextData } : current));
-    setFeedbackBusy(false);
+    setFeedbackError(null);
+    try {
+      const { data, error } = await supabase.rpc("submit_match_feedback", {
+        class_id: state.classId,
+        choice,
+      });
+      if (error) throw error;
+      const nextData = (data ?? { ...state.data, feedback_after_week: choice }) as ResultData;
+      setState((current) =>
+        current.status === "ready" ? { ...current, data: nextData } : current,
+      );
+    } catch (err) {
+      console.error("Failed to save match feedback:", err);
+      setFeedbackError("Feedback could not be saved. Please try again.");
+    } finally {
+      setFeedbackBusy(false);
+    }
   }
 
   return (
@@ -1136,6 +1146,7 @@ function Results() {
               Saved: {d.feedback_after_week}. This helps the lead decide on rematch adjustments.
             </p>
           )}
+          {feedbackError && <p className="mt-3 text-xs text-destructive">{feedbackError}</p>}
         </section>
       </main>
     </div>
