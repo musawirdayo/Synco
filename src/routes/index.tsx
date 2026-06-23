@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { animate, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -84,30 +84,25 @@ const strengths = [
 
 function Landing() {
   const prefersReducedMotion = useReducedMotion();
+  const reduceMotion = prefersReducedMotion === true;
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Sleek background dynamic blur glows */}
       <motion.div
-        animate={
-          prefersReducedMotion ? undefined : { opacity: [0.9, 1, 0.9], scale: [0.98, 1.03, 0.98] }
-        }
+        animate={reduceMotion ? undefined : { opacity: [0.9, 1, 0.9], scale: [0.98, 1.03, 0.98] }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(ellipse_at_top,_oklch(0.96_0.05_90/0.45)_0%,_transparent_65%)] pointer-events-none z-0"
       />
       <motion.div
         animate={
-          prefersReducedMotion
-            ? undefined
-            : { opacity: [0.85, 0.95, 0.85], scale: [0.96, 1.04, 0.96] }
+          reduceMotion ? undefined : { opacity: [0.85, 0.95, 0.85], scale: [0.96, 1.04, 0.96] }
         }
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-[20%] left-[10%] w-[380px] h-[380px] rounded-full bg-accent/3 blur-[120px] pointer-events-none z-0"
       />
       <motion.div
-        animate={
-          prefersReducedMotion ? undefined : { opacity: [0.88, 1, 0.88], scale: [1.02, 0.96, 1.02] }
-        }
+        animate={reduceMotion ? undefined : { opacity: [0.88, 1, 0.88], scale: [1.02, 0.96, 1.02] }}
         transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-[40%] right-[10%] w-[420px] h-[420px] rounded-full bg-primary/4 blur-[130px] pointer-events-none z-0"
       />
@@ -423,51 +418,95 @@ function LandingHeader() {
 
 function MockMatchCard() {
   const prefersReducedMotion = useReducedMotion();
-  const [started, setStarted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [factorCount, setFactorCount] = useState(0);
+  const reduceMotion = prefersReducedMotion === true;
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [score, setScore] = useState(92);
+  const [factorCount, setFactorCount] = useState(5);
+  const [revealed, setRevealed] = useState(true);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
+    if (reduceMotion) {
       setScore(92);
       setFactorCount(5);
+      setRevealed(true);
       return;
     }
-    if (!started || hasAnimated.current) return;
 
-    hasAnimated.current = true;
-    const scoreControls = animate(0, 92, {
-      duration: 1.15,
-      ease: motionEase,
-      onUpdate: (latest) => setScore(Math.round(latest)),
-    });
-    const factorControls = animate(0, 5, {
-      duration: 0.9,
-      delay: 0.25,
-      ease: motionEase,
-      onUpdate: (latest) => setFactorCount(Math.round(latest)),
-    });
+    const card = cardRef.current;
+    if (!card || hasAnimated.current) return;
+
+    let frame = 0;
+    let revealTimer = 0;
+
+    const runSequence = () => {
+      if (hasAnimated.current) return;
+      hasAnimated.current = true;
+      setScore(0);
+      setFactorCount(0);
+      setRevealed(false);
+
+      const duration = 1150;
+      const factorDuration = 900;
+      const start = performance.now();
+
+      const tick = (now: number) => {
+        const elapsed = now - start;
+        const scoreProgress = Math.min(elapsed / duration, 1);
+        const factorProgress = Math.min(elapsed / factorDuration, 1);
+        const easedScore = 1 - Math.pow(1 - scoreProgress, 3);
+        const easedFactor = 1 - Math.pow(1 - factorProgress, 3);
+
+        setScore(Math.round(easedScore * 92));
+        setFactorCount(Math.round(easedFactor * 5));
+
+        if (scoreProgress < 1) {
+          frame = window.requestAnimationFrame(tick);
+        } else {
+          setScore(92);
+          setFactorCount(5);
+        }
+      };
+
+      frame = window.requestAnimationFrame(tick);
+      revealTimer = window.setTimeout(() => setRevealed(true), 600);
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      runSequence();
+      return () => {
+        window.cancelAnimationFrame(frame);
+        window.clearTimeout(revealTimer);
+      };
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          runSequence();
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "-80px", threshold: 0.25 },
+    );
+
+    observer.observe(card);
 
     return () => {
-      scoreControls.stop();
-      factorControls.stop();
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(revealTimer);
     };
-  }, [prefersReducedMotion, started]);
+  }, [reduceMotion]);
 
-  const visible = Boolean(prefersReducedMotion || started);
-  const displayScore = prefersReducedMotion ? 92 : score;
-  const displayFactorCount = prefersReducedMotion ? 5 : factorCount;
-  const initialState = prefersReducedMotion ? false : "hide";
-  const animateState = visible ? "show" : "hide";
+  const displayScore = reduceMotion ? 92 : score;
+  const displayFactorCount = reduceMotion ? 5 : factorCount;
+  const revealState = revealed || reduceMotion ? "show" : "hide";
 
   return (
     <motion.div
-      initial={prefersReducedMotion ? false : "hide"}
-      whileInView="show"
-      viewport={sectionViewport}
-      variants={fadeUp}
-      onViewportEnter={() => setStarted(true)}
+      ref={cardRef}
+      initial={false}
       className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl p-8 relative z-10 max-w-lg mx-auto w-full hover:shadow-3xl transition-shadow"
     >
       <div className="flex items-center justify-between border-b border-border pb-6 mb-6">
@@ -493,9 +532,9 @@ function MockMatchCard() {
 
       <div className="space-y-5">
         <motion.div
-          initial={initialState}
-          animate={animateState}
-          custom={0.95}
+          initial={false}
+          animate={revealState}
+          custom={0.2}
           variants={cardPieceReveal}
           className="bg-primary/5 rounded-lg p-4 border border-primary/10"
         >
@@ -513,9 +552,9 @@ function MockMatchCard() {
 
         <div className="grid grid-cols-2 gap-3">
           <motion.div
-            initial={initialState}
-            animate={animateState}
-            custom={1.25}
+            initial={false}
+            animate={revealState}
+            custom={0.45}
             variants={cardPieceReveal}
             className="border border-border/60 rounded-lg p-3 bg-muted/30"
           >
@@ -526,9 +565,9 @@ function MockMatchCard() {
             <span className="block text-[10px] text-muted-foreground mt-0.5">Mon, Wed, Fri</span>
           </motion.div>
           <motion.div
-            initial={initialState}
-            animate={animateState}
-            custom={1.4}
+            initial={false}
+            animate={revealState}
+            custom={0.6}
             variants={cardPieceReveal}
             className="border border-border/60 rounded-lg p-3 bg-muted/30"
           >
@@ -541,9 +580,9 @@ function MockMatchCard() {
         </div>
 
         <motion.div
-          initial={initialState}
-          animate={animateState}
-          custom={1.7}
+          initial={false}
+          animate={revealState}
+          custom={0.85}
           variants={cardPieceReveal}
           className="bg-accent/5 rounded-lg p-4 border border-accent/10"
         >
@@ -552,9 +591,9 @@ function MockMatchCard() {
           </h4>
           <ul className="text-xs text-foreground space-y-2">
             <motion.li
-              initial={initialState}
-              animate={animateState}
-              custom={1.85}
+              initial={false}
+              animate={revealState}
+              custom={1}
               variants={cardPieceReveal}
               className="flex items-center gap-2"
             >
@@ -562,9 +601,9 @@ function MockMatchCard() {
               <span>Confirm preferred communication channel</span>
             </motion.li>
             <motion.li
-              initial={initialState}
-              animate={animateState}
-              custom={1.98}
+              initial={false}
+              animate={revealState}
+              custom={1.13}
               variants={cardPieceReveal}
               className="flex items-center gap-2"
             >
@@ -572,9 +611,9 @@ function MockMatchCard() {
               <span>Set meeting frequency before task allocation</span>
             </motion.li>
             <motion.li
-              initial={initialState}
-              animate={animateState}
-              custom={2.11}
+              initial={false}
+              animate={revealState}
+              custom={1.26}
               variants={cardPieceReveal}
               className="flex items-center gap-2"
             >
