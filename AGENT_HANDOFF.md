@@ -38,8 +38,8 @@ These passed after the feature work:
 
 GitHub Actions note:
 
-- Commit `6fe3096` deployed successfully on Vercel, but GitHub CI failed in `npm test` on Ubuntu because the lockfile lacked the Linux native `lightningcss` package entry.
-- Follow-up package metadata adds `lightningcss-linux-x64-gnu` as an optional dependency so Ubuntu CI can install it.
+- Commit `6fe3096` deployed successfully on Vercel, but GitHub CI failed in `npm test` on Ubuntu because the lockfile lacked Linux native package entries.
+- Follow-up package metadata adds `lightningcss-linux-x64-gnu` and `@tailwindcss/oxide-linux-x64-gnu` as optional dependencies so Ubuntu CI can install them.
 
 Manual end-to-end verification in `npm run dev` is still TODO unless a later log entry says otherwise.
 
