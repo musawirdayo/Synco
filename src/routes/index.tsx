@@ -13,7 +13,6 @@ import {
   Lightbulb,
   TrendingUp,
   Settings,
-  ChevronDown,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: Landing });
@@ -351,38 +350,22 @@ function Landing() {
 }
 
 function LandingFaq() {
-  const [openFaq, setOpenFaq] = useState<string | null>(null);
-
   return (
     <div className="w-full space-y-3">
-      {faqs.map((faq) => {
-        const isOpen = openFaq === faq.id;
-
-        return (
-          <div key={faq.id} className="rounded-xl border border-border bg-card px-5">
-            <button
-              type="button"
-              aria-expanded={isOpen}
-              aria-controls={`faq-panel-${faq.id}`}
-              onClick={() => setOpenFaq(isOpen ? null : faq.id)}
-              className="flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left text-base font-medium transition-colors hover:text-primary"
+      {faqs.map((faq) => (
+        <details key={faq.id} className="group rounded-xl border border-border bg-card px-5">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-base font-medium transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
+            <span>{faq.question}</span>
+            <span
+              className="text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+              aria-hidden="true"
             >
-              <span>{faq.question}</span>
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                  isOpen ? "rotate-180" : ""
-                }`}
-                aria-hidden="true"
-              />
-            </button>
-            {isOpen && (
-              <div id={`faq-panel-${faq.id}`} className="pb-4 text-sm leading-relaxed text-muted">
-                {faq.answer}
-              </div>
-            )}
-          </div>
-        );
-      })}
+              v
+            </span>
+          </summary>
+          <div className="pb-4 text-sm leading-relaxed text-muted">{faq.answer}</div>
+        </details>
+      ))}
     </div>
   );
 }
