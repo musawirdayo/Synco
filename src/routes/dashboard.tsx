@@ -95,10 +95,7 @@ function Dashboard() {
       window.location.reload();
     } catch (err) {
       console.error("Failed to create demo class:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      alert(
-        `Failed to create demo class.\n\nError: ${msg}\n\nMake sure to apply the setup_demo_class SQL migration on your Supabase dashboard first!`,
-      );
+      alert(demoClassErrorMessage(err));
     }
   }
 
@@ -234,4 +231,12 @@ function Dashboard() {
       </main>
     </div>
   );
+}
+
+function demoClassErrorMessage(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("setup_demo_class_forbidden")) {
+    return "Demo class could not be created because your session is not allowed to create demo data for this account. Sign in again and retry.";
+  }
+  return "Demo class could not be created. Check that your Supabase migrations are applied, then try again.";
 }
