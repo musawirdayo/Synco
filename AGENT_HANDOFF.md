@@ -36,6 +36,11 @@ These passed after the feature work:
 - `npm exec --yes supabase -- migration list --linked` shows every local migration version matched on remote.
 - `npm exec --yes supabase -- db push --linked --dry-run` reports `Remote database is up to date.`
 
+GitHub Actions note:
+
+- Commit `6fe3096` deployed successfully on Vercel, but GitHub CI failed in `npm test` on Ubuntu because the lockfile lacked the Linux native `lightningcss` package entry.
+- Follow-up package metadata adds `lightningcss-linux-x64-gnu` as an optional dependency so Ubuntu CI can install it.
+
 Manual end-to-end verification in `npm run dev` is still TODO unless a later log entry says otherwise.
 
 ## Supabase Migration Situation
