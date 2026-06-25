@@ -40,7 +40,7 @@ function Signup() {
         AUTH_TIMEOUT_MESSAGE,
       );
       if (error) {
-        setErrors({ form: error.message });
+        setErrors({ form: signupErrorMessage(error) });
         return;
       }
       const pendingCode = getPendingJoinCode();
@@ -63,10 +63,7 @@ function Signup() {
     } catch (err) {
       console.error("Signup failed:", err);
       setErrors({
-        form:
-          err instanceof Error
-            ? err.message
-            : "We couldn't reach Synco's auth service. Check your connection and try again.",
+        form: signupErrorMessage(err),
       });
     } finally {
       setLoading(false);
@@ -132,4 +129,28 @@ function Signup() {
       </form>
     </AuthShell>
   );
+}
+
+function signupErrorMessage(err: unknown) {
+  const raw =
+    err && typeof err === "object" && "message" in err && typeof err.message === "string"
+      ? err.message
+      : String(err ?? "");
+  const message = raw.toLowerCase();
+
+  if (raw === AUTH_TIMEOUT_MESSAGE) return raw;
+  if (message.includes("already registered") || message.includes("already been registered")) {
+    return "An account already exists for this email. Sign in instead.";
+  }
+  if (message.includes("invalid email")) {
+    return "Use a valid email address.";
+  }
+  if (message.includes("password")) {
+    return "Use a stronger password with at least 8 characters.";
+  }
+  if (message.includes("signup") && message.includes("disabled")) {
+    return "New signups are currently disabled. Try again later.";
+  }
+
+  return "We couldn't create your account. Check your details and try again.";
 }

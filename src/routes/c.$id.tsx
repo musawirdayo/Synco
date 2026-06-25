@@ -144,7 +144,7 @@ function ClassHub() {
                     to="/survey/guide"
                     icon={<ClipboardList className="h-5 w-5" />}
                     title="Take the survey to unlock your profile"
-                    desc="A few focused minutes. Until you submit, your matches and friction pairings stay locked."
+                    desc="A focused set of questions. Until you submit, your matches and friction pairings stay locked."
                     primary
                   />
                   <HubCard

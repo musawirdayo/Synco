@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Copy, AlertTriangle } from "lucide-react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Field, PrimaryButton, inputClass } from "@/components/auth-shell";
@@ -11,6 +12,22 @@ import { normalizeStudentIdentifier } from "@/lib/class-flow";
 export const Route = createFileRoute("/class/new")({ component: NewClass });
 
 const TEAM_SIZE_OPTIONS = [2, 3, 4, 5, 6] as const;
+const MAX_INVITE_CODE_ATTEMPTS = 6;
+const classBasicsSchema = z.object({
+  name: z.string().trim().min(2, "Class name needs at least 2 characters."),
+  institution: z.string().trim().max(120, "Institution or course is too long."),
+  expected: z
+    .number({ invalid_type_error: "Expected students must be a number." })
+    .int("Expected students must be a whole number.")
+    .min(2, "Add at least 2 expected students.")
+    .max(500, "Keep expected students at 500 or fewer."),
+  teamSize: z
+    .number()
+    .int()
+    .refine((value) => TEAM_SIZE_OPTIONS.some((size) => size === value), {
+      message: "Pick a team size from 2 to 6.",
+    }),
+});
 
 type ClassBasics = {
   name: string;
@@ -60,45 +77,54 @@ function NewClass() {
     setBusy(true);
     setError(null);
     try {
-      const code = genCode();
-      const { data, error: createError } = await supabase
-        .from("classes")
-        .insert({
-          lead_id: user.id,
-          name: classBasics.name,
-          institution: classBasics.institution || null,
-          expected_count: classBasics.expected,
-          team_size: classBasics.teamSize,
-          invite_code: code,
-          roster_lock_enabled: rosterLock,
-          identifier_type: identType,
-        })
-        .select("id,invite_code")
-        .single();
-      if (createError || !data) throw createError ?? new Error("Class could not be created.");
+      let createdClass: { id: string; invite_code: string } | null = null;
+      for (let attempt = 0; attempt < MAX_INVITE_CODE_ATTEMPTS; attempt += 1) {
+        const code = genCode();
+        const { data, error: createError } = await supabase
+          .from("classes")
+          .insert({
+            lead_id: user.id,
+            name: classBasics.name,
+            institution: classBasics.institution || null,
+            expected_count: classBasics.expected,
+            team_size: classBasics.teamSize,
+            invite_code: code,
+            roster_lock_enabled: rosterLock,
+            identifier_type: identType,
+          })
+          .select("id,invite_code")
+          .single();
+
+        if (!createError && data) {
+          createdClass = data;
+          break;
+        }
+        if (!isInviteCodeCollision(createError)) {
+          throw createError ?? new Error("Class could not be created.");
+        }
+      }
+      if (!createdClass) {
+        throw new Error("invite_code_generation_failed");
+      }
 
       if (rosterLock && rosterEntries.length) {
         const { error: rosterError } = await supabase.from("roster_entries").insert(
           rosterEntries.map((id) => ({
-            class_id: data.id,
+            class_id: createdClass.id,
             identifier: id,
             identifier_type: identType,
           })),
         );
 
         if (rosterError) {
-          await supabase.from("classes").delete().eq("id", data.id);
+          await supabase.from("classes").delete().eq("id", createdClass.id);
           throw rosterError;
         }
       }
-      setCreated({ id: data.id, code: data.invite_code });
+      setCreated({ id: createdClass.id, code: createdClass.invite_code });
       setStep(3);
     } catch (err) {
-      const message =
-        err && typeof err === "object" && "message" in err && typeof err.message === "string"
-          ? err.message
-          : "We couldn't create this class. Please check the details and try again.";
-      setError(message);
+      setError(createClassErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -147,6 +173,13 @@ function NewClass() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  const parsed = classBasicsSchema.safeParse(classBasics);
+                  if (!parsed.success) {
+                    setError(parsed.error.issues[0]?.message ?? "Check the class details.");
+                    return;
+                  }
+                  setError(null);
+                  setClassBasics(parsed.data);
                   setStep(2);
                 }}
                 className="space-y-5"
@@ -213,6 +246,11 @@ function NewClass() {
                     })}
                   </div>
                 </Field>
+                {error && (
+                  <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
                 <PrimaryButton type="submit">Continue</PrimaryButton>
               </form>
             </motion.div>
@@ -364,4 +402,34 @@ function NewClass() {
       </main>
     </div>
   );
+}
+
+function isInviteCodeCollision(err: unknown) {
+  const message =
+    err && typeof err === "object" && "message" in err && typeof err.message === "string"
+      ? err.message.toLowerCase()
+      : "";
+  const code =
+    err && typeof err === "object" && "code" in err && typeof err.code === "string" ? err.code : "";
+
+  return code === "23505" && message.includes("invite_code");
+}
+
+function createClassErrorMessage(err: unknown) {
+  const message =
+    err && typeof err === "object" && "message" in err && typeof err.message === "string"
+      ? err.message
+      : String(err ?? "");
+
+  if (message.includes("invite_code_generation_failed")) {
+    return "Synco could not reserve an invite code. Try again.";
+  }
+  if (message.toLowerCase().includes("roster")) {
+    return "The class was created, but the roster could not be saved. Check the roster and try again.";
+  }
+  if (message.toLowerCase().includes("team_size")) {
+    return "Pick a team size between 2 and 6.";
+  }
+
+  return "We couldn't create this class. Please check the details and try again.";
 }

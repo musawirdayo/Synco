@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import React, { ReactNode, useId } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 
@@ -44,17 +44,35 @@ export function Field({
   label,
   error,
   hint,
+  htmlFor,
   children,
 }: {
   label: string;
   error?: string;
   hint?: string;
+  htmlFor?: string;
   children: ReactNode;
 }) {
+  const generatedId = useId();
+  let labelFor = htmlFor;
+  let content = children;
+
+  if (
+    !labelFor &&
+    React.isValidElement<{ id?: string }>(children) &&
+    typeof children.type === "string" &&
+    ["input", "textarea", "select"].includes(children.type)
+  ) {
+    labelFor = children.props.id ?? generatedId;
+    content = React.cloneElement(children, { id: labelFor });
+  }
+
   return (
     <div className="space-y-2">
-      <label className="block text-xs sm:text-sm font-medium">{label}</label>
-      {children}
+      <label htmlFor={labelFor} className="block text-xs sm:text-sm font-medium">
+        {label}
+      </label>
+      {content}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

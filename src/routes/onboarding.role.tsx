@@ -43,7 +43,7 @@ function Role() {
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mb-3">
             What brings you to Synco?
           </h1>
-          <p className="text-muted">Pick one — you can always switch later.</p>
+          <p className="text-muted">Pick the role you need for this workspace.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           {[

@@ -40,10 +40,15 @@ import {
   slug,
   escapeHtml,
 } from "@/lib/class-helpers";
-import { buildTeamAssignmentSnapshot, type TeamAssignmentSnapshot } from "@/lib/team-assignments";
+import {
+  buildTeamAssignmentSnapshot,
+  teamAssignmentForStudent,
+  type TeamAssignmentSnapshot,
+} from "@/lib/team-assignments";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 
 export const Route = createFileRoute("/class/$id")({
   component: ClassPage,
@@ -106,57 +111,93 @@ function ClassPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"invite" | "reminder" | null>(null);
   const [deletingSurveyId, setDeletingSurveyId] = useState<string | null>(null);
-  const [deleteNotice, setDeleteNotice] = useState("");
+  const [pageNotice, setPageNotice] = useState<{ tone: "info" | "error"; text: string } | null>(
+    null,
+  );
+  const [loadError, setLoadError] = useState("");
+  const [feedbackByStudent, setFeedbackByStudent] = useState<Record<string, string>>({});
+  const { confirm, confirmationDialog } = useConfirmDialog();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth/login" });
   }, [user, loading, navigate]);
 
   const load = useCallback(async () => {
-    const { data: c } = await supabase
-      .from("classes")
-      .select(
-        "name,expected_count,invite_code,is_published,roster_lock_enabled,team_size,team_assignments",
-      )
-      .eq("id", id)
-      .single();
-    if (c) setCls(c as ClassRow);
-    const { data: m } = await supabase
-      .from("class_members")
-      .select("student_id,display_name,identifier")
-      .eq("class_id", id);
-    const memberRows = m ?? [];
-    setMembers(memberRows);
-    const { data: r } = await supabase
-      .from("survey_responses")
-      .select("student_id,answers,completed,submitted_at")
-      .eq("class_id", id);
-    const memberIds = new Set(memberRows.map((member) => member.student_id));
-    setResponses(((r ?? []) as Resp[]).filter((resp) => memberIds.has(resp.student_id)));
+    try {
+      setLoadError("");
+      const { data: c, error: classError } = await supabase
+        .from("classes")
+        .select(
+          "name,expected_count,invite_code,is_published,roster_lock_enabled,team_size,team_assignments",
+        )
+        .eq("id", id)
+        .single();
+      if (classError) throw classError;
+      if (c) setCls(c as ClassRow);
 
-    const { data: roster } = await supabase
-      .from("roster_entries")
-      .select("identifier,claimed_by")
-      .eq("class_id", id);
-    setRosterEntries(roster ?? []);
+      const { data: m, error: membersError } = await supabase
+        .from("class_members")
+        .select("student_id,display_name,identifier")
+        .eq("class_id", id);
+      if (membersError) throw membersError;
+      const memberRows = m ?? [];
+      setMembers(memberRows);
 
-    const { data: resultRows } = await supabase
-      .from("match_results")
-      .select("student_id,result_data,generated_at")
-      .eq("class_id", id);
+      const { data: r, error: responsesError } = await supabase
+        .from("survey_responses")
+        .select("student_id,answers,completed,submitted_at")
+        .eq("class_id", id);
+      if (responsesError) throw responsesError;
+      const memberIds = new Set(memberRows.map((member) => member.student_id));
+      setResponses(((r ?? []) as Resp[]).filter((resp) => memberIds.has(resp.student_id)));
 
-    const first = resultRows?.[0];
-    const resultData = first?.result_data as PublishedResultData | undefined;
-    setResultMeta({
-      version: resultData?.results_version ?? 0,
-      generatedAt: resultData?.generated_at ?? first?.generated_at ?? null,
-      included: resultData?.submitted_count ?? resultRows?.length ?? 0,
-    });
+      const { data: roster, error: rosterError } = await supabase
+        .from("roster_entries")
+        .select("identifier,claimed_by")
+        .eq("class_id", id);
+      if (rosterError) throw rosterError;
+      setRosterEntries(roster ?? []);
+
+      const { data: resultRows, error: resultsError } = await supabase
+        .from("match_results")
+        .select("student_id,result_data,generated_at")
+        .eq("class_id", id);
+      if (resultsError) throw resultsError;
+
+      const first = resultRows?.[0];
+      const resultData = first?.result_data as PublishedResultData | undefined;
+      const feedbackRows = (resultRows ?? []).reduce<Record<string, string>>((acc, row) => {
+        const rowData = row.result_data as { feedback_after_week?: unknown } | null;
+        if (typeof rowData?.feedback_after_week === "string") {
+          acc[row.student_id] = rowData.feedback_after_week;
+        }
+        return acc;
+      }, {});
+      setFeedbackByStudent(feedbackRows);
+      setResultMeta({
+        version: resultData?.results_version ?? 0,
+        generatedAt: resultData?.generated_at ?? first?.generated_at ?? null,
+        included: resultData?.submitted_count ?? resultRows?.length ?? 0,
+      });
+    } catch (err) {
+      console.error("Failed to load class:", err);
+      setLoadError("Class data could not be loaded. Check your connection and try again.");
+    }
   }, [id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  if (!cls && loadError) {
+    return (
+      <div className="grid min-h-screen place-items-center px-4">
+        <div className="max-w-md rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+          {loadError}
+        </div>
+      </div>
+    );
+  }
 
   if (!cls) return <ClassSkeleton />;
 
@@ -203,6 +244,16 @@ function ClassPage() {
     ? completed.filter((r) => r.submitted_at && new Date(r.submitted_at) > resultGeneratedAt).length
     : 0;
   const resultIncluded = resultMeta.included || submitted;
+  const feedbackValues = Object.values(feedbackByStudent);
+  const feedbackSummary = feedbackValues.length
+    ? ["Useful", "Unsure", "Not useful"]
+        .map((choice) => {
+          const count = feedbackValues.filter((value) => value === choice).length;
+          return count ? `${choice}: ${count}` : "";
+        })
+        .filter(Boolean)
+        .join(" · ")
+    : "No student feedback yet";
   const nextVersion = Math.max(1, resultMeta.version + 1);
   const canGenerate = submitted >= 2 && !hasIdentityConflicts;
   const publishVerb = cls.is_published ? "Republish" : "Publish";
@@ -275,131 +326,188 @@ function ClassPage() {
   async function publish() {
     if (!cls || hasIdentityConflicts) return;
     setBusy(true);
-    const generatedAt = new Date().toISOString();
-    const rows = completed.map((self) => {
-      const ranked = rankedPeersFor(self);
-
-      const matches = ranked
-        .slice(0, 5)
-        .map(
-          (
-            {
-              insight,
-              friction: _f,
-              friendFlagged: _ff,
-              friendRisk: _fr,
-              answers,
-              identifier: _id,
-              publicName: _p,
-              ...rest
-            },
-            index,
-          ) => ({
-            ...rest,
-            name: publicPeerName(answers, rest.name, index),
-            assigned: false,
-            ...publicInsightForPeer(answers, insight),
-          }),
+    setPageNotice(null);
+    try {
+      const generatedAt = new Date().toISOString();
+      const teamStudents: Array<
+        MatchStudent & { name: string; archetype: string; identifier: string | null }
+      > = completed.map((response) => {
+        const member = memberByStudent.get(response.student_id);
+        const name = member?.display_name ?? nameOf(response.student_id);
+        return {
+          id: response.student_id,
+          answers: response.answers,
+          name,
+          archetype: archetype(response.answers),
+          identifier: member?.identifier ?? null,
+        };
+      });
+      const teamPlan = formTeams(teamStudents, cls.team_size);
+      const teamAssignments = buildTeamAssignmentSnapshot({
+        plan: teamPlan,
+        students: teamStudents,
+        teamSize: cls.team_size,
+        version: nextVersion,
+        generatedAt,
+      });
+      const rows = completed.map((self) => {
+        const ranked = rankedPeersFor(self);
+        const assignedTeam = teamAssignmentForStudent(teamAssignments, self.student_id);
+        const assignedTeammateIds = new Set(
+          assignedTeam?.teammates.map((teammate) => teammate.student_id) ?? [],
         );
-      const avoid = ranked
-        .slice(-5)
-        .reverse()
-        .map(
-          (
-            {
-              friction,
-              friendRisk,
-              insight: _i,
-              answers,
-              identifier: _id,
-              publicName: _p,
-              ...rest
-            },
-            index,
-          ) => {
-            const displayName = publicPeerName(answers, rest.name, index);
-            const safeFriendRisk =
-              friendRisk && displayName !== rest.name
-                ? friendRisk.replace(`flagged ${rest.name}`, `flagged ${displayName}`)
-                : friendRisk;
 
-            return {
+        const matches = ranked
+          .slice(0, 5)
+          .map(
+            (
+              {
+                insight,
+                friction: _f,
+                friendFlagged: _ff,
+                friendRisk: _fr,
+                answers,
+                identifier: _id,
+                publicName: _p,
+                ...rest
+              },
+              index,
+            ) => ({
               ...rest,
-              name: displayName,
-              friendRisk: safeFriendRisk,
-              ...publicFrictionForPeer(answers, friction),
-            };
-          },
-        );
+              name: publicPeerName(answers, rest.name, index),
+              assigned: assignedTeammateIds.has(rest.student_id),
+              ...publicInsightForPeer(answers, insight),
+            }),
+          );
+        const avoid = ranked
+          .slice(-5)
+          .reverse()
+          .map(
+            (
+              {
+                friction,
+                friendRisk,
+                insight: _i,
+                answers,
+                identifier: _id,
+                publicName: _p,
+                ...rest
+              },
+              index,
+            ) => {
+              const displayName = publicPeerName(answers, rest.name, index);
+              const safeFriendRisk =
+                friendRisk && displayName !== rest.name
+                  ? friendRisk.replace(`flagged ${rest.name}`, `flagged ${displayName}`)
+                  : friendRisk;
 
-      return {
-        class_id: id,
-        student_id: self.student_id,
-        generated_at: generatedAt,
-        result_data: {
-          results_version: nextVersion,
+              return {
+                ...rest,
+                name: displayName,
+                friendRisk: safeFriendRisk,
+                ...publicFrictionForPeer(answers, friction),
+              };
+            },
+          );
+        const baseReadiness = buildReadinessCard(archetype(self.answers), matches, avoid);
+        const assignedSuggestedGroup =
+          assignedTeam?.teammates.map((member) => {
+            const rankedPeer = ranked.find((peer) => peer.student_id === member.student_id);
+            return {
+              name: member.name,
+              archetype: member.archetype,
+              score: rankedPeer?.score ?? 0,
+            };
+          }) ?? [];
+        const readiness =
+          assignedTeam && assignedSuggestedGroup.length
+            ? {
+                ...baseReadiness,
+                suggestedGroup: assignedSuggestedGroup,
+                why: assignedTeam.rationale,
+                disclaimer:
+                  "This is your assigned team from the class-level matching plan. Use the match and watch lists below for extra context.",
+              }
+            : baseReadiness;
+        const assignedPartnerId =
+          cls.team_size === 2 ? (assignedTeam?.teammates[0]?.student_id ?? null) : null;
+
+        return {
+          class_id: id,
+          student_id: self.student_id,
           generated_at: generatedAt,
-          archetype: archetype(self.answers),
-          meters: workStyleMeters(self.answers),
-          matches,
-          avoid,
-          readiness: buildReadinessCard(archetype(self.answers), matches, avoid),
-          assigned_partner_id: null,
-          matching_algorithm: "direct-compatibility",
-          matching_weights:
-            "30% availability, 25% academic fit, 20% complementary skills, 15% study style, 10% goals",
-          submitted_count: completed.length,
-          expected_count: cls.expected_count,
-        } as never,
-      };
-    });
-    const teamStudents: Array<
-      MatchStudent & { name: string; archetype: string; identifier: string | null }
-    > = completed.map((response) => {
-      const member = memberByStudent.get(response.student_id);
-      const name = member?.display_name ?? nameOf(response.student_id);
-      return {
-        id: response.student_id,
-        answers: response.answers,
-        name,
-        archetype: archetype(response.answers),
-        identifier: member?.identifier ?? null,
-      };
-    });
-    const teamPlan = formTeams(teamStudents, cls.team_size);
-    const teamAssignments = buildTeamAssignmentSnapshot({
-      plan: teamPlan,
-      students: teamStudents,
-      teamSize: cls.team_size,
-      version: nextVersion,
-      generatedAt,
-    });
-    if (rows.length)
-      await supabase.from("match_results").upsert(rows, { onConflict: "class_id,student_id" });
-    await supabase
-      .from("classes")
-      .update({ is_published: true, team_assignments: teamAssignments as never })
-      .eq("id", id);
-    setBusy(false);
-    setConfirming(false);
-    load();
+          result_data: {
+            results_version: nextVersion,
+            generated_at: generatedAt,
+            archetype: archetype(self.answers),
+            meters: workStyleMeters(self.answers),
+            matches,
+            avoid,
+            readiness,
+            assigned_partner_id: assignedPartnerId,
+            assigned_team_id: assignedTeam?.id ?? null,
+            matching_algorithm: teamAssignments.algorithm,
+            matching_weights:
+              "30% availability, 25% academic fit, 20% complementary skills, 15% study style, 10% goals",
+            submitted_count: completed.length,
+            expected_count: cls.expected_count,
+          } as never,
+        };
+      });
+      if (rows.length) {
+        const { error: resultError } = await supabase
+          .from("match_results")
+          .upsert(rows, { onConflict: "class_id,student_id" });
+        if (resultError) throw resultError;
+      }
+      const { error: publishError } = await supabase
+        .from("classes")
+        .update({ is_published: true, team_assignments: teamAssignments as never })
+        .eq("id", id);
+      if (publishError) throw publishError;
+      setConfirming(false);
+      await load();
+    } catch (err) {
+      console.error("Failed to publish results:", err);
+      setPageNotice({
+        tone: "error",
+        text: "Results could not be published. Check permissions and try again.",
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function unpublish() {
-    await supabase.from("classes").update({ is_published: false }).eq("id", id);
-    load();
+    setPageNotice(null);
+    try {
+      const { error } = await supabase.from("classes").update({ is_published: false }).eq("id", id);
+      if (error) throw error;
+      await load();
+    } catch (err) {
+      console.error("Failed to unpublish results:", err);
+      setPageNotice({
+        tone: "error",
+        text: "Results could not be unpublished. Check permissions and try again.",
+      });
+    }
   }
 
   async function deleteSurvey(member: Member) {
     const response = respByStudent.get(member.student_id);
     if (!response || deletingSurveyId) return;
 
-    const confirmed = window.confirm(
-      `Delete ${member.display_name}'s survey response? This removes their submitted answers and their published result. You can republish after this to refresh the rest of the class.`,
-    );
+    const confirmed = await confirm({
+      title: `Delete ${member.display_name}'s survey?`,
+      description:
+        "This removes their submitted answers and published result. Republish afterward to refresh recommendations for the rest of the class.",
+      confirmLabel: "Delete survey",
+      destructive: true,
+    });
     if (!confirmed) return;
 
     setDeletingSurveyId(member.student_id);
+    setPageNotice(null);
     try {
       const { error: responseError } = await supabase
         .from("survey_responses")
@@ -415,12 +523,16 @@ function ClassPage() {
         .eq("student_id", member.student_id);
       if (resultError) throw resultError;
 
-      setDeleteNotice(
-        `${member.display_name}'s survey was deleted. Republish results to remove stale recommendations from other students' views.`,
-      );
+      setPageNotice({
+        tone: "info",
+        text: `${member.display_name}'s survey was deleted. Republish results to remove stale recommendations from other students' views.`,
+      });
       await load();
     } catch {
-      setDeleteNotice("The survey could not be deleted. Check permissions and try again.");
+      setPageNotice({
+        tone: "error",
+        text: "The survey could not be deleted. Check permissions and try again.",
+      });
     } finally {
       setDeletingSurveyId(null);
     }
@@ -429,19 +541,27 @@ function ClassPage() {
   async function deleteClass() {
     if (!cls || busy) return;
 
-    const confirmed = window.confirm(
-      `Are you absolutely sure you want to delete the class "${cls.name}"? This will permanently erase the class roster, all student survey responses, and all published results. This action CANNOT be undone.`,
-    );
+    const confirmed = await confirm({
+      title: `Delete "${cls.name}"?`,
+      description:
+        "This permanently erases the class roster, all student survey responses, and all published results. This action cannot be undone.",
+      confirmLabel: "Delete class",
+      destructive: true,
+    });
     if (!confirmed) return;
 
     setBusy(true);
+    setPageNotice(null);
     try {
       const { error } = await supabase.from("classes").delete().eq("id", id);
       if (error) throw error;
       navigate({ to: "/dashboard" });
     } catch (err) {
       console.error("Failed to delete class:", err);
-      alert("Failed to delete class. Please check your network and permissions.");
+      setPageNotice({
+        tone: "error",
+        text: "Failed to delete class. Please check your network and permissions.",
+      });
     } finally {
       setBusy(false);
     }
@@ -461,7 +581,7 @@ function ClassPage() {
     const reminder = [
       `Reminder: please complete the Synco survey for ${cls.name}.`,
       `Join or return here: ${window.location.origin}/join/${cls.invite_code}`,
-      "It takes a few focused minutes. Your answers help classmates get more useful matches, and raw answers stay private.",
+      "It is a focused set of questions. Your answers help classmates get more useful matches, and raw answers stay private.",
     ].join("\n\n");
     const ok = await copyText(reminder);
     if (ok) {
@@ -689,6 +809,7 @@ function ClassPage() {
 
   return (
     <div className="min-h-screen">
+      {confirmationDialog}
       <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60">
         <Link to="/dashboard" className="text-xs sm:text-sm text-muted hover:text-foreground">
           ← Dashboard
@@ -734,12 +855,19 @@ function ClassPage() {
               </button>
             </div>
           )}
-          {deleteNotice && (
-            <div className="rounded-lg border border-accent/35 bg-[color:var(--color-accent-light)] text-sm p-3 my-4 flex items-center justify-between gap-3 flex-wrap">
-              <span>{deleteNotice}</span>
+          {pageNotice && (
+            <div
+              className={
+                "rounded-lg border text-sm p-3 my-4 flex items-center justify-between gap-3 flex-wrap " +
+                (pageNotice.tone === "error"
+                  ? "border-destructive/30 bg-destructive/5 text-destructive"
+                  : "border-accent/35 bg-[color:var(--color-accent-light)]")
+              }
+            >
+              <span>{pageNotice.text}</span>
               <button
                 type="button"
-                onClick={() => setDeleteNotice("")}
+                onClick={() => setPageNotice(null)}
                 className="text-xs font-medium text-muted hover:text-foreground transition-colors"
               >
                 Dismiss
@@ -778,7 +906,7 @@ function ClassPage() {
               </span>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <DecisionTile
                 label="Confidence"
                 value={confidenceLabel}
@@ -795,8 +923,13 @@ function ClassPage() {
               />
               <DecisionTile
                 label="Matching System"
-                value="Direct Match"
-                detail="Calculates ranked top 5 & bottom 5 for every student"
+                value={cls.team_size === 2 ? "Optimal Pairs" : "Team Optimizer"}
+                detail={`Uses the team engine for target size ${cls.team_size}`}
+              />
+              <DecisionTile
+                label="Feedback"
+                value={String(feedbackValues.length)}
+                detail={feedbackSummary}
               />
             </div>
 
@@ -1014,6 +1147,12 @@ function ClassPage() {
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[color:var(--color-accent-light)] text-xs font-medium">
                                 {arch}
                               </span>
+                              <p className="mt-2 text-xs text-muted">
+                                Feedback:{" "}
+                                <span className="font-medium text-foreground">
+                                  {feedbackByStudent[self.student_id] ?? "Not submitted yet"}
+                                </span>
+                              </p>
                             </div>
                           </div>
                           <div className="text-xs uppercase tracking-wider text-muted mb-2">

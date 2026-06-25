@@ -38,6 +38,16 @@ if (supabasePublishableKey) {
 
 const isVitest = process.env.VITEST === "true";
 
+function manualChunks(id: string) {
+  if (!id.includes("node_modules")) return;
+  if (id.includes("@tanstack/react-router") || id.includes("@tanstack/react-query")) {
+    return "tanstack";
+  }
+  if (id.includes("@supabase/supabase-js")) return "supabase";
+  if (id.includes("framer-motion")) return "motion";
+  if (id.includes("lucide-react")) return "icons";
+}
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
@@ -47,12 +57,7 @@ export default defineConfig({
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            tanstack: ["@tanstack/react-router", "@tanstack/react-query"],
-            supabase: ["@supabase/supabase-js"],
-            motion: ["framer-motion"],
-            icons: ["lucide-react"],
-          },
+          manualChunks,
         },
       },
     },

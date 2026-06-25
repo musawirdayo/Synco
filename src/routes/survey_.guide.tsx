@@ -23,8 +23,8 @@ const principles = [
   },
   {
     icon: Clock,
-    t: "Takes a few focused minutes",
-    b: "Answer in one sitting if you can. Your progress saves automatically.",
+    t: "A focused survey",
+    b: "There are several short screens. Answer in one sitting if you can; progress saves automatically.",
   },
   {
     icon: Users,
@@ -78,7 +78,7 @@ function Guide() {
           </div>
 
           <p className="text-sm text-muted mb-6">
-            {QUESTIONS.length} questions · Saved automatically
+            {QUESTIONS.length} core questions + optional details · Saved automatically
           </p>
           <button
             onClick={() => navigate({ to: "/survey" })}

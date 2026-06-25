@@ -19,7 +19,7 @@ function Forgot() {
       redirectTo: window.location.origin + "/auth/reset-password",
     });
     setLoading(false);
-    if (error) setErr(error.message);
+    if (error) setErr(resetEmailErrorMessage(error));
     else setSent(true);
   }
 
@@ -55,4 +55,20 @@ function Forgot() {
       </form>
     </AuthShell>
   );
+}
+
+function resetEmailErrorMessage(err: unknown) {
+  const raw =
+    err && typeof err === "object" && "message" in err && typeof err.message === "string"
+      ? err.message
+      : String(err ?? "");
+  const message = raw.toLowerCase();
+
+  if (message.includes("invalid email")) return "Use a valid email address.";
+  if (message.includes("rate") || message.includes("too many")) {
+    return "Too many reset requests. Wait a moment and try again.";
+  }
+  if (message.includes("disabled")) return "Password reset is not available right now.";
+
+  return "We couldn't send a reset link. Check the email and try again.";
 }

@@ -11,6 +11,7 @@ import {
   setActiveClassId,
 } from "@/lib/class-flow";
 import { OPTIONAL_TEXT_SURVEY_FIELDS, QUESTIONS } from "@/lib/questions";
+import { checkedSupabase } from "@/lib/supabase-safe";
 import type { Answers, AnswerValue } from "@/lib/synco";
 
 import { RouteErrorFallback } from "@/components/route-error-boundary";
@@ -96,6 +97,7 @@ function Survey() {
   const [idx, setIdx] = useState(0);
   const [direction, setDirection] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth/login" });
@@ -104,22 +106,30 @@ function Survey() {
   useEffect(() => {
     (async () => {
       if (!user) return;
-      const cid = getActiveClassId() ?? (await getLatestMembershipClassId(user.id));
-      if (!cid) {
-        const pendingCode = getPendingJoinCode();
-        if (pendingCode) navigate({ to: "/join/$code", params: { code: pendingCode } });
-        else navigate({ to: "/join" });
-        return;
+      try {
+        const cid = getActiveClassId() ?? (await getLatestMembershipClassId(user.id));
+        if (!cid) {
+          const pendingCode = getPendingJoinCode();
+          if (pendingCode) navigate({ to: "/join/$code", params: { code: pendingCode } });
+          else navigate({ to: "/join" });
+          return;
+        }
+        setActiveClassId(cid);
+        setClassId(cid);
+        const resp = await checkedSupabase(
+          supabase
+            .from("survey_responses")
+            .select("answers")
+            .eq("class_id", cid)
+            .eq("student_id", user.id)
+            .maybeSingle(),
+          "Load survey response",
+        );
+        if (resp?.answers) setAnswers(resp.answers as Answers);
+      } catch (err) {
+        console.error("Failed to prepare survey:", err);
+        setError("Your saved answers could not be loaded. Refresh and try again.");
       }
-      setActiveClassId(cid);
-      setClassId(cid);
-      const { data: resp } = await supabase
-        .from("survey_responses")
-        .select("answers")
-        .eq("class_id", cid)
-        .eq("student_id", user.id)
-        .maybeSingle();
-      if (resp?.answers) setAnswers(resp.answers as Answers);
     })();
   }, [user, navigate]);
 
@@ -147,33 +157,43 @@ function Survey() {
 
   async function save(next: Answers, completed = false) {
     if (!user || !classId) return;
-    await supabase.from("survey_responses").upsert(
-      {
-        class_id: classId,
-        student_id: user.id,
-        answers: next as never,
-        completed,
-        submitted_at: completed ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "class_id,student_id" },
+    await checkedSupabase(
+      supabase.from("survey_responses").upsert(
+        {
+          class_id: classId,
+          student_id: user.id,
+          answers: next as never,
+          completed,
+          submitted_at: completed ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "class_id,student_id" },
+      ),
+      "Save survey response",
     );
   }
 
   async function advance() {
     if (busy) return;
     setBusy(true);
-    const next = q ? { ...answers, [q.id]: value } : answers;
-    setAnswers(next);
-    if (idx === totalSteps - 1) {
-      await save(next, true);
-      navigate({ to: "/survey/done" });
-      return;
+    setError("");
+    try {
+      const next = q ? { ...answers, [q.id]: value } : answers;
+      setAnswers(next);
+      if (idx === totalSteps - 1) {
+        await save(next, true);
+        navigate({ to: "/survey/done" });
+        return;
+      }
+      await save(next);
+      setDirection(1);
+      setIdx(idx + 1);
+    } catch (err) {
+      console.error("Failed to save survey response:", err);
+      setError("Your answers could not be saved. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    await save(next);
-    setDirection(1);
-    setIdx(idx + 1);
-    setBusy(false);
   }
 
   function back() {
@@ -251,6 +271,11 @@ function Survey() {
 
       <div className="px-4 sm:px-6 md:px-12 pb-8">
         <div className="max-w-2xl mx-auto">
+          {error && (
+            <p className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <button
             onClick={advance}
             disabled={busy}

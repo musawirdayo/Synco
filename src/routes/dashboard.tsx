@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, LogOut, Copy, Check } from "lucide-react";
+import { Plus, LogOut, Copy, Check, Trash2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { copyText } from "@/lib/clipboard";
 
 export const Route = createFileRoute("/dashboard")({ component: Dashboard });
@@ -24,6 +25,10 @@ function Dashboard() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [name, setName] = useState("there");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pageNotice, setPageNotice] = useState("");
+  const { confirm, confirmationDialog } = useConfirmDialog();
 
   async function handleCopy(e: React.MouseEvent, code: string, id: string) {
     e.preventDefault();
@@ -42,35 +47,52 @@ function Dashboard() {
   useEffect(() => {
     (async () => {
       if (!user) return;
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (prof?.full_name) setName(prof.full_name.split(" ")[0]);
-      const { data } = await supabase
-        .from("classes")
-        .select("id,name,institution,expected_count,is_published,invite_code")
-        .eq("lead_id", user.id)
-        .order("created_at", { ascending: false });
-      setClasses(data ?? []);
-      const map: Record<string, number> = {};
-      const classIds = (data ?? []).map((c) => c.id);
-      if (classIds.length > 0) {
-        const { data: respCounts } = await supabase
-          .from("survey_responses")
-          .select("class_id")
-          .in("class_id", classIds)
-          .eq("completed", true);
+      setPageNotice("");
+      try {
+        const { data: prof, error: profileError } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        if (prof?.full_name) setName(prof.full_name.split(" ")[0]);
 
-        classIds.forEach((id) => {
-          map[id] = 0;
+        const { data: adminAllowed, error: adminError } = await supabase.rpc("is_platform_admin", {
+          _user_id: user.id,
         });
-        (respCounts ?? []).forEach((row) => {
-          map[row.class_id] = (map[row.class_id] ?? 0) + 1;
-        });
+        if (adminError) console.warn("Could not check admin status:", adminError);
+        else setIsAdmin(Boolean(adminAllowed));
+
+        const { data, error: classesError } = await supabase
+          .from("classes")
+          .select("id,name,institution,expected_count,is_published,invite_code")
+          .eq("lead_id", user.id)
+          .order("created_at", { ascending: false });
+        if (classesError) throw classesError;
+
+        setClasses(data ?? []);
+        const map: Record<string, number> = {};
+        const classIds = (data ?? []).map((c) => c.id);
+        if (classIds.length > 0) {
+          const { data: respCounts, error: countsError } = await supabase
+            .from("survey_responses")
+            .select("class_id")
+            .in("class_id", classIds)
+            .eq("completed", true);
+          if (countsError) throw countsError;
+
+          classIds.forEach((id) => {
+            map[id] = 0;
+          });
+          (respCounts ?? []).forEach((row) => {
+            map[row.class_id] = (map[row.class_id] ?? 0) + 1;
+          });
+        }
+        setCounts(map);
+      } catch (err) {
+        console.error("Failed to load dashboard:", err);
+        setPageNotice("Dashboard data could not be loaded. Refresh the page and try again.");
       }
-      setCounts(map);
     })();
   }, [user]);
 
@@ -79,14 +101,17 @@ function Dashboard() {
       navigate({ to: "/auth/login" });
       return;
     }
-    if (
-      !window.confirm(
-        "Set up a brand new demo class populated with 6 test student responses? This is perfect for exploring the platform's matches, coordinates ecosystem map, and synergy simulator instantly.",
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "Set up a demo class?",
+      description:
+        "This creates a private demo class for your account with test student responses so you can explore publishing and results.",
+      confirmLabel: "Set up demo",
+    });
+    if (!confirmed) {
       return;
     }
 
+    setPageNotice("");
     try {
       const { error } = await supabase.rpc("setup_demo_class", {
         _lead_id: user.id,
@@ -95,12 +120,45 @@ function Dashboard() {
       window.location.reload();
     } catch (err) {
       console.error("Failed to create demo class:", err);
-      alert(demoClassErrorMessage(err));
+      setPageNotice(demoClassErrorMessage(err));
+    }
+  }
+
+  async function deleteClass(e: React.MouseEvent, cls: ClassRow) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const confirmed = await confirm({
+      title: `Delete "${cls.name}"?`,
+      description:
+        "This permanently removes the class, roster, survey responses, and published results.",
+      confirmLabel: "Delete class",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    setDeletingClassId(cls.id);
+    setPageNotice("");
+    try {
+      const { error } = await supabase.from("classes").delete().eq("id", cls.id);
+      if (error) throw error;
+      setClasses((current) => current.filter((item) => item.id !== cls.id));
+      setCounts((current) => {
+        const next = { ...current };
+        delete next[cls.id];
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to delete class:", err);
+      setPageNotice("Class could not be deleted. Check your connection and try again.");
+    } finally {
+      setDeletingClassId(null);
     }
   }
 
   return (
     <div className="min-h-screen">
+      {confirmationDialog}
       <header className="px-4 sm:px-6 md:px-12 py-4 sm:py-5 border-b border-border/60 flex items-center justify-between gap-4 flex-wrap">
         <Link
           to="/"
@@ -119,9 +177,22 @@ function Dashboard() {
         </button>
       </header>
       <main className="px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14 max-w-5xl mx-auto">
+        {pageNotice && (
+          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {pageNotice}
+          </div>
+        )}
         <div className="flex items-end justify-between mb-8 sm:mb-10 flex-wrap gap-4">
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl">Welcome back, {name}.</h1>
           <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Shield className="h-4 w-4 text-accent" /> Master Control
+              </Link>
+            )}
             <button
               onClick={setupDemoClass}
               className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -205,22 +276,33 @@ function Dashboard() {
                         {c.expected_count} submitted
                       </span>
                       <span className="font-mono text-xs">{pct}%</span>
-                      <button
-                        onClick={(e) => handleCopy(e, c.invite_code, c.id)}
-                        className="ml-auto inline-flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium transition-colors"
-                      >
-                        {copiedId === c.id ? (
-                          <>
-                            <Check className="h-3 w-3 text-[color:var(--color-success)]" /> Link
-                            copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3 w-3" /> Copy invite link ·{" "}
-                            <span className="font-mono">{c.invite_code}</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="ml-auto flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleCopy(e, c.invite_code, c.id)}
+                          className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium transition-colors"
+                        >
+                          {copiedId === c.id ? (
+                            <>
+                              <Check className="h-3 w-3 text-[color:var(--color-success)]" /> Link
+                              copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" /> Copy invite link ·{" "}
+                              <span className="font-mono">{c.invite_code}</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => deleteClass(e, c)}
+                          disabled={deletingClassId === c.id}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          {deletingClassId === c.id ? "Deleting" : "Delete"}
+                        </button>
+                      </div>
                     </div>
                   </Link>
                 </motion.div>
@@ -237,6 +319,9 @@ function demoClassErrorMessage(err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
   if (message.includes("setup_demo_class_forbidden")) {
     return "Demo class could not be created because your session is not allowed to create demo data for this account. Sign in again and retry.";
+  }
+  if (message.includes("demo_invite_code_unavailable")) {
+    return "Demo class could not be created because Synco could not reserve a private demo code for your account. Try again in a moment.";
   }
   return "Demo class could not be created. Check that your Supabase migrations are applied, then try again.";
 }

@@ -1,345 +1,493 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  BarChart3,
-  CheckCircle2,
-  LogIn,
-  ShieldCheck,
-  Users,
-  HelpCircle,
-  FileText,
-  Lightbulb,
-  TrendingUp,
-  Settings,
-} from "lucide-react";
+import type { CSSProperties } from "react";
+import { Reveal, ScrollProgress, StaggerContainer } from "@/components/animations/reveal";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
-const motionEase = [0.22, 1, 0.36, 1] as const;
-const sectionViewport = { once: true, margin: "-80px" };
+const pageContainer = "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8";
+const sectionPadding = "py-10 sm:py-14 lg:py-20";
+const primaryButtonClass =
+  "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]";
+const textLinkClass =
+  "inline-flex h-11 items-center justify-center text-sm font-medium text-[color:var(--color-primary)] transition-colors hover:text-[color:var(--color-primary-hover)]";
 
-const stagger = {
-  hide: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
+const workflowSteps = ["Create class", "Share code", "Everyone answers", "Teams are ready"];
 
-const fadeUp = {
-  hide: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: motionEase } },
-};
-
-const cardPieceReveal = {
-  hide: { opacity: 0, y: 14 },
-  show: (delay = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, delay, ease: motionEase },
-  }),
-};
-
-const workflow = [
+const howSyncoWorks = [
   {
-    icon: Settings,
-    title: "Set up your class",
-    text: "Add roster, set team size, optionally lock to enrolled identifiers for secure participation.",
+    title: "Set up the class",
+    text: "Choose the class name, team size, and who can join before sharing the code.",
   },
   {
-    icon: FileText,
-    title: "Collect preferences",
-    text: "Students complete a short, focused survey about their schedules, work pace, and study goals.",
+    title: "Classmates join with a code",
+    text: "Everyone uses the same code to get into the right class without a long setup.",
   },
   {
-    icon: TrendingUp,
-    title: "Publish results",
-    text: "Review the matching plan, adjust if needed, and instantly share teams with clear compatibility explanations.",
+    title: "Everyone answers a short form",
+    text: "Synco checks free time, work habits, class goals, and do-not-pair notes.",
+  },
+  {
+    title: "Teams are made with reasons",
+    text: "Each team comes with a plain reason for why the group makes sense.",
   },
 ];
 
-const strengths = [
+const productivityBenefits = [
   {
-    icon: ShieldCheck,
-    title: "Privacy protected",
-    text: "Student survey responses stay confidential. Only match summaries and explanations are shared—no raw data revealed.",
+    value: "25%",
+    title: "productivity boost",
+    text: "When students use Synco teams, less time is lost to group confusion and more time goes into the work.",
   },
   {
-    icon: Lightbulb,
-    title: "Transparent reasoning",
-    text: "Every pairing shows why students match: shared availability, compatible pace, complementary skills, and first-meeting talking points.",
+    value: "2 lists",
+    title: "people to consider or avoid",
+    text: "Synco shows who may be easier to work with and who may need extra care.",
   },
   {
-    icon: BarChart3,
-    title: "Data-driven matching",
-    text: "Algorithm weights availability (30%), academic goals (25%), strengths (20%), work style (15%), and personal goals (10%) for optimal teams.",
+    value: "1 plan",
+    title: "teams plus reasons",
+    text: "The class gets teams, teammates, and plain reasons in one place.",
   },
+];
+
+const matchingFactors = [
+  {
+    title: "Free time",
+    text: "People who can meet at similar times are easier to place together.",
+  },
+  {
+    title: "Class goals",
+    text: "Teams work better when people want a similar level of effort.",
+  },
+  {
+    title: "Work habits",
+    text: "Synco checks how people plan, talk, and handle deadlines.",
+  },
+  {
+    title: "Do-not-pair notes",
+    text: "Names people should avoid are kept out of the same team when possible.",
+  },
+];
+
+const classBenefits = [
+  {
+    title: "No sorting names by hand",
+    text: "Stop moving names around and hoping the teams still feel fair.",
+  },
+  {
+    title: "No checking every request by hand",
+    text: "Friend requests and do-not-pair notes are checked before teams are shared.",
+  },
+  {
+    title: "Fewer last-minute team changes",
+    text: "Make teams with enough context to avoid moving people around again and again.",
+  },
+  {
+    title: "A clear reason for each team",
+    text: "Each team includes a short explanation in plain language.",
+  },
+  {
+    title: "Know who fits you better",
+    text: "Each person can see classmates they may work well with.",
+  },
+  {
+    title: "Know who may be harder",
+    text: "Synco also shows pairings that may need more care or may be best avoided.",
+  },
+];
+
+const previewTeams = [
+  {
+    name: "Team 1",
+    members: "Maya, Noor, Ezra, Jules",
+    rationale: "Strong schedule overlap with mixed planning styles.",
+  },
+  {
+    name: "Team 2",
+    members: "Ari, Lina, Sam, Theo",
+    rationale: "Balanced academic goals and complementary strengths.",
+  },
+];
+
+const previewPeople = [
+  ["Consider", "Noor, Ari"],
+  ["Be careful", "Theo, Sam"],
+];
+
+const previewStats = [
+  ["Invite code", "H7K2"],
+  ["Answers", "24 / 28"],
+  ["Team size", "4"],
 ];
 
 const faqs = [
   {
+    id: "join",
+    question: "Can people join with just a code?",
+    answer:
+      "Yes. Create a class, share the code, and classmates can join the right class from the join page. You can also limit joining by roll number, email, or student ID.",
+  },
+  {
+    id: "questions",
+    question: "What does Synco ask students?",
+    answer:
+      "The form asks about free time, work habits, class goals, skills, and names people would like or would not like to work with. The goal is to make teams that are easier to work in, not to judge anyone.",
+  },
+  {
     id: "privacy",
-    question: "How is student privacy maintained?",
+    question: "Will everyone see my answers?",
     answer:
-      "Students' raw survey answers stay private. Classmates see their own compatibility percentages plus specific match reasoning, such as why a pairing works and what to discuss first, without exposing another student's raw answers.",
+      "No. Raw answers are not shown to classmates. Results focus on your team, your closest matches, people you may want to avoid, and short reasons that explain the match.",
   },
   {
-    id: "roster",
-    question: "Can I import my existing class roster?",
+    id: "individual",
+    question: "Does Synco only make teams?",
     answer:
-      "Yes! When creating a class, you can enable roster lock and paste your students' roll numbers, emails, or student IDs. Students must match these identifiers to join, preventing unlisted users or duplicates.",
+      "No. Synco also gives each person a clearer view of classmates they may work well with and classmates they may want to avoid or handle carefully.",
   },
   {
-    id: "algorithm",
-    question: "How does the matching algorithm work?",
+    id: "avoid",
+    question: "Can Synco keep two people apart?",
     answer:
-      "We compute a mutual work-style score using a balanced set of weighted criteria: 30% availability, 25% academic focus, 20% complementary strengths, 15% study style, and 10% goals. For cohorts up to 20 students, an exact bitmask solver finds the absolute optimal non-conflicting match plan. Larger cohorts use a highly optimized greedy matcher.",
+      "Yes. If someone lists a do-not-pair name, Synco treats that as a rule and avoids putting those people on the same team.",
+  },
+  {
+    id: "late",
+    question: "What if someone answers late?",
+    answer:
+      "Teams work best when everyone answers before they are made. If someone joins late, the class can collect their answers and make or update the team plan before sharing results.",
   },
   {
     id: "odd",
-    question: "What if the number of students in my class is odd?",
+    question: "What if the class number does not split evenly?",
     answer:
-      "Synco automatically places students into the best-fitting team it can. If the class size does not divide evenly by the chosen team size, remaining students are assigned into compatible existing teams when the pairing rules allow it, without manual placement by the instructor.",
+      "Synco still places everyone. If a perfect split is not possible, the leftover people are added to teams where they fit best.",
   },
 ];
 
+const scatterPositions = [
+  [285, 175],
+  [531, 151],
+  [314, 182],
+  [146, 163],
+  [378, 233],
+  [99, 111],
+  [97, 237],
+  [411, 45],
+  [561, 276],
+  [390, 189],
+  [132, 39],
+  [325, 50],
+  [149, 95],
+  [66, 151],
+  [279, 246],
+  [320, 195],
+  [310, 201],
+  [288, 105],
+  [569, 284],
+  [487, 212],
+  [214, 92],
+  [200, 53],
+  [448, 135],
+  [490, 132],
+  [548, 247],
+  [50, 87],
+  [523, 152],
+  [560, 134],
+] as const;
+
+const clusterPositions = [
+  [157, 247],
+  [464, 223],
+  [122, 121],
+  [92, 113],
+  [166, 96],
+  [518, 49],
+  [106, 122],
+  [128, 235],
+  [435, 207],
+  [116, 199],
+  [488, 101],
+  [471, 53],
+  [448, 239],
+  [433, 222],
+  [489, 56],
+  [477, 251],
+  [452, 73],
+  [140, 78],
+  [449, 237],
+  [497, 58],
+  [480, 233],
+  [134, 223],
+  [129, 63],
+  [446, 55],
+  [121, 214],
+  [148, 83],
+  [114, 256],
+  [119, 231],
+] as const;
+
+const clusterAssignments = [
+  2, 3, 0, 0, 0, 1, 0, 2, 3, 2, 1, 1, 3, 3, 1, 3, 1, 0, 3, 1, 3, 2, 0, 1, 2, 0, 2, 2,
+] as const;
+
+const clusterColors = [
+  "var(--color-primary)",
+  "var(--color-accent)",
+  "oklch(0.56 0.06 178)",
+  "oklch(0.48 0.07 335)",
+] as const;
+
+const clusterConnections = [0, 1, 2, 3].flatMap((cluster) => {
+  const members = clusterAssignments
+    .map((memberCluster, index) => (memberCluster === cluster ? index : null))
+    .filter((index): index is number => index !== null);
+
+  return members.map((from, index) => ({
+    cluster,
+    from,
+    to: members[(index + 1) % members.length],
+  }));
+});
+
 function Landing() {
-  const prefersReducedMotion = useReducedMotion();
-  const reduceMotion = prefersReducedMotion === true;
-
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Sleek background dynamic blur glows */}
-      <motion.div
-        animate={reduceMotion ? undefined : { opacity: [0.9, 1, 0.9], scale: [0.98, 1.03, 0.98] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(ellipse_at_top,_oklch(0.96_0.05_90/0.45)_0%,_transparent_65%)] pointer-events-none z-0"
-      />
-      <motion.div
-        animate={
-          reduceMotion ? undefined : { opacity: [0.85, 0.95, 0.85], scale: [0.96, 1.04, 0.96] }
-        }
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[20%] left-[10%] w-[380px] h-[380px] rounded-full bg-accent/3 blur-[120px] pointer-events-none z-0"
-      />
-      <motion.div
-        animate={reduceMotion ? undefined : { opacity: [0.88, 1, 0.88], scale: [1.02, 0.96, 1.02] }}
-        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[40%] right-[10%] w-[420px] h-[420px] rounded-full bg-primary/4 blur-[130px] pointer-events-none z-0"
-      />
-
+    <div className="relative min-h-screen overflow-hidden bg-background font-sans text-foreground">
+      <ScrollProgress />
       <LandingHeader />
 
       <main className="relative z-10">
-        {/* HERO SECTION */}
-        <section className="border-b border-border/40 pb-12 pt-6 sm:pb-16 md:pb-24 md:pt-14">
-          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 md:px-8 lg:px-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <motion.div initial="hide" animate="show" variants={stagger} className="max-w-2xl">
-              <motion.div
-                variants={fadeUp}
-                className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary"
+        <section className="border-b border-border/70 bg-background">
+          <div
+            className={`${pageContainer} grid gap-10 py-10 sm:py-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20`}
+          >
+            <div className="max-w-xl">
+              <Reveal
+                as="p"
+                blur={false}
+                className="text-sm font-medium text-[color:var(--color-primary)]"
               >
-                <Users className="h-3.5 w-3.5" />
-                For every classroom
-              </motion.div>
-              <motion.h1
-                variants={fadeUp}
-                className="mt-5 font-display text-2xl leading-[1.06] sm:text-3xl md:text-5xl lg:text-6xl tracking-tight"
+                For classes forming student teams
+              </Reveal>
+              <Reveal
+                as="h1"
+                delay={0.08}
+                className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
-                Smart team formation{" "}
-                <span className="bg-gradient-to-tr from-primary via-primary to-accent bg-clip-text text-transparent block sm:inline">
-                  based on student compatibility.
-                </span>
-              </motion.h1>
-              <motion.p
-                variants={fadeUp}
-                className="mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-muted leading-relaxed"
+                Boost student productivity with fair class teams.
+              </Reveal>
+              <Reveal
+                as="p"
+                blur={false}
+                delay={0.16}
+                className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
-                Create a class, collect student work-style preferences, and automatically form
-                balanced teams optimized for compatibility and shared schedules.
-              </motion.p>
+                Create a class, share a code, let everyone answer a few questions, and get teams
+                based on real factors. Synco also shows who you should consider working with and who
+                may be harder to team up with.
+              </Reveal>
 
-              <motion.div
-                variants={fadeUp}
-                className="mt-6 sm:mt-8 flex flex-col gap-3 sm:flex-row"
+              <Reveal
+                blur={false}
+                delay={0.24}
+                className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
-                <Link
-                  to="/auth/signup"
-                  className="motion-lift group inline-flex h-11 sm:h-12 items-center justify-center gap-3 rounded-[8px] bg-primary px-6 font-medium text-primary-foreground shadow-[0_14px_34px_rgba(28,61,46,0.16)] hover:bg-[color:var(--color-primary-hover)]"
-                >
+                <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
                   Create a class
-                  <ArrowRight className="motion-icon h-4 w-4" />
                 </Link>
-                <Link
-                  to="/join"
-                  className="motion-lift inline-flex h-11 sm:h-12 items-center justify-center gap-3 rounded-[8px] border border-border bg-card px-6 font-medium hover:border-primary/40 hover:bg-muted"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Join with a code
-                </Link>
-              </motion.div>
+                <a href="#matching" className={textLinkClass}>
+                  See how matching works
+                </a>
+              </Reveal>
 
-              <motion.div
-                variants={stagger}
-                className="mt-6 sm:mt-8 grid gap-3 sm:gap-4 text-xs sm:text-sm text-muted grid-cols-1 sm:grid-cols-3 border-t border-border/40 pt-6"
-              >
-                {["Private responses", "Invite-code onboarding", "Explainable matches"].map(
-                  (item) => (
-                    <motion.div key={item} variants={fadeUp} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-[color:var(--color-success)]" />
-                      <span>{item}</span>
-                    </motion.div>
-                  ),
-                )}
-              </motion.div>
-            </motion.div>
+              <Reveal blur={false} delay={0.32} className="mt-7">
+                <WorkflowLine />
+              </Reveal>
+            </div>
 
-            <MockMatchCard />
+            <Reveal delay={0.18} mask scale={0.97}>
+              <MockMatchCard />
+            </Reveal>
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
         <section
           id="how-it-works"
-          className="py-12 sm:py-16 md:py-20 bg-card/20 border-b border-border/40"
+          className={`border-b border-border/70 bg-secondary ${sectionPadding}`}
         >
-          <motion.div
-            initial="hide"
-            whileInView="show"
-            viewport={sectionViewport}
-            variants={stagger}
-            className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12"
-          >
-            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-              <span className="text-xs uppercase tracking-widest text-accent font-semibold bg-accent-light px-3 py-1 rounded-full">
-                The Process
-              </span>
-              <h2 className="mt-4 text-2xl sm:text-3xl font-display md:text-4xl">
-                Three simple steps to assign teams.
-              </h2>
-              <p className="mt-3 text-xs sm:text-sm text-muted">
-                No complex setup. Just capture what matters: schedules, work style, and academic
-                goals. Synco handles the matching.
+          <div className={`${pageContainer} grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-12`}>
+            <Reveal className="max-w-md">
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                Class workflow
               </p>
-            </div>
-
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {workflow.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <motion.div
-                    key={step.title}
-                    variants={fadeUp}
-                    whileHover={{ y: -4 }}
-                    transition={{ duration: 0.22, ease: motionEase }}
-                    className="rounded-xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 hover:shadow-md transition-all relative overflow-hidden group"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <div className="text-3xl font-display font-bold text-primary/30 group-hover:text-primary/50 transition-colors">
-                        {index + 1}
-                      </div>
-                    </div>
-                    <h3 className="font-semibold text-lg">{step.title}</h3>
-                    <p className="mt-2 text-sm text-muted leading-relaxed">{step.text}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </section>
-
-        {/* FEATURES showcase */}
-        <section id="features" className="py-12 sm:py-16 md:py-20">
-          <motion.div
-            initial="hide"
-            whileInView="show"
-            viewport={sectionViewport}
-            variants={stagger}
-            className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12"
-          >
-            <motion.div variants={fadeUp} className="mb-10 sm:mb-14 text-center max-w-2xl mx-auto">
-              <span className="text-xs uppercase tracking-widest text-primary font-semibold bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
-                Why Instructors Choose Synco
-              </span>
-              <h2 className="mt-4 text-2xl sm:text-3xl font-display md:text-4xl">
-                Built for classroom success.
+              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                How Synco works
               </h2>
-            </motion.div>
+              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
+                A short flow for getting classmates from a join code to clear teams.
+              </p>
+            </Reveal>
 
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {strengths.map((strength) => {
-                const Icon = strength.icon;
-                return (
-                  <motion.div
-                    key={strength.title}
-                    variants={fadeUp}
-                    whileHover={{ y: -4 }}
-                    transition={{ duration: 0.22, ease: motionEase }}
-                    className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 hover:shadow-md transition-all"
-                  >
-                    <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--color-accent-light)]">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-base sm:text-lg">{strength.title}</h3>
-                    <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
-                      {strength.text}
-                    </p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </section>
-
-        {/* INTERACTIVE FAQ SECTION */}
-        <section
-          id="faq"
-          className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20"
-        >
-          <div className="text-center mb-10 sm:mb-12">
-            <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/5 text-primary mb-3">
-              <HelpCircle className="h-5 w-5" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-display md:text-4xl">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-muted mt-2 text-xs sm:text-sm">
-              Everything you need to know about Synco.
-            </p>
+            <StaggerContainer as="ol" className="grid gap-4 sm:grid-cols-2">
+              {howSyncoWorks.map((step, index) => (
+                <Reveal
+                  as="li"
+                  key={step.title}
+                  staggerItem
+                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="max-w-[13rem] font-sans text-base font-semibold leading-6">
+                      {step.title}
+                    </h3>
+                    <span className="font-mono text-xs font-medium text-[color:var(--color-accent)]">
+                      0{index + 1}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-muted">{step.text}</p>
+                </Reveal>
+              ))}
+            </StaggerContainer>
           </div>
-          <LandingFaq />
         </section>
 
-        {/* CTA BOTTOM SECTION */}
-        <section className="mx-auto max-w-7xl px-5 py-16 md:px-8 border-t border-border/40">
-          <div className="rounded-2xl border border-primary/10 bg-primary/5 p-8 md:p-12 text-center max-w-4xl mx-auto relative overflow-hidden">
-            <div className="absolute -top-24 -left-24 w-48 h-48 rounded-full bg-accent/8 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <section className={`border-b border-border/70 bg-background ${sectionPadding}`}>
+          <div className={pageContainer}>
+            <Reveal className="max-w-2xl">
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">Why it helps</p>
+              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                Better teams mean better project work.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
+                When students actually use the teams Synco suggests, the class can get around 25%
+                more useful project time. Synco helps by reducing bad team fits, unclear roles, and
+                avoidable clashes before the work starts.
+              </p>
+            </Reveal>
 
-            <p className="text-sm font-semibold text-accent uppercase tracking-wider">
-              Get started today
-            </p>
-            <h2 className="mt-3 text-3xl font-display md:text-4xl max-w-2xl mx-auto">
-              Start building better teams for your class.
-            </h2>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                to="/auth/signup"
-                className="motion-lift group inline-flex h-12 items-center justify-center gap-3 rounded-[8px] bg-primary px-6 font-medium text-primary-foreground hover:bg-[color:var(--color-primary-hover)]"
-              >
+            <StaggerContainer className="mt-8 grid gap-4 md:grid-cols-3">
+              {productivityBenefits.map((benefit) => (
+                <Reveal
+                  key={benefit.title}
+                  staggerItem
+                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                >
+                  <div className="font-sans text-3xl font-semibold text-[color:var(--color-primary)]">
+                    {benefit.value}
+                  </div>
+                  <h3 className="mt-3 font-sans text-base font-semibold">{benefit.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted">{benefit.text}</p>
+                </Reveal>
+              ))}
+            </StaggerContainer>
+          </div>
+        </section>
+
+        <section
+          id="matching"
+          className={`border-b border-border/70 bg-background ${sectionPadding}`}
+        >
+          <div
+            className={`${pageContainer} grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-12`}
+          >
+            <Reveal className="max-w-md">
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                How teams are made
+              </p>
+              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                Teams from real factors. Personal match guidance too.
+              </h2>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <p className="max-w-2xl text-base leading-7 text-muted">
+                Synco uses real factors like free time, work habits, class goals, skills, friend
+                requests, and do-not-pair notes. You can see why a team was suggested, and each
+                person also gets guidance on classmates to consider working with and pairings that
+                may be harder.
+              </p>
+              <StaggerContainer className="mt-6 grid gap-3 sm:grid-cols-2" delay={0.08}>
+                {matchingFactors.map((factor) => (
+                  <Reveal
+                    key={factor.title}
+                    staggerItem
+                    className="motion-lift rounded-[8px] border border-border bg-card p-4 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                  >
+                    <h3 className="font-sans text-sm font-semibold">{factor.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">{factor.text}</p>
+                  </Reveal>
+                ))}
+              </StaggerContainer>
+            </Reveal>
+          </div>
+        </section>
+
+        <section
+          id="features"
+          className={`border-b border-border/70 bg-secondary ${sectionPadding}`}
+        >
+          <div
+            className={`${pageContainer} grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-12`}
+          >
+            <Reveal className="max-w-md">
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">Group payoff</p>
+              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                Less sorting before group work starts.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
+                Synco handles the repeated sorting work so the class can move into the project with
+                fewer arguments and less guessing.
+              </p>
+            </Reveal>
+
+            <StaggerContainer className="grid gap-4 sm:grid-cols-2">
+              {classBenefits.map((benefit) => (
+                <Reveal
+                  key={benefit.title}
+                  staggerItem
+                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                >
+                  <h3 className="font-sans text-base font-semibold">{benefit.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted">{benefit.text}</p>
+                </Reveal>
+              ))}
+            </StaggerContainer>
+          </div>
+        </section>
+
+        <section id="faq" className={`${pageContainer} ${sectionPadding}`}>
+          <div className="mx-auto max-w-3xl">
+            <Reveal className="text-center">
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                Practical details
+              </p>
+              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                Questions before you start
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
+                Simple answers about joining, privacy, team rules, and late responses.
+              </p>
+            </Reveal>
+            <Reveal blur={false} delay={0.08} className="mt-8">
+              <LandingFaq />
+            </Reveal>
+          </div>
+        </section>
+
+        <section className="border-t border-border/70 bg-secondary py-8 sm:py-10 lg:py-14">
+          <div className={pageContainer}>
+            <Reveal className="flex flex-col items-start justify-between gap-6 rounded-[8px] border border-border bg-card p-6 sm:p-8 md:flex-row md:items-center">
+              <div>
+                <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                  Start with one class
+                </p>
+                <h2 className="mt-2 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                  Ready to create your first class?
+                </h2>
+              </div>
+              <Link to="/auth/signup" className={`${primaryButtonClass} w-full sm:w-auto`}>
                 Create a class
-                <ArrowRight className="motion-icon h-4 w-4" />
               </Link>
-              <Link
-                to="/join"
-                className="motion-lift inline-flex h-12 items-center justify-center gap-3 rounded-[8px] border border-border bg-card px-6 font-medium hover:border-primary/40 hover:bg-muted"
-              >
-                <LogIn className="h-4 w-4" />
-                Join a class
-              </Link>
-            </div>
+            </Reveal>
           </div>
         </section>
       </main>
@@ -349,21 +497,42 @@ function Landing() {
   );
 }
 
+function WorkflowLine() {
+  return (
+    <div className="rounded-[8px] border border-border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        {workflowSteps.map((step, index) => (
+          <span key={step} className="inline-flex items-center gap-2">
+            <span className="font-medium text-foreground">{step}</span>
+            {index < workflowSteps.length - 1 ? (
+              <span className="text-muted" aria-hidden="true">
+                &rarr;
+              </span>
+            ) : null}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LandingFaq() {
   return (
-    <div className="w-full space-y-3">
+    <div className="overflow-hidden rounded-[8px] border border-border bg-card">
       {faqs.map((faq) => (
-        <details key={faq.id} className="group rounded-xl border border-border bg-card px-5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-base font-medium transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
+        <details key={faq.id} className="group border-b border-border last:border-b-0">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-5 px-5 py-4 text-left text-sm font-semibold transition-colors hover:text-primary sm:px-6 sm:py-5 [&::-webkit-details-marker]:hidden">
             <span>{faq.question}</span>
             <span
-              className="text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border text-xs text-muted transition-transform duration-200 group-open:rotate-180"
               aria-hidden="true"
             >
               v
             </span>
           </summary>
-          <div className="pb-4 text-sm leading-relaxed text-muted">{faq.answer}</div>
+          <div className="max-w-2xl px-5 pb-5 text-sm leading-7 text-muted sm:px-6">
+            {faq.answer}
+          </div>
         </details>
       ))}
     </div>
@@ -372,21 +541,21 @@ function LandingFaq() {
 
 function LandingHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur-md">
+      <div className={`${pageContainer} flex items-center justify-between py-4`}>
         <Link
           to="/"
-          className="font-display text-lg sm:text-xl md:text-2xl tracking-tight hover:opacity-80 transition-opacity"
+          className="text-base font-semibold tracking-normal transition-colors hover:text-[color:var(--color-primary)]"
         >
           Synco
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-muted md:flex font-medium">
+        <nav className="hidden items-center gap-7 text-sm font-medium text-muted md:flex">
           <a href="#how-it-works" className="transition-colors hover:text-foreground">
-            How it works
+            How Synco works
           </a>
-          <a href="#features" className="transition-colors hover:text-foreground">
-            Features
+          <a href="#matching" className="transition-colors hover:text-foreground">
+            Matching
           </a>
           <a href="#faq" className="transition-colors hover:text-foreground">
             FAQ
@@ -396,16 +565,15 @@ function LandingHeader() {
         <div className="flex items-center gap-3">
           <Link
             to="/auth/login"
-            className="hidden text-sm font-medium text-muted transition-colors hover:text-foreground sm:inline mr-2"
+            className="hidden text-sm font-medium text-muted transition-colors hover:text-foreground sm:inline"
           >
             Sign in
           </Link>
           <Link
             to="/auth/signup"
-            className="motion-lift group inline-flex h-10 items-center gap-2 rounded-[8px] bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[color:var(--color-primary-hover)]"
+            className="inline-flex h-10 items-center rounded-[8px] bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]"
           >
-            Start
-            <ArrowRight className="motion-icon h-4 w-4" />
+            Create class
           </Link>
         </div>
       </div>
@@ -414,242 +582,194 @@ function LandingHeader() {
 }
 
 function MockMatchCard() {
-  const prefersReducedMotion = useReducedMotion();
-  const reduceMotion = prefersReducedMotion === true;
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const [score, setScore] = useState(92);
-  const [factorCount, setFactorCount] = useState(5);
-  const [revealed, setRevealed] = useState(true);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setScore(92);
-      setFactorCount(5);
-      setRevealed(true);
-      return;
-    }
-
-    const card = cardRef.current;
-    if (!card || hasAnimated.current) return;
-
-    let frame = 0;
-    let revealTimer = 0;
-
-    const runSequence = () => {
-      if (hasAnimated.current) return;
-      hasAnimated.current = true;
-      setScore(0);
-      setFactorCount(0);
-      setRevealed(false);
-
-      const duration = 1150;
-      const factorDuration = 900;
-      const start = performance.now();
-
-      const tick = (now: number) => {
-        const elapsed = now - start;
-        const scoreProgress = Math.min(elapsed / duration, 1);
-        const factorProgress = Math.min(elapsed / factorDuration, 1);
-        const easedScore = 1 - Math.pow(1 - scoreProgress, 3);
-        const easedFactor = 1 - Math.pow(1 - factorProgress, 3);
-
-        setScore(Math.round(easedScore * 92));
-        setFactorCount(Math.round(easedFactor * 5));
-
-        if (scoreProgress < 1) {
-          frame = window.requestAnimationFrame(tick);
-        } else {
-          setScore(92);
-          setFactorCount(5);
-        }
-      };
-
-      frame = window.requestAnimationFrame(tick);
-      revealTimer = window.setTimeout(() => setRevealed(true), 600);
-    };
-
-    if (!("IntersectionObserver" in window)) {
-      runSequence();
-      return () => {
-        window.cancelAnimationFrame(frame);
-        window.clearTimeout(revealTimer);
-      };
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          runSequence();
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "-80px", threshold: 0.25 },
-    );
-
-    observer.observe(card);
-
-    return () => {
-      observer.disconnect();
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(revealTimer);
-    };
-  }, [reduceMotion]);
-
-  const displayScore = reduceMotion ? 92 : score;
-  const displayFactorCount = reduceMotion ? 5 : factorCount;
-  const revealState = revealed || reduceMotion ? "show" : "hide";
-
   return (
-    <motion.div
-      ref={cardRef}
-      initial={false}
-      className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl p-8 relative z-10 max-w-lg mx-auto w-full hover:shadow-3xl transition-shadow"
+    <div
+      className="rounded-[8px] border border-border bg-card shadow-[0_12px_36px_oklch(0.18_0_0_/_0.05)]"
+      aria-label="Preview of generated classroom teams"
     >
-      <div className="flex items-center justify-between border-b border-border pb-6 mb-6">
+      <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-            Perfect Match
-          </span>
-          <h3 className="mt-2 text-2xl font-display font-bold">Maya & Noor</h3>
+          <p className="text-sm font-semibold">Team preview</p>
+          <p className="text-xs text-muted">Project group setup</p>
         </div>
-        <div className="text-right">
-          <div className="text-4xl font-display font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
-            {displayScore > 0 ? (
-              `${displayScore}%`
-            ) : (
-              <span className="inline-block h-9 w-20 rounded-md border border-dashed border-primary/25" />
-            )}
+        <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-[color:var(--color-primary)]">
+          Ready to share
+        </span>
+      </div>
+
+      <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-[0.92fr_1.08fr]">
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-background">
+            {previewStats.map(([label, value]) => (
+              <div key={label} className="min-w-0 px-3 py-3">
+                <p className="text-[0.7rem] font-medium leading-4 text-muted">{label}</p>
+                <p className="mt-1 text-sm font-semibold">{value}</p>
+              </div>
+            ))}
           </div>
-          <span className="block text-[9px] font-medium uppercase text-muted tracking-wider">
-            Compatible
-          </span>
-        </div>
-      </div>
 
-      <div className="space-y-5">
-        <motion.div
-          initial={false}
-          animate={revealState}
-          custom={0.2}
-          variants={cardPieceReveal}
-          className="bg-primary/5 rounded-lg p-4 border border-primary/10"
-        >
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">
-            Why this pairing works
-            <span className="ml-2 text-[10px] font-bold text-muted normal-case tracking-normal">
-              {displayFactorCount} factors compared
-            </span>
-          </h4>
-          <p className="text-sm text-foreground leading-relaxed font-medium">
-            Both prefer regular check-ins, active communication, and high academic standards. Noor's
-            API design expertise complements Maya's needs.
-          </p>
-        </motion.div>
+          <div className="space-y-3">
+            {previewTeams.map((team) => (
+              <div key={team.name} className="rounded-[8px] border border-border bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-sans text-sm font-semibold">{team.name}</h3>
+                  <span className="text-xs font-medium text-[color:var(--color-accent)]">
+                    92% fit
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-foreground">{team.members}</p>
+                <p className="mt-2 text-xs leading-5 text-muted">{team.rationale}</p>
+              </div>
+            ))}
+          </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <motion.div
-            initial={false}
-            animate={revealState}
-            custom={0.45}
-            variants={cardPieceReveal}
-            className="border border-border/60 rounded-lg p-3 bg-muted/30"
-          >
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-              📅 Shared Hours
-            </span>
-            <span className="font-semibold text-sm text-foreground">4 slots</span>
-            <span className="block text-[10px] text-muted-foreground mt-0.5">Mon, Wed, Fri</span>
-          </motion.div>
-          <motion.div
-            initial={false}
-            animate={revealState}
-            custom={0.6}
-            variants={cardPieceReveal}
-            className="border border-border/60 rounded-lg p-3 bg-muted/30"
-          >
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5">
-              ⚡ Work Rhythm
-            </span>
-            <span className="font-semibold text-sm text-foreground">Structured</span>
-            <span className="block text-[10px] text-muted-foreground mt-0.5">Early starts</span>
-          </motion.div>
+          <div className="rounded-[8px] border border-border bg-background p-4">
+            <h3 className="font-sans text-sm font-semibold">Your classmate guide</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+              {previewPeople.map(([label, names]) => (
+                <div key={label}>
+                  <p className="text-xs font-medium text-muted">{label}</p>
+                  <p className="mt-1 text-sm font-semibold">{names}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <motion.div
-          initial={false}
-          animate={revealState}
-          custom={0.85}
-          variants={cardPieceReveal}
-          className="bg-accent/5 rounded-lg p-4 border border-accent/10"
-        >
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-accent mb-3">
-            First meeting checklist
-          </h4>
-          <ul className="text-xs text-foreground space-y-2">
-            <motion.li
-              initial={false}
-              animate={revealState}
-              custom={1}
-              variants={cardPieceReveal}
-              className="flex items-center gap-2"
-            >
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-              <span>Confirm preferred communication channel</span>
-            </motion.li>
-            <motion.li
-              initial={false}
-              animate={revealState}
-              custom={1.13}
-              variants={cardPieceReveal}
-              className="flex items-center gap-2"
-            >
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-              <span>Set meeting frequency before task allocation</span>
-            </motion.li>
-            <motion.li
-              initial={false}
-              animate={revealState}
-              custom={1.26}
-              variants={cardPieceReveal}
-              className="flex items-center gap-2"
-            >
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-              <span>Establish shared deadline expectations</span>
-            </motion.li>
-          </ul>
-        </motion.div>
+        <div className="flex min-h-[280px] flex-col rounded-[8px] border border-border bg-background p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-sans text-sm font-semibold">Team map</h3>
+              <p className="mt-1 text-xs leading-5 text-muted">
+                Classmates settle into balanced teams as rules are applied.
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium text-accent-foreground">
+              4 teams
+            </span>
+          </div>
+
+          <svg
+            viewBox="0 0 600 320"
+            role="img"
+            className="mt-4 h-auto w-full flex-1"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <style>
+              {`
+                .team-dot {
+                  transform-box: fill-box;
+                  transform-origin: center;
+                  animation: team-dot-settle 12s cubic-bezier(.45, .05, .55, .95) infinite;
+                }
+
+                .team-line {
+                  opacity: 0;
+                  animation: team-line-fade 12s cubic-bezier(.22, 1, .36, 1) infinite;
+                }
+
+                @keyframes team-dot-settle {
+                  0% { transform: translate(var(--team-dx), var(--team-dy)); }
+                  32% { transform: translate(0, 0); }
+                  76% { transform: translate(0, 0); }
+                  100% { transform: translate(var(--team-dx), var(--team-dy)); }
+                }
+
+                @keyframes team-line-fade {
+                  0%, 30% { opacity: 0; }
+                  42%, 76% { opacity: .46; }
+                  92%, 100% { opacity: 0; }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                  .team-dot,
+                  .team-line {
+                    animation: none;
+                  }
+
+                  .team-line {
+                    opacity: .46;
+                  }
+                }
+              `}
+            </style>
+
+            {clusterConnections.map(({ cluster, from, to }) => {
+              const [x1, y1] = clusterPositions[from];
+              const [x2, y2] = clusterPositions[to];
+
+              return (
+                <line
+                  key={`${from}-${to}`}
+                  data-team-line=""
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  className="team-line"
+                  stroke={clusterColors[cluster]}
+                  strokeWidth="1.25"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+
+            {clusterAssignments.map((cluster, index) => {
+              const [startX, startY] = scatterPositions[index];
+              const [endX, endY] = clusterPositions[index];
+
+              return (
+                <g
+                  key={index}
+                  data-team-dot={index}
+                  className="team-dot"
+                  style={
+                    {
+                      "--team-dx": `${startX - endX}px`,
+                      "--team-dy": `${startY - endY}px`,
+                    } as CSSProperties
+                  }
+                >
+                  <circle r="7" fill={clusterColors[cluster]} opacity="0.88" cx={endX} cy={endY} />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 function LandingFooter() {
   return (
-    <footer className="mx-auto flex max-w-7xl flex-col gap-6 border-t border-border/40 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-10 text-xs sm:text-sm text-muted md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-col gap-1 sm:gap-2">
-        <Link
-          to="/"
-          className="font-display text-sm sm:text-base hover:opacity-80 transition-opacity w-fit"
-        >
-          Synco
-        </Link>
-        <p className="text-xs text-muted">Sync your way to success</p>
-      </div>
-      <div className="flex flex-wrap gap-4 sm:gap-6 text-xs">
-        <Link to="/auth/login" className="transition-colors hover:text-foreground">
-          Sign in
-        </Link>
-        <Link to="/join" className="transition-colors hover:text-foreground">
-          Join
-        </Link>
-        <Link to="/privacy" className="transition-colors hover:text-foreground">
-          Privacy
-        </Link>
-        <Link to="/terms" className="transition-colors hover:text-foreground">
-          Terms
-        </Link>
-        <span>private / honest / useful</span>
+    <footer className="border-t border-border/70 bg-background">
+      <div
+        className={`${pageContainer} flex flex-col gap-5 py-7 text-xs text-muted sm:text-sm md:flex-row md:items-center md:justify-between`}
+      >
+        <div>
+          <Link
+            to="/"
+            className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+          >
+            Synco
+          </Link>
+          <p className="mt-1 text-xs text-muted">Class teams, explained.</p>
+        </div>
+        <div className="flex flex-wrap gap-4 sm:gap-6">
+          <Link to="/auth/login" className="transition-colors hover:text-foreground">
+            Sign in
+          </Link>
+          <Link to="/join" className="transition-colors hover:text-foreground">
+            Join
+          </Link>
+          <Link to="/privacy" className="transition-colors hover:text-foreground">
+            Privacy
+          </Link>
+          <Link to="/terms" className="transition-colors hover:text-foreground">
+            Terms
+          </Link>
+        </div>
       </div>
     </footer>
   );

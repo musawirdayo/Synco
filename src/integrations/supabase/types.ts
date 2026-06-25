@@ -8,6 +8,60 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string;
+          actor_id: string | null;
+          created_at: string;
+          details: Json;
+          id: string;
+          target_id: string | null;
+          target_type: string;
+        };
+        Insert: {
+          action: string;
+          actor_id?: string | null;
+          created_at?: string;
+          details?: Json;
+          id?: string;
+          target_id?: string | null;
+          target_type: string;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string | null;
+          created_at?: string;
+          details?: Json;
+          id?: string;
+          target_id?: string | null;
+          target_type?: string;
+        };
+        Relationships: [];
+      };
+      admin_presence: {
+        Row: {
+          last_path: string;
+          last_seen_at: string;
+          updated_at: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          last_path?: string;
+          last_seen_at?: string;
+          updated_at?: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: {
+          last_path?: string;
+          last_seen_at?: string;
+          updated_at?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       class_members: {
         Row: {
           class_id: string;
@@ -120,6 +174,27 @@ export type Database = {
           },
         ];
       };
+      platform_admins: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          note: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          note?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          note?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -219,6 +294,97 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_delete_class: {
+        Args: { _class_id: string };
+        Returns: undefined;
+      };
+      admin_delete_user_account: {
+        Args: { _user_id: string };
+        Returns: undefined;
+      };
+      admin_get_class_detail: {
+        Args: { _class_id: string };
+        Returns: Json;
+      };
+      admin_get_overview: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      admin_get_user_detail: {
+        Args: { _user_id: string };
+        Returns: Json;
+      };
+      admin_has_platform_access: {
+        Args: { _user_id: string };
+        Returns: boolean;
+      };
+      admin_grant_platform_admin: {
+        Args: { _note?: string | null; _user_id: string };
+        Returns: undefined;
+      };
+      admin_list_audit_log: {
+        Args: { _limit?: number };
+        Returns: {
+          action: string;
+          actor_email: string | null;
+          actor_id: string | null;
+          created_at: string;
+          details: Json;
+          id: string;
+          target_id: string | null;
+          target_type: string;
+        }[];
+      };
+      admin_list_classes: {
+        Args: { _limit?: number; _query?: string };
+        Returns: {
+          class_id: string;
+          completed_count: number;
+          created_at: string;
+          expected_count: number;
+          feedback_count: number;
+          institution: string | null;
+          invite_code: string;
+          is_published: boolean;
+          lead_email: string | null;
+          lead_id: string;
+          lead_name: string | null;
+          member_count: number;
+          name: string;
+          result_count: number;
+          team_size: number;
+        }[];
+      };
+      admin_revoke_platform_admin: {
+        Args: { _user_id: string };
+        Returns: undefined;
+      };
+      admin_search_users: {
+        Args: { _limit?: number; _query?: string };
+        Returns: {
+          class_count: number;
+          completed_response_count: number;
+          created_at: string;
+          email: string | null;
+          full_name: string | null;
+          is_admin: boolean;
+          last_path: string | null;
+          last_seen_at: string | null;
+          last_sign_in_at: string | null;
+          led_class_count: number;
+          response_count: number;
+          role: Database["public"]["Enums"]["app_role"] | null;
+          user_id: string;
+        }[];
+      };
+      admin_set_user_role: {
+        Args: { _role: Database["public"]["Enums"]["app_role"]; _user_id: string };
+        Returns: undefined;
+      };
+      is_platform_admin: {
+        Args: { _user_id: string };
+        Returns: boolean;
+      };
       is_class_lead: {
         Args: { _class_id: string; _user_id: string };
         Returns: boolean;
@@ -242,6 +408,10 @@ export type Database = {
       normalize_student_identifier: {
         Args: { _identifier: string };
         Returns: string | null;
+      };
+      record_presence: {
+        Args: { _path: string; _user_agent?: string | null };
+        Returns: undefined;
       };
       setup_demo_class: {
         Args: { _lead_id: string };

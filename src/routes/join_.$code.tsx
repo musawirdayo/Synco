@@ -199,8 +199,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
               better teammates.
             </h2>
             <p className="text-primary-foreground/70 max-w-sm">
-              You'll spend a few focused minutes answering questions about how you actually work.
-              That's it.
+              You'll answer a focused set of questions about how you actually work. That's it.
             </p>
           </div>
           <span className="font-mono text-xs text-primary-foreground/50">
@@ -255,8 +254,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
             better teammates.
           </h2>
           <p className="text-primary-foreground/70 max-w-sm">
-            You'll spend a few focused minutes answering questions about how you actually work.
-            That's it.
+            You'll answer a focused set of questions about how you actually work. That's it.
           </p>
         </div>
         <span className="font-mono text-xs text-primary-foreground/50">

@@ -20,6 +20,7 @@ type Row = {
 };
 
 type PublicRosterPeer = { student_id: string; name: string };
+type MemberRosterRow = { student_id: string; display_name?: string | null };
 
 function Roster() {
   const { id } = useParams({ from: "/c/$id_/roster" });
@@ -49,15 +50,33 @@ function Roster() {
       setClassName(cls.name);
       setPublished(cls.is_published);
       setIsLead(viewerIsLead);
-      const { data: members } = await supabase
-        .from("class_members")
-        .select("student_id,display_name")
-        .eq("class_id", id)
-        .order("display_name");
-      const { data: resps } = await supabase
+      const { data: ownMember } = !viewerIsLead
+        ? await supabase
+            .from("class_members")
+            .select("display_name")
+            .eq("class_id", id)
+            .eq("student_id", user.id)
+            .maybeSingle()
+        : { data: null };
+      const { data: members } = viewerIsLead
+        ? await supabase
+            .from("class_members")
+            .select("student_id,display_name")
+            .eq("class_id", id)
+            .order("display_name")
+        : await supabase
+            .from("class_members")
+            .select("student_id")
+            .eq("class_id", id)
+            .order("joined_at");
+      let responseQuery = supabase
         .from("survey_responses")
         .select("student_id,completed,answers")
         .eq("class_id", id);
+      if (!viewerIsLead) {
+        responseQuery = responseQuery.eq("student_id", user.id);
+      }
+      const { data: resps } = await responseQuery;
       const responseByStudent = new Map((resps ?? []).map((r) => [r.student_id, r]));
       const publicNameByStudent = new Map<string, string>();
       if (!viewerIsLead && cls.is_published) {
@@ -76,12 +95,17 @@ function Roster() {
         });
       }
       setRows(
-        (members ?? []).map((m, index) => {
+        ((members ?? []) as MemberRosterRow[]).map((m, index) => {
           const response = responseByStudent.get(m.student_id);
           const publicName = publicNameByStudent.get(m.student_id) ?? null;
+          const displayName = viewerIsLead
+            ? (m.display_name ?? "Classmate")
+            : m.student_id === user.id
+              ? (ownMember?.display_name ?? "You")
+              : "";
           return {
             student_id: m.student_id,
-            display_name: m.display_name,
+            display_name: displayName,
             submitted: response
               ? response.completed
               : publicName
@@ -100,10 +124,11 @@ function Roster() {
 
   const visibleRows = rows.map((r) => {
     const isMe = r.student_id === user?.id;
+    const publicNameShowsIdentity = Boolean(r.publicName && !isAnonymousRosterName(r.publicName));
     const canSeeDetails =
       isLead ||
       isMe ||
-      r.publicName === r.display_name ||
+      publicNameShowsIdentity ||
       Boolean(
         r.answers && publicPeerName(r.answers, r.display_name, r.displayIndex) === r.display_name,
       );
@@ -221,4 +246,8 @@ function Roster() {
       </main>
     </div>
   );
+}
+
+function isAnonymousRosterName(name: string) {
+  return /^Classmate\s+\d+$/i.test(name.trim());
 }

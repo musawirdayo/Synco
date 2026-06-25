@@ -188,7 +188,8 @@
     transition-timing-function: var(--motion-ease);
   }
   .motion-lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px oklch(0.18 0 0 / 0.06);
   }
 
   .motion-icon {

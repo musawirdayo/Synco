@@ -9,6 +9,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -144,6 +146,26 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function record() {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled || !data.session) return;
+      await supabase.rpc("record_presence", {
+        _path: pathname,
+        _user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      });
+    }
+
+    void record();
+    const interval = window.setInterval(() => void record(), 45_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [pathname]);
 
   return (
     <QueryClientProvider client={queryClient}>

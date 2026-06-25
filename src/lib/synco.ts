@@ -220,7 +220,7 @@ function availabilityScore(a: Answers, b: Answers) {
   // Practical logistics signals (all 1-5 Likert, normalized to 0-1):
   //   q10: flexibility with scheduling changes
   //   q14: ability to meet in person nearby
-  //   q15: internet/device reliability
+  //   q15: predictable class/lab presence
   //   q16: online meeting setup quality
   //   q20: timezone/schedule regularity
   const practicalFit = avg([
