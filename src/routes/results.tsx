@@ -276,16 +276,134 @@ function WorkStyleSection({ meters }: { meters: ResultData["meters"] }) {
   );
 }
 
+type PeerWithMode = (Match | Avoid) & { isAvoid: boolean };
+type BreakdownMetricKey = "availability" | "academic" | "complementary" | "studyStyle" | "goals";
+type BreakdownRow = { key: BreakdownMetricKey; label: string; value: number };
+
+const BREAKDOWN_LABELS: Array<{ key: BreakdownMetricKey; label: string }> = [
+  { key: "availability", label: "meeting time" },
+  { key: "academic", label: "course focus" },
+  { key: "complementary", label: "skill coverage" },
+  { key: "studyStyle", label: "work rhythm" },
+  { key: "goals", label: "effort level" },
+];
+
+function breakdownRows(breakdown?: MatchBreakdown): BreakdownRow[] {
+  if (!breakdown) return [];
+  return BREAKDOWN_LABELS.map((item) => ({
+    ...item,
+    value: breakdown[item.key],
+  }));
+}
+
+function strongestSignal(peer: Match | Avoid) {
+  return [...breakdownRows(peer.breakdown)].sort((left, right) => right.value - left.value)[0];
+}
+
+function weakestSignal(peer: Match | Avoid) {
+  return [...breakdownRows(peer.breakdown)].sort((left, right) => left.value - right.value)[0];
+}
+
+function matchHeadline(peer: Match) {
+  if (peer.assigned) return "Assigned teammate";
+  if (peer.score >= 85) return "High-trust match";
+  if (peer.score >= 75) return "Strong project fit";
+  if (peer.score >= 65) return "Useful working fit";
+  return "Worth a careful first chat";
+}
+
+function matchBenefit(peer: Match) {
+  const strongest = strongestSignal(peer);
+  if (!strongest) return "This match is based on the overall pattern of your answers.";
+  if (strongest.key === "complementary") {
+    return "The value here is coverage: they are useful because they may cover gaps, not because they are a copy of you.";
+  }
+  if (strongest.key === "availability") {
+    return "The practical win is simple: this person should be easier to actually meet and make progress with.";
+  }
+  if (strongest.key === "studyStyle") {
+    return "The work rhythm is the upside, so planning, updates, and task handoffs should feel smoother.";
+  }
+  if (strongest.key === "goals") {
+    return "The effort level lines up, which lowers the chance that one person carries the project alone.";
+  }
+  return "The course focus lines up, so helping each other should take less translation time.";
+}
+
+function watchHeadline(peer: Avoid) {
+  if (peer.friendFlagged) return "Friend reality check";
+  if (peer.isRisky) return "High-risk pairing";
+  if (peer.riskScore && peer.riskScore >= 25) return "Needs a strict plan";
+  return "Watch before choosing";
+}
+
+function likelyFailureMode(peer: Avoid) {
+  const weakest = weakestSignal(peer);
+  if (!weakest) return peer.watch || "This pairing needs a clear plan before work starts.";
+  if (weakest.key === "availability") {
+    return "What will probably go wrong: you spend more time trying to meet than actually finishing work.";
+  }
+  if (weakest.key === "academic") {
+    return "What will probably go wrong: you may be preparing for different things, so support turns into extra teaching time.";
+  }
+  if (weakest.key === "complementary") {
+    return "What will probably go wrong: the same skill gaps stay uncovered, so the project slows down when hard parts appear.";
+  }
+  if (weakest.key === "studyStyle") {
+    return "What will probably go wrong: one person expects fast back-and-forth while the other works in a different rhythm.";
+  }
+  return "What will probably go wrong: the effort level or target outcome may not match once deadlines get real.";
+}
+
+function firstAgreement(peer: Match | Avoid) {
+  if ("agree" in peer && peer.agree?.length) return peer.agree[0];
+  const weakest = weakestSignal(peer);
+  return weakest?.label ?? "first check-in cadence";
+}
+
+function teamSummary(team: StudentTeamAssignment) {
+  const quality = team.quality;
+  if (!quality) {
+    return {
+      best: "Team assignment",
+      weak: "First plan",
+      proof: team.rationale,
+      move: "Start with roles, meeting time, and the first task owner.",
+      cards: [],
+    };
+  }
+
+  const metrics = [
+    { label: "Meeting time", value: quality.logistics },
+    { label: "Skill coverage", value: quality.skillCoverage },
+    { label: "Role mix", value: quality.roleCoverage },
+    { label: "Pair safety", value: quality.minPairSafety },
+    { label: "Effort alignment", value: quality.goalAlignment },
+  ].sort((left, right) => right.value - left.value);
+  const best = metrics[0];
+  const weak = [...metrics].sort((left, right) => left.value - right.value)[0];
+  const proofParts = [
+    quality.rolesCovered.length ? `roles: ${quality.rolesCovered.slice(0, 4).join(", ")}` : "",
+    quality.strengthsCovered.length
+      ? `coverage: ${quality.strengthsCovered.slice(0, 4).join(", ")}`
+      : "",
+  ].filter(Boolean);
+
+  return {
+    best: `${best?.label ?? "Team quality"} is the strongest signal (${best?.value ?? quality.score}%).`,
+    weak: `${weak?.label ?? "First plan"} is the weak spot (${weak?.value ?? quality.score}%).`,
+    proof: proofParts.length ? proofParts.join(" · ") : quality.rationale,
+    move: quality.watch,
+    cards: metrics.slice(0, 4),
+  };
+}
+
 /* ─── Component: Peer detail panel ─── */
-function PeerDetail({
-  peer,
-  ownArchetype,
-}: {
-  peer: (Match | Avoid) & { isAvoid: boolean };
-  ownArchetype: string;
-}) {
+function PeerDetail({ peer, ownArchetype }: { peer: PeerWithMode; ownArchetype: string }) {
   const isAvoid = peer.isAvoid;
   const breakdown = peer.breakdown;
+  const matchPeer = !isAvoid ? (peer as Match) : null;
+  const avoidPeer = isAvoid ? (peer as Avoid) : null;
 
   return (
     <div className="rounded-xl border border-border/50 bg-background/40 p-6 space-y-5">
@@ -299,7 +417,7 @@ function PeerDetail({
                 : "bg-accent/10 text-accent border border-accent/20"
             }`}
           >
-            {isAvoid ? "Needs careful alignment" : "Strong match"}
+            {avoidPeer ? watchHeadline(avoidPeer) : matchPeer ? matchHeadline(matchPeer) : "Match"}
           </span>
           <h3 className="text-2xl font-bold tracking-tight text-foreground">{peer.name}</h3>
           <div className="mt-1 flex flex-wrap gap-2 justify-center sm:justify-start items-center">
@@ -324,6 +442,25 @@ function PeerDetail({
             {isAvoid ? "Why this might be hard" : "Why you'd work well together"}
           </h4>
           <p className="text-sm leading-relaxed text-foreground">{peer.why}</p>
+        </div>
+
+        <div
+          className={`rounded-xl p-4 border ${
+            isAvoid
+              ? "bg-destructive/[0.025] border-destructive/15"
+              : "bg-accent/[0.035] border-accent/15"
+          }`}
+        >
+          <h4
+            className={`text-xs uppercase tracking-wider font-bold mb-1.5 ${
+              isAvoid ? "text-destructive" : "text-accent"
+            }`}
+          >
+            {isAvoid ? "Likely failure mode" : "Why this person is useful"}
+          </h4>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {avoidPeer ? likelyFailureMode(avoidPeer) : matchPeer ? matchBenefit(matchPeer) : ""}
+          </p>
         </div>
 
         {((isAvoid && "riskProofs" in peer && peer.riskProofs?.length) ||
@@ -412,6 +549,10 @@ function PeerDetail({
         <p className="text-xs text-muted-foreground pt-2 border-t border-border/20">
           <strong className="font-semibold text-foreground/80">Getting started:</strong> {peer.move}
         </p>
+        <p className="text-xs text-muted-foreground">
+          <strong className="font-semibold text-foreground/80">First thing to agree on:</strong>{" "}
+          {firstAgreement(peer)}.
+        </p>
       </div>
     </div>
   );
@@ -446,9 +587,9 @@ function Results() {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    const matches = state.data?.matches || [];
-    if (matches.length > 0 && !selectedPeerId) {
-      setSelectedPeerId(matches[0].student_id);
+    const firstPeerId = state.data?.matches?.[0]?.student_id ?? state.data?.avoid?.[0]?.student_id;
+    if (firstPeerId && !selectedPeerId) {
+      setSelectedPeerId(firstPeerId);
     }
   }, [state.data, selectedPeerId]);
 
@@ -651,10 +792,6 @@ function Results() {
       "Use this as a practical starting point. A good team still needs a first conversation, clear roles, and instructor judgment.",
   };
 
-  const allPeers = [
-    ...(d.matches || []).map((m) => ({ ...m, isAvoid: false })),
-    ...(d.avoid || []).map((a) => ({ ...a, isAvoid: true })),
-  ];
   const orderedAvoid = (d.avoid || [])
     .map((peer, index) => ({ peer, index }))
     .sort((left, right) => {
@@ -664,10 +801,15 @@ function Results() {
       return left.index - right.index;
     })
     .map(({ peer }) => peer);
+  const allPeers = [
+    ...(d.matches || []).map((m) => ({ ...m, isAvoid: false })),
+    ...orderedAvoid.map((a) => ({ ...a, isAvoid: true })),
+  ];
   const assignedTeam = state.assignedTeam ?? null;
   const assignmentSnapshot = state.assignmentSnapshot ?? null;
   const isUnmatchedFromTeams =
     Boolean(user) && studentIsUnmatched(assignmentSnapshot, user?.id ?? "");
+  const assignedTeamSummary = assignedTeam ? teamSummary(assignedTeam) : null;
 
   async function sendFeedback(choice: string) {
     if (!state.classId || !user || feedbackBusy || !state.data) return;
@@ -754,6 +896,32 @@ function Results() {
                   {assignedTeam.members.length === 1 ? "" : "s"} · {assignedTeam.average_score}%
                   average compatibility
                 </p>
+                {assignedTeamSummary && (
+                  <div className="mb-5 grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+                    <div className="rounded-xl border border-accent/20 bg-accent/[0.04] p-5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-accent mb-2">
+                        Best signal
+                      </div>
+                      <p className="text-sm leading-relaxed text-foreground">
+                        {assignedTeamSummary.best}
+                      </p>
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                        {assignedTeamSummary.proof}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border/50 bg-background/45 p-5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                        Weak spot to handle
+                      </div>
+                      <p className="text-sm leading-relaxed text-foreground">
+                        {assignedTeamSummary.weak}
+                      </p>
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                        {assignedTeamSummary.move}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {assignedTeam.teammates.length > 0 && (
                   <p className="mb-5 rounded-xl border border-accent/20 bg-accent/[0.04] p-4 text-sm text-muted-foreground">
                     Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
@@ -800,28 +968,49 @@ function Results() {
                 {assignedTeam.quality && (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {[
-                      ["Team quality", assignedTeam.quality.score, "overall balance"],
-                      ["Pair safety", assignedTeam.quality.minPairSafety, "no weak hidden pair"],
-                      ["Skill coverage", assignedTeam.quality.skillCoverage, "gaps covered"],
-                      ["Role balance", assignedTeam.quality.roleCoverage, "different work roles"],
-                    ].map(([label, value, helper]) => (
-                      <div
-                        key={label}
-                        className="rounded-xl border border-border/40 bg-background/45 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              {label}
+                      {
+                        label: "Team quality",
+                        value: assignedTeam.quality.score,
+                        helper: "overall balance",
+                      },
+                      ...(assignedTeamSummary?.cards.map((card) => ({
+                        label: card.label,
+                        value: card.value,
+                        helper:
+                          card.label === "Meeting time"
+                            ? "schedule reality"
+                            : card.label === "Skill coverage"
+                              ? "gaps covered"
+                              : card.label === "Role mix"
+                                ? "different jobs"
+                                : card.label === "Pair safety"
+                                  ? "no hidden weak pair"
+                                  : "same effort level",
+                      })) ?? []),
+                    ]
+                      .filter(
+                        (card, index, cards) =>
+                          cards.findIndex((candidate) => candidate.label === card.label) === index,
+                      )
+                      .slice(0, 4)
+                      .map(({ label, value, helper }) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-border/40 bg-background/45 p-4"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {label}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">{helper}</div>
                             </div>
-                            <div className="mt-1 text-xs text-muted-foreground">{helper}</div>
+                            <span className="font-display text-2xl font-bold text-accent">
+                              {value}%
+                            </span>
                           </div>
-                          <span className="font-display text-2xl font-bold text-accent">
-                            {value}%
-                          </span>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                     {(assignedTeam.quality.rolesCovered.length > 0 ||
                       assignedTeam.quality.weakAreasCovered.length > 0) && (
                       <div className="sm:col-span-2 rounded-xl border border-accent/15 bg-accent/[0.035] p-4 text-sm text-muted-foreground">
@@ -1028,7 +1217,9 @@ function Results() {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground truncate mt-0.5">
-                          {peer.archetype}
+                          {peer.isAvoid
+                            ? watchHeadline(peer as Avoid)
+                            : matchHeadline(peer as Match)}
                         </div>
                       </div>
                       <span
@@ -1084,8 +1275,11 @@ function Results() {
                             <div>
                               <h4 className="font-semibold text-lg text-foreground">{peer.name}</h4>
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-[10px] font-bold text-accent uppercase tracking-wider">
-                                {peer.archetype}
+                                {matchHeadline(peer)}
                               </span>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {peer.archetype}
+                              </div>
                             </div>
                             <div className="text-right shrink-0">
                               <span className="font-display text-2xl font-extrabold text-accent">
@@ -1100,6 +1294,12 @@ function Results() {
                           {peer.breakdown && <BreakdownBars breakdown={peer.breakdown} />}
 
                           <div className="text-xs leading-relaxed space-y-2">
+                            <div className="rounded-lg border border-accent/15 bg-accent/[0.035] p-3">
+                              <strong className="text-accent text-[10px] uppercase tracking-wider block mb-1.5">
+                                Why this person matters
+                              </strong>
+                              <p className="text-muted-foreground">{matchBenefit(peer)}</p>
+                            </div>
                             <p className="text-muted-foreground">
                               <strong className="text-foreground/80 text-[10px] block mb-0.5">
                                 Why:
@@ -1127,6 +1327,29 @@ function Results() {
                                 </ul>
                               </div>
                             )}
+                            {peer.agree && peer.agree.length > 0 && (
+                              <div>
+                                <strong className="text-foreground/80 text-[10px] uppercase tracking-wider block mb-1.5">
+                                  Agree before starting
+                                </strong>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {peer.agree.slice(0, 3).map((item) => (
+                                    <span
+                                      key={item}
+                                      className="rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
+                                    >
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <p className="rounded-lg border border-border/30 bg-background/35 p-3 text-muted-foreground">
+                              <strong className="text-foreground/80 text-[10px] block mb-0.5">
+                                First move:
+                              </strong>{" "}
+                              {peer.move}
+                            </p>
                           </div>
                         </div>
 
@@ -1188,8 +1411,11 @@ function Results() {
                                       : "bg-destructive/10 border-destructive/20 text-destructive")
                                   }
                                 >
-                                  {peer.archetype}
+                                  {watchHeadline(peer)}
                                 </span>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  {peer.archetype}
+                                </div>
                               </div>
                               <div className="text-right shrink-0">
                                 <span className="font-display text-2xl font-extrabold text-destructive">
@@ -1201,6 +1427,26 @@ function Results() {
                             {peer.breakdown && <BreakdownBars breakdown={peer.breakdown} />}
 
                             <div className="text-xs leading-relaxed space-y-2">
+                              <div
+                                className={
+                                  "rounded-lg border p-3 " +
+                                  (peer.friendFlagged
+                                    ? "border-amber-500/20 bg-amber-500/[0.08]"
+                                    : "border-destructive/10 bg-destructive/[0.02]")
+                                }
+                              >
+                                <strong
+                                  className={
+                                    "text-[10px] uppercase tracking-wider block mb-1.5 " +
+                                    (peer.friendFlagged
+                                      ? "text-amber-700 dark:text-amber-300"
+                                      : "text-destructive")
+                                  }
+                                >
+                                  What will probably go wrong
+                                </strong>
+                                <p className="text-muted-foreground">{likelyFailureMode(peer)}</p>
+                              </div>
                               <p className="text-muted-foreground">
                                 <strong className="text-foreground/80 text-[10px] block mb-0.5">
                                   Why this is hard:
@@ -1237,6 +1483,13 @@ function Results() {
                                   </ul>
                                 </div>
                               )}
+                              <p className="rounded-lg border border-border/30 bg-background/35 p-3 text-muted-foreground">
+                                <strong className="text-foreground/80 text-[10px] block mb-0.5">
+                                  If you still choose this pair:
+                                </strong>{" "}
+                                Agree on {firstAgreement(peer).toLowerCase()} before assigning any
+                                work.
+                              </p>
                             </div>
                           </div>
 

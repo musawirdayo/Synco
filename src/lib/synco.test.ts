@@ -1101,6 +1101,86 @@ describe("formTeams", () => {
       expect(roles.filter((role) => role === "Reliable Finisher").length).toBeLessThan(3);
     }
   });
+
+  it("keeps a hard-to-place student assigned when a legal team shape exists", () => {
+    const hardToPlace: MatchStudent = {
+      id: "hard",
+      answers: {
+        ...studentC(),
+        availability: ["Sunday late night"],
+        topics: ["Independent research"],
+        strengths: ["Data cleanup"],
+        weakAreas: ["Presentation"],
+        deliveryReliability: "Often late",
+        responseExpectation: "Scheduled check-ins over frequent messages",
+      },
+    };
+    const students: MatchStudent[] = [
+      teamStudent("a", "calculus"),
+      teamStudent("b", "design"),
+      teamStudent("c", "writing"),
+      teamStudent("d", "research"),
+      teamStudent("e", "presentation"),
+      teamStudent("f", "programming"),
+      hardToPlace,
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 4));
+    expect(plan.unmatchedIds).toHaveLength(0);
+    expect(plan.teams.flatMap((team) => team.memberIds)).toContain("hard");
+    expect(plan.teams.every((team) => team.quality.score >= 0 && team.quality.score <= 100)).toBe(
+      true,
+    );
+  });
+
+  it("does not let a mutual friend request override a blocked-pair conflict", () => {
+    const aliceBase = teamStudent("a", "calculus");
+    const bobBase = teamStudent("b", "calculus");
+    const students: MatchStudent[] = [
+      {
+        ...aliceBase,
+        name: "Alice",
+        answers: { ...aliceBase.answers, wantToWorkWith: "Bob", doNotPairWith: "Bob" },
+      },
+      {
+        ...bobBase,
+        name: "Bob",
+        answers: { ...bobBase.answers, wantToWorkWith: "Alice" },
+      },
+      teamStudent("c", "design"),
+      teamStudent("d", "writing"),
+      teamStudent("e", "research"),
+      teamStudent("f", "presentation"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    for (const team of plan.teams) {
+      expect(team.memberIds.includes("a") && team.memberIds.includes("b")).toBe(false);
+    }
+  });
+
+  it("handles many missing answers without NaN scores or dropped students", () => {
+    const students: MatchStudent[] = [
+      { id: "empty-1", answers: studentEmpty() },
+      { id: "empty-2", answers: studentEmpty() },
+      { id: "minimal-1", answers: studentMinimal() },
+      { id: "minimal-2", answers: studentMinimal() },
+      teamStudent("topic-1", "calculus"),
+      teamStudent("topic-2", "design"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    expect(plan.unmatchedIds).toHaveLength(0);
+    expect(plan.teams.flatMap((team) => team.memberIds).sort()).toEqual(
+      students.map((student) => student.id).sort(),
+    );
+    for (const team of plan.teams) {
+      expect(Number.isFinite(team.averageScore)).toBe(true);
+      expect(Number.isFinite(team.quality.score)).toBe(true);
+      expect(team.quality.score).toBeGreaterThanOrEqual(0);
+      expect(team.quality.score).toBeLessThanOrEqual(100);
+    }
+  });
 });
 
 // ─── MATCH_WEIGHTS tests ───

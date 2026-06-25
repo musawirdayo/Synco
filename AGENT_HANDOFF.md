@@ -299,6 +299,35 @@ Next recommended Matching V2 work:
 - Improve student results copy so each suggested/avoided peer gets clearer, punchier plain-language evidence.
 - Consider a teacher review UI for low-confidence teams before publish.
 
+## 2026-06-25 Results V2 Student Explanation Pass
+
+Implemented locally:
+
+- Upgraded `src/routes/results.tsx` so published student results explain the data more clearly without requiring a new publish:
+  - top-match cards now show a stronger headline, why the person matters, proof bullets, what to agree on first, and the first move
+  - watch/avoid cards now show a likely failure mode, friend-reality cards stay visually distinct and sorted first, and risky pairs get clearer next-step copy
+  - the peer detail panel now includes the same practical upside/failure-mode explanation
+  - the assigned team card now highlights the team's best signal, weak spot, proof from roles/coverage, and top quality metrics
+- Kept the existing top-5 match and watch/avoid sections in place.
+- Added form-team scenario tests for:
+  - hard-to-place student assignment
+  - mutual request blocked by a do-not-pair conflict
+  - many missing answers with finite team scores and no dropped students
+
+Verification passed after this slice:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (86 passing)
+- `npm run build`
+- `git diff --check`
+
+Next recommended Matching V2 work:
+
+- Add a teacher-facing low-confidence team review panel before publish.
+- Add analytics for which match reasons students click/expand most, if the product needs evidence that the result page is engaging.
+- Consider regrouping the long survey into fewer visual screens once enough real responses reveal which fields carry the most signal.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.
