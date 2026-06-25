@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { archetypeBlurb } from "@/lib/synco";
 import type { MatchBreakdown } from "@/lib/synco";
-import { Users, Activity, Info, AlertCircle } from "lucide-react";
+import { Activity, Info } from "lucide-react";
 import {
   clearActiveClassId,
   getActiveClassId,
@@ -88,7 +88,15 @@ type ResultData = {
 };
 
 /* ─── Component: Score ring ─── */
-function ScoreRing({ score, isWarning }: { score: number; isWarning?: boolean }) {
+function ScoreRing({
+  score,
+  isWarning,
+  label = "Match",
+}: {
+  score: number;
+  isWarning?: boolean;
+  label?: string;
+}) {
   const radius = 48;
   const stroke = 5;
   const normRad = radius - stroke * 2;
@@ -127,7 +135,7 @@ function ScoreRing({ score, isWarning }: { score: number; isWarning?: boolean })
           {score}%
         </span>
         <span className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5 font-bold">
-          Match
+          {label}
         </span>
       </div>
     </div>
@@ -276,7 +284,6 @@ function WorkStyleSection({ meters }: { meters: ResultData["meters"] }) {
   );
 }
 
-type PeerWithMode = (Match | Avoid) & { isAvoid: boolean };
 type BreakdownMetricKey = "availability" | "academic" | "complementary" | "studyStyle" | "goals";
 type BreakdownRow = { key: BreakdownMetricKey; label: string; value: number };
 
@@ -398,163 +405,509 @@ function teamSummary(team: StudentTeamAssignment) {
   };
 }
 
-/* ─── Component: Peer detail panel ─── */
-function PeerDetail({ peer, ownArchetype }: { peer: PeerWithMode; ownArchetype: string }) {
-  const isAvoid = peer.isAvoid;
-  const breakdown = peer.breakdown;
-  const matchPeer = !isAvoid ? (peer as Match) : null;
-  const avoidPeer = isAvoid ? (peer as Avoid) : null;
+function formatReportDate(value?: string) {
+  if (!value) return "Not recorded";
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function profileInitial(name?: string) {
+  return (name?.trim()?.[0] ?? "S").toUpperCase();
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  tone = "default",
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  tone?: "default" | "warning";
+}) {
+  return (
+    <div>
+      {eyebrow && (
+        <div
+          className={
+            "mb-2 text-[10px] font-bold uppercase tracking-[0.18em] " +
+            (tone === "warning" ? "text-destructive" : "text-accent")
+          }
+        >
+          {eyebrow}
+        </div>
+      )}
+      <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
+      {description && (
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ProfileOverview({
+  name,
+  className,
+  data,
+  partial,
+}: {
+  name?: string;
+  className?: string;
+  data: ResultData;
+  partial: boolean;
+}) {
+  const stats = [
+    { label: "Best matches", value: data.matches?.length ?? 0 },
+    { label: "Watch-outs", value: data.avoid?.length ?? 0 },
+    { label: "Responses", value: `${data.submitted_count}/${data.expected_count}` },
+    { label: "Report", value: data.results_version ? `v${data.results_version}` : "Live" },
+  ];
 
   return (
-    <div className="rounded-xl border border-border/50 bg-background/40 p-6 space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-5 pb-5 border-b border-border/40">
-        <div className="text-center sm:text-left">
-          <span
-            className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 ${
-              isAvoid
-                ? "bg-destructive/10 text-destructive border border-destructive/20"
-                : "bg-accent/10 text-accent border border-accent/20"
-            }`}
-          >
-            {avoidPeer ? watchHeadline(avoidPeer) : matchPeer ? matchHeadline(matchPeer) : "Match"}
-          </span>
-          <h3 className="text-2xl font-bold tracking-tight text-foreground">{peer.name}</h3>
-          <div className="mt-1 flex flex-wrap gap-2 justify-center sm:justify-start items-center">
-            <span className="text-xs text-muted-foreground">
-              Work style: <span className="font-semibold text-foreground">{peer.archetype}</span>
-            </span>
-            {ownArchetype === peer.archetype && (
-              <>
-                <span className="h-1 w-1 rounded-full bg-border" />
-                <span className="text-xs text-accent font-medium">Same style as you</span>
-              </>
-            )}
-          </div>
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+          <span className="font-display text-2xl font-bold">{profileInitial(name)}</span>
         </div>
-        <ScoreRing score={peer.score} isWarning={isAvoid} />
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Result profile
+          </div>
+          <h1 className="mt-1 truncate font-display text-3xl font-bold tracking-tight text-foreground">
+            {name || "Your results"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{className || "Current class"}</p>
+        </div>
       </div>
 
-      {/* Why this fit / Why this is hard */}
-      <div className="space-y-3">
-        <div className="bg-card/50 rounded-xl p-4 border border-border/40">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
-            {isAvoid ? "Why this might be hard" : "Why you'd work well together"}
-          </h4>
-          <p className="text-sm leading-relaxed text-foreground">{peer.why}</p>
+      <div className="mt-6 rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
+        <div className="inline-flex rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+          {data.archetype}
         </div>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {archetypeBlurb[data.archetype]}
+        </p>
+      </div>
 
-        <div
-          className={`rounded-xl p-4 border ${
-            isAvoid
-              ? "bg-destructive/[0.025] border-destructive/15"
-              : "bg-accent/[0.035] border-accent/15"
-          }`}
-        >
-          <h4
-            className={`text-xs uppercase tracking-wider font-bold mb-1.5 ${
-              isAvoid ? "text-destructive" : "text-accent"
-            }`}
-          >
-            {isAvoid ? "Likely failure mode" : "Why this person is useful"}
-          </h4>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {avoidPeer ? likelyFailureMode(avoidPeer) : matchPeer ? matchBenefit(matchPeer) : ""}
-          </p>
-        </div>
-
-        {((isAvoid && "riskProofs" in peer && peer.riskProofs?.length) ||
-          (!isAvoid && "proofs" in peer && peer.proofs?.length)) && (
-          <div
-            className={`rounded-xl p-4 border ${
-              isAvoid
-                ? "bg-destructive/[0.025] border-destructive/15"
-                : "bg-accent/[0.035] border-accent/15"
-            }`}
-          >
-            <h4
-              className={`text-xs uppercase tracking-wider font-bold mb-2 ${
-                isAvoid ? "text-destructive" : "text-accent"
-              }`}
-            >
-              {isAvoid ? "Proof signals" : "Proof signals"}
-            </h4>
-            <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
-              {(isAvoid && "riskProofs" in peer
-                ? peer.riskProofs
-                : "proofs" in peer
-                  ? peer.proofs
-                  : []
-              )
-                ?.slice(0, 4)
-                .map((proof) => (
-                  <li key={proof} className="flex gap-2">
-                    <span
-                      className={`mt-2 h-1.5 w-1.5 rounded-full shrink-0 ${
-                        isAvoid ? "bg-destructive" : "bg-accent"
-                      }`}
-                    />
-                    <span>{proof}</span>
-                  </li>
-                ))}
-            </ul>
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-border/60 bg-background/45 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {stat.label}
+            </div>
+            <div className="mt-1 font-display text-xl font-semibold text-foreground">
+              {stat.value}
+            </div>
           </div>
-        )}
+        ))}
+      </div>
 
-        {"watch" in peer && peer.watch && (
-          <div className="text-sm leading-relaxed text-destructive/90 bg-destructive/[0.02] rounded-xl p-3.5 border border-destructive/15 flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-destructive font-semibold">Watch out:</strong> {peer.watch}
+      <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span className="rounded-full border border-border bg-background/60 px-3 py-1">
+          Generated {formatReportDate(data.generated_at)}
+        </span>
+        <span className="rounded-full border border-border bg-background/60 px-3 py-1">
+          {data.matching_algorithm || "Synco matcher"}
+        </span>
+      </div>
+
+      {partial && (
+        <div className="mt-5 rounded-xl border border-accent/15 bg-accent/[0.025] p-3 text-xs leading-relaxed text-muted-foreground">
+          <div className="flex gap-2">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            <span>
+              Includes {data.submitted_count} of {data.expected_count} responses.{" "}
+              {data.expected_count - data.submitted_count} classmates are still pending.
+            </span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MetricBar({ label, value, helper }: { label: string; value: number; helper?: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+        <span className="font-semibold text-foreground">{label}</span>
+        <span className="font-mono font-bold text-accent">{value}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-border/50">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+      </div>
+      {helper && <p className="mt-1 text-[11px] text-muted-foreground">{helper}</p>}
+    </div>
+  );
+}
+
+function TeamProfilePanel({
+  assignedTeam,
+  assignedTeamSummary,
+  isUnmatchedFromTeams,
+  userId,
+  readiness,
+}: {
+  assignedTeam: StudentTeamAssignment | null;
+  assignedTeamSummary: ReturnType<typeof teamSummary> | null;
+  isUnmatchedFromTeams: boolean;
+  userId?: string;
+  readiness: NonNullable<ResultData["readiness"]>;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border/50 pb-5 md:flex-row md:items-start md:justify-between">
+        <SectionHeader
+          eyebrow="Headline result"
+          title="Your assigned team"
+          description="The team assignment is the main result. The match lists below are extra context for who you may work well with or should plan carefully around."
+        />
+        {assignedTeam?.quality?.score !== undefined && (
+          <div className="shrink-0 rounded-xl border border-accent/20 bg-accent/[0.04] px-4 py-3 text-right">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-accent">
+              Team quality
+            </div>
+            <div className="font-display text-3xl font-bold text-foreground">
+              {assignedTeam.quality.score}%
             </div>
           </div>
         )}
-
-        {"brings" in peer && peer.brings && (
-          <div className="bg-card/50 rounded-xl p-4 border border-border/40">
-            <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">
-              What they bring
-            </h4>
-            <p className="text-sm leading-relaxed text-muted-foreground">{peer.brings}</p>
-          </div>
-        )}
       </div>
 
-      {/* Breakdown */}
-      {breakdown && (
-        <div className="pt-4 border-t border-border/40">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-3 flex items-center gap-1.5">
-            <Activity className="h-3.5 w-3.5 text-accent shrink-0" />
-            Compatibility Breakdown
-          </h4>
-          <BreakdownBars breakdown={breakdown} />
+      {assignedTeam ? (
+        <div className="mt-6 space-y-6">
+          <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {assignedTeam.members.map((member) => {
+                  const isSelf = member.student_id === userId;
+                  return (
+                    <div
+                      key={member.student_id}
+                      className={
+                        "rounded-xl border p-4 " +
+                        (isSelf
+                          ? "border-accent/35 bg-accent/[0.04]"
+                          : "border-border/60 bg-background/45")
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-foreground">
+                            {isSelf ? "You" : member.name}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {member.archetype}
+                          </div>
+                        </div>
+                        {isSelf && (
+                          <span className="rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                            You
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                {assignedTeam.rationale}
+              </p>
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-border/60 bg-background/35 p-5">
+              {assignedTeamSummary && (
+                <>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                      Best signal
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground">
+                      {assignedTeamSummary.best}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Weak spot to handle
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {assignedTeamSummary.weak}
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className="border-t border-border/50 pt-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  First meeting
+                </div>
+                <div className="mt-3 space-y-2">
+                  {readiness.agenda.slice(0, 3).map((item, index) => (
+                    <div key={item} className="flex gap-3 text-sm text-muted-foreground">
+                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-accent/20 bg-accent/10 font-mono text-[10px] font-bold text-accent">
+                        {index + 1}
+                      </span>
+                      <span className="leading-relaxed">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {assignedTeam.quality && assignedTeamSummary && (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Pair safety",
+                  value: assignedTeam.quality.minPairSafety,
+                  helper: "lowest inside-team pair",
+                },
+                ...assignedTeamSummary.cards.slice(0, 3).map((card) => ({
+                  label: card.label,
+                  value: card.value,
+                  helper:
+                    card.label === "Meeting time"
+                      ? "schedule reality"
+                      : card.label === "Skill coverage"
+                        ? "different strengths"
+                        : card.label === "Role mix"
+                          ? "work roles covered"
+                          : "team signal",
+                })),
+              ]
+                .filter(
+                  (card, index, cards) =>
+                    cards.findIndex((candidate) => candidate.label === card.label) === index,
+                )
+                .slice(0, 4)
+                .map((metric) => (
+                  <MetricBar key={metric.label} {...metric} />
+                ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
+          {isUnmatchedFromTeams
+            ? "You were included in published results, but Synco could not place you into a team without breaking hard constraints or team size limits."
+            : "Your class lead has not published a team assignment for you yet."}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function SuggestedTeamPanel({ readiness }: { readiness: NonNullable<ResultData["readiness"]> }) {
+  if (!readiness.suggestedGroup.length) return null;
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <SectionHeader
+        eyebrow="Working group"
+        title="Suggested team direction"
+        description="Use this when your class lead has not published an assigned team yet."
+      />
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {readiness.suggestedGroup.map((member) => (
+          <div
+            key={member.name}
+            className="rounded-xl border border-border/60 bg-background/45 p-4"
+          >
+            <div className="font-semibold text-foreground">{member.name}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{member.archetype}</div>
+            <div className="mt-3 text-xs font-bold text-accent">{member.score}/100 fit</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{readiness.why}</p>
+    </section>
+  );
+}
+
+function MatchProfileCard({ peer }: { peer: Match }) {
+  return (
+    <article className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-accent/35">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-lg font-semibold text-foreground">{peer.name}</h3>
+            {peer.assigned && (
+              <span className="rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                Teammate
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">{peer.archetype}</div>
+          <div className="mt-3 inline-flex rounded-full border border-accent/20 bg-accent/[0.05] px-3 py-1 text-xs font-semibold text-accent">
+            {matchHeadline(peer)}
+          </div>
+        </div>
+        <ScoreRing score={peer.score} />
+      </div>
+
+      <p className="mt-4 text-sm leading-relaxed text-foreground">{matchBenefit(peer)}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+        <span className="font-semibold text-foreground">They bring:</span> {peer.brings}
+      </p>
+
+      {peer.breakdown && (
+        <div className="mt-4">
+          <BreakdownBars breakdown={peer.breakdown} />
         </div>
       )}
 
-      {/* Next steps */}
-      <div className="pt-4 border-t border-border/40 space-y-3 text-sm">
-        {"agree" in peer && peer.agree && peer.agree.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <strong className="text-foreground text-xs mr-1">Discuss first:</strong>
-            {peer.agree.map((item) => (
-              <span
-                key={item}
-                className="px-2 py-0.5 rounded-full bg-[color:var(--color-accent-light)] text-[11px] font-semibold border border-accent/15"
-              >
-                {item}
-              </span>
-            ))}
+      {peer.proofs && peer.proofs.length > 0 && (
+        <ul className="mt-4 space-y-2 border-t border-border/50 pt-4 text-sm leading-relaxed text-muted-foreground">
+          {peer.proofs.slice(0, 3).map((proof) => (
+            <li key={proof} className="flex gap-2">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+              <span>{proof}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {peer.agree.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {peer.agree.slice(0, 3).map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-semibold text-muted-foreground"
+            >
+              Agree on {item}
+            </span>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function WatchProfileCard({ peer }: { peer: Avoid }) {
+  const friend = Boolean(peer.friendFlagged);
+  return (
+    <article
+      className={
+        "rounded-2xl border p-5 shadow-sm transition-colors " +
+        (friend
+          ? "border-amber-500/40 bg-amber-500/[0.035] hover:border-amber-500/60"
+          : "border-destructive/20 bg-card hover:border-destructive/35")
+      }
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          {friend && (
+            <span className="mb-2 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              Friend flagged
+            </span>
+          )}
+          <h3 className="truncate text-lg font-semibold text-foreground">{peer.name}</h3>
+          <div className="mt-1 text-xs text-muted-foreground">{peer.archetype}</div>
+          <div
+            className={
+              "mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold " +
+              (friend
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : "border-destructive/20 bg-destructive/10 text-destructive")
+            }
+          >
+            {watchHeadline(peer)}
           </div>
-        )}
-        <p className="text-xs text-muted-foreground pt-2 border-t border-border/20">
-          <strong className="font-semibold text-foreground/80">Getting started:</strong> {peer.move}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          <strong className="font-semibold text-foreground/80">First thing to agree on:</strong>{" "}
-          {firstAgreement(peer)}.
-        </p>
+        </div>
+        <ScoreRing score={peer.score} isWarning label="Risk" />
       </div>
-    </div>
+
+      <p className="mt-4 text-sm leading-relaxed text-foreground">{likelyFailureMode(peer)}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
+
+      {peer.friendRisk ? (
+        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-4 text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+          {peer.friendRisk}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-destructive/15 bg-destructive/[0.025] p-4 text-sm leading-relaxed text-destructive/90">
+          {peer.watch}
+        </div>
+      )}
+
+      {peer.breakdown && (
+        <div className="mt-4">
+          <BreakdownBars breakdown={peer.breakdown} />
+        </div>
+      )}
+
+      {peer.riskProofs && peer.riskProofs.length > 0 && (
+        <ul className="mt-4 space-y-2 border-t border-border/50 pt-4 text-sm leading-relaxed text-muted-foreground">
+          {peer.riskProofs.slice(0, 3).map((proof) => (
+            <li key={proof} className="flex gap-2">
+              <span
+                className={
+                  "mt-2 h-1.5 w-1.5 shrink-0 rounded-full " +
+                  (friend ? "bg-amber-500" : "bg-destructive")
+                }
+              />
+              <span>{proof}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+        If you still choose this pair, agree on {firstAgreement(peer).toLowerCase()} before
+        assigning work.
+      </p>
+    </article>
+  );
+}
+
+function FeedbackPanel({
+  data,
+  feedbackBusy,
+  feedbackError,
+  onFeedback,
+}: {
+  data: ResultData;
+  feedbackBusy: boolean;
+  feedbackError: string | null;
+  onFeedback: (choice: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <SectionHeader
+        eyebrow="After the first week"
+        title="Tell your lead if this worked"
+        description="This feedback updates your result record and helps the lead decide whether the class needs a rematch."
+      />
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        {["Useful", "Unsure", "Not useful"].map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            onClick={() => onFeedback(choice)}
+            disabled={feedbackBusy}
+            className={
+              "h-11 rounded-xl border px-3 text-sm font-semibold transition-colors disabled:opacity-60 " +
+              (data.feedback_after_week === choice
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background hover:bg-muted")
+            }
+          >
+            {choice}
+          </button>
+        ))}
+      </div>
+      {data.feedback_after_week && (
+        <p className="mt-3 text-xs text-muted-foreground">Saved: {data.feedback_after_week}.</p>
+      )}
+      {feedbackError && <p className="mt-3 text-xs text-destructive">{feedbackError}</p>}
+    </section>
   );
 }
 
@@ -579,19 +932,9 @@ function Results() {
     assignmentSnapshot?: TeamAssignmentSnapshot | null;
   }>({ status: "loading" });
 
-  const [activeTab, setActiveTab] = useState<"details" | "list">("details");
-  const [selectedPeerId, setSelectedPeerId] = useState<string | null>(null);
-
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth/login" });
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    const firstPeerId = state.data?.matches?.[0]?.student_id ?? state.data?.avoid?.[0]?.student_id;
-    if (firstPeerId && !selectedPeerId) {
-      setSelectedPeerId(firstPeerId);
-    }
-  }, [state.data, selectedPeerId]);
 
   useEffect(() => {
     (async () => {
@@ -801,10 +1144,6 @@ function Results() {
       return left.index - right.index;
     })
     .map(({ peer }) => peer);
-  const allPeers = [
-    ...(d.matches || []).map((m) => ({ ...m, isAvoid: false })),
-    ...orderedAvoid.map((a) => ({ ...a, isAvoid: true })),
-  ];
   const assignedTeam = state.assignedTeam ?? null;
   const assignmentSnapshot = state.assignmentSnapshot ?? null;
   const isUnmatchedFromTeams =
@@ -844,707 +1183,81 @@ function Results() {
         </Link>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 space-y-12">
-        {/* Profile header */}
-        <motion.section
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="text-center sm:text-left"
+          transition={{ duration: 0.28 }}
+          className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start mb-3">
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
-              {state.name || "Your results"}
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-xs font-semibold text-accent">
-              {d.archetype}
-            </span>
-          </div>
-          <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
-            {archetypeBlurb[d.archetype]}
-          </p>
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+            <ProfileOverview
+              name={state.name}
+              className={state.className}
+              data={d}
+              partial={partial}
+            />
+            <WorkStyleSection meters={d.meters} />
+          </aside>
 
-          {partial && (
-            <div className="mt-4 p-3 rounded-xl border border-accent/10 bg-accent/[0.02] text-xs text-muted-foreground flex items-center justify-center sm:justify-start gap-2 max-w-xl">
-              <Info className="h-4 w-4 text-accent shrink-0" />
-              <span>
-                Includes {d.submitted_count} of {d.expected_count} responses.{" "}
-                {d.expected_count - d.submitted_count} classmates are still pending.
-              </span>
-            </div>
-          )}
-        </motion.section>
+          <div className="space-y-6">
+            <TeamProfilePanel
+              assignedTeam={assignedTeam}
+              assignedTeamSummary={assignedTeamSummary}
+              isUnmatchedFromTeams={isUnmatchedFromTeams}
+              userId={user?.id}
+              readiness={readiness}
+            />
 
-        {assignmentSnapshot && (
-          <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
-            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-accent">
-                  Headline result
-                </span>
-                <h2 className="mt-1 text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <Users className="h-5 w-5 text-accent" />
-                  Your Team
-                </h2>
-              </div>
-            </div>
-            {assignedTeam ? (
-              <>
-                <p className="text-sm text-muted-foreground mb-5">
-                  Team {Number(assignedTeam.id.replace("team-", "")) || ""} ·{" "}
-                  {assignedTeam.members.length} member
-                  {assignedTeam.members.length === 1 ? "" : "s"} · {assignedTeam.average_score}%
-                  average compatibility
-                </p>
-                {assignedTeamSummary && (
-                  <div className="mb-5 grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
-                    <div className="rounded-xl border border-accent/20 bg-accent/[0.04] p-5">
-                      <div className="text-xs font-bold uppercase tracking-wider text-accent mb-2">
-                        Best signal
-                      </div>
-                      <p className="text-sm leading-relaxed text-foreground">
-                        {assignedTeamSummary.best}
-                      </p>
-                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                        {assignedTeamSummary.proof}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-border/50 bg-background/45 p-5">
-                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                        Weak spot to handle
-                      </div>
-                      <p className="text-sm leading-relaxed text-foreground">
-                        {assignedTeamSummary.weak}
-                      </p>
-                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                        {assignedTeamSummary.move}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {assignedTeam.teammates.length > 0 && (
-                  <p className="mb-5 rounded-xl border border-accent/20 bg-accent/[0.04] p-4 text-sm text-muted-foreground">
-                    Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
-                    <span className="font-semibold text-foreground">
-                      {assignedTeam.teammates.map((member) => member.name).join(", ")}
-                    </span>
-                  </p>
-                )}
-                <div className="grid gap-4 sm:grid-cols-2 mb-5">
-                  {assignedTeam.members.map((member) => {
-                    const isSelf = member.student_id === user?.id;
-                    return (
-                      <div
-                        key={member.student_id}
-                        className="rounded-xl border border-border/60 bg-background/50 p-5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-semibold text-base text-foreground">
-                              {isSelf ? "You" : member.name}
-                            </div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">
-                              {member.archetype}
-                            </div>
-                          </div>
-                          {isSelf && (
-                            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                              You
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="rounded-xl border border-border/40 bg-background/40 p-5">
-                  <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-2">
-                    Why this team
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {assignedTeam.rationale}
-                  </p>
-                </div>
-                {assignedTeam.quality && (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {[
-                      {
-                        label: "Team quality",
-                        value: assignedTeam.quality.score,
-                        helper: "overall balance",
-                      },
-                      ...(assignedTeamSummary?.cards.map((card) => ({
-                        label: card.label,
-                        value: card.value,
-                        helper:
-                          card.label === "Meeting time"
-                            ? "schedule reality"
-                            : card.label === "Skill coverage"
-                              ? "gaps covered"
-                              : card.label === "Role mix"
-                                ? "different jobs"
-                                : card.label === "Pair safety"
-                                  ? "no hidden weak pair"
-                                  : "same effort level",
-                      })) ?? []),
-                    ]
-                      .filter(
-                        (card, index, cards) =>
-                          cards.findIndex((candidate) => candidate.label === card.label) === index,
-                      )
-                      .slice(0, 4)
-                      .map(({ label, value, helper }) => (
-                        <div
-                          key={label}
-                          className="rounded-xl border border-border/40 bg-background/45 p-4"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {label}
-                              </div>
-                              <div className="mt-1 text-xs text-muted-foreground">{helper}</div>
-                            </div>
-                            <span className="font-display text-2xl font-bold text-accent">
-                              {value}%
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    {(assignedTeam.quality.rolesCovered.length > 0 ||
-                      assignedTeam.quality.weakAreasCovered.length > 0) && (
-                      <div className="sm:col-span-2 rounded-xl border border-accent/15 bg-accent/[0.035] p-4 text-sm text-muted-foreground">
-                        {assignedTeam.quality.rolesCovered.length > 0 && (
-                          <p>
-                            <strong className="text-foreground">Role mix:</strong>{" "}
-                            {assignedTeam.quality.rolesCovered.join(", ")}.
-                          </p>
-                        )}
-                        {assignedTeam.quality.weakAreasCovered.length > 0 && (
-                          <p className="mt-2">
-                            <strong className="text-foreground">Coverage proof:</strong>{" "}
-                            {assignedTeam.quality.weakAreasCovered.slice(0, 3).join(", ")}.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {isUnmatchedFromTeams
-                  ? "You were included in published results, but Synco could not place you into a team without breaking hard constraints or team size limits."
-                  : "Your class lead has not published a team assignment for you yet."}
-              </p>
-            )}
-          </section>
-        )}
+            {!assignedTeam && <SuggestedTeamPanel readiness={readiness} />}
 
-        {/* Suggested team */}
-        {readiness.suggestedGroup.length > 0 && (
-          <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <h2 className="text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-1">
-              <Users className="h-5 w-5 text-accent" />
-              Suggested Team
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Based on your survey, these peers have the strongest compatibility for forming a
-              working group.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-3 mb-6">
-              {readiness.suggestedGroup.map((member) => (
-                <div
-                  key={member.name}
-                  className="rounded-xl border border-border/60 bg-background/50 p-5 hover:border-accent/40 transition-colors"
-                >
-                  <div className="font-semibold text-base text-foreground">{member.name}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{member.archetype}</div>
-                  <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-3">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                      Score
-                    </span>
-                    <span className="font-mono text-xs font-bold text-accent">
-                      {member.score}/100
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2 bg-background/40 border border-border/40 rounded-xl p-5">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-2">
-                  Why this works
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{readiness.why}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-2">
-                  What to watch
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {readiness.friction}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-3">
-                  First meeting agenda
-                </h3>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  {readiness.agenda.map((item, idx) => (
-                    <div key={item} className="flex gap-2.5 items-start">
-                      <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center font-mono text-[10px] font-bold text-accent">
-                        {idx + 1}
-                      </span>
-                      <span className="leading-relaxed">{item}</span>
-                    </div>
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <SectionHeader
+                eyebrow="Best collaborators"
+                title="People you should consider working with"
+                description="These are not just high scores. Synco looks for practical fit: meeting time, effort level, thinking style, and skills that fill your gaps."
+              />
+              {(d.matches || []).length > 0 ? (
+                <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                  {(d.matches || []).map((peer) => (
+                    <MatchProfileCard key={peer.student_id} peer={peer} />
                   ))}
                 </div>
-              </div>
-              {readiness.roles.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider mb-3">
-                    Suggested roles
-                  </h3>
-                  <div className="space-y-2">
-                    {readiness.roles.map((role) => {
-                      const parts = role.split(":");
-                      const name = parts[0] || "You";
-                      const suggestion = parts[1] || "Flex Support";
-                      return (
-                        <div
-                          key={role}
-                          className="flex items-center justify-between rounded-xl bg-background/60 border border-border/40 px-4 py-3 text-sm"
-                        >
-                          <span className="font-semibold text-foreground">{name}</span>
-                          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary capitalize">
-                            {suggestion.trim()}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+              ) : (
+                <div className="mt-5 rounded-xl border border-dashed border-border bg-background/35 p-8 text-center text-sm text-muted-foreground">
+                  No strong collaborator matches are available yet.
                 </div>
               )}
-            </div>
+            </section>
 
-            <p className="mt-5 text-xs text-muted-foreground/80 italic text-center md:text-left border-t border-border/30 pt-4">
-              {readiness.disclaimer}
-            </p>
-          </section>
-        )}
-
-        {/* Work style */}
-        <WorkStyleSection meters={d.meters} />
-
-        {/* Match details */}
-        <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5 mb-6">
-            <div>
-              <h2 className="text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
-                <Users className="h-5 w-5 text-accent" />
-                Your Matches
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Explore each match to understand why you were paired and what to do first.
-              </p>
-            </div>
-
-            <div className="flex p-1 bg-muted/80 rounded-xl border border-border/60 max-w-xs self-start md:self-auto">
-              {(
-                [
-                  { id: "details", label: "Detail View" },
-                  { id: "list", label: "Overview" },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-4 text-xs font-semibold rounded-lg transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? "bg-card text-foreground shadow-sm border border-border/50"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {activeTab === "details" && (
-              <motion.div
-                key="details"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="grid md:grid-cols-[240px_1fr] gap-5"
-              >
-                {/* Peer selector */}
-                <div className="flex flex-col gap-2 max-h-[520px] overflow-y-auto pr-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-2.5 mb-1">
-                    Select a classmate
-                  </span>
-                  {allPeers.map((peer) => (
-                    <button
-                      key={peer.student_id}
-                      type="button"
-                      onClick={() => setSelectedPeerId(peer.student_id)}
-                      className={`w-full text-left p-3 rounded-xl border text-sm transition-all duration-200 flex items-start justify-between gap-3 ${
-                        selectedPeerId === peer.student_id
-                          ? "bg-background border-accent shadow-sm"
-                          : peer.isAvoid
-                            ? "bg-card/40 hover:bg-card/70 border-destructive/15 hover:border-destructive/30"
-                            : "bg-card/40 hover:bg-card/70 border-border/50 hover:border-border"
-                      }`}
-                    >
-                      <div className="truncate">
-                        <div className="font-semibold truncate flex items-center gap-1.5 text-foreground/90">
-                          {peer.name}
-                          {peer.isAvoid && (
-                            <span
-                              className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0"
-                              title="Low compatibility"
-                            />
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate mt-0.5">
-                          {peer.isAvoid
-                            ? watchHeadline(peer as Avoid)
-                            : matchHeadline(peer as Match)}
-                        </div>
-                      </div>
-                      <span
-                        className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full ${
-                          peer.isAvoid
-                            ? "text-destructive bg-destructive/10 border border-destructive/15"
-                            : "text-accent bg-accent/10 border border-accent/15"
-                        }`}
-                      >
-                        {peer.score}%
-                      </span>
-                    </button>
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <SectionHeader
+                eyebrow="Watch-outs"
+                title="Pairs to think twice about"
+                description="This list exists so group work does not become awkward later. It points out where the data says you would need a strict plan before choosing that person."
+                tone="warning"
+              />
+              {orderedAvoid.length > 0 ? (
+                <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                  {orderedAvoid.map((peer) => (
+                    <WatchProfileCard key={peer.student_id} peer={peer} />
                   ))}
                 </div>
-
-                {/* Detail panel */}
-                {(() => {
-                  const activePeer = allPeers.find((p) => p.student_id === selectedPeerId);
-                  if (!activePeer) {
-                    return (
-                      <div className="rounded-xl border border-dashed border-border/60 bg-background/25 flex items-center justify-center p-12 text-center text-muted-foreground">
-                        <p className="text-sm">Select a classmate to view match details.</p>
-                      </div>
-                    );
-                  }
-                  return <PeerDetail peer={activePeer} ownArchetype={d.archetype} />;
-                })()}
-              </motion.div>
-            )}
-
-            {activeTab === "list" && (
-              <motion.div
-                key="list"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-8"
-              >
-                {/* Top matches */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-display font-semibold tracking-tight text-foreground">
-                    Top {(d.matches || []).length} matches
-                  </h3>
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {(d.matches || []).map((peer) => (
-                      <div
-                        key={peer.student_id}
-                        className="rounded-xl border border-border/50 bg-card/45 p-5 hover:border-accent/40 transition-colors flex flex-col justify-between"
-                      >
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3 pb-3 border-b border-border/20">
-                            <div>
-                              <h4 className="font-semibold text-lg text-foreground">{peer.name}</h4>
-                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-[10px] font-bold text-accent uppercase tracking-wider">
-                                {matchHeadline(peer)}
-                              </span>
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                {peer.archetype}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="font-display text-2xl font-extrabold text-accent">
-                                {peer.score}%
-                              </span>
-                              <div className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">
-                                match
-                              </div>
-                            </div>
-                          </div>
-
-                          {peer.breakdown && <BreakdownBars breakdown={peer.breakdown} />}
-
-                          <div className="text-xs leading-relaxed space-y-2">
-                            <div className="rounded-lg border border-accent/15 bg-accent/[0.035] p-3">
-                              <strong className="text-accent text-[10px] uppercase tracking-wider block mb-1.5">
-                                Why this person matters
-                              </strong>
-                              <p className="text-muted-foreground">{matchBenefit(peer)}</p>
-                            </div>
-                            <p className="text-muted-foreground">
-                              <strong className="text-foreground/80 text-[10px] block mb-0.5">
-                                Why:
-                              </strong>{" "}
-                              {peer.why}
-                            </p>
-                            <p className="text-muted-foreground">
-                              <strong className="text-foreground/80 text-[10px] block mb-0.5">
-                                What they bring:
-                              </strong>{" "}
-                              {peer.brings}
-                            </p>
-                            {peer.proofs && peer.proofs.length > 0 && (
-                              <div className="rounded-lg border border-accent/15 bg-accent/[0.035] p-3">
-                                <strong className="text-accent text-[10px] uppercase tracking-wider block mb-1.5">
-                                  Proof
-                                </strong>
-                                <ul className="space-y-1 text-muted-foreground">
-                                  {peer.proofs.slice(0, 3).map((proof) => (
-                                    <li key={proof} className="flex gap-2">
-                                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
-                                      <span>{proof}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {peer.agree && peer.agree.length > 0 && (
-                              <div>
-                                <strong className="text-foreground/80 text-[10px] uppercase tracking-wider block mb-1.5">
-                                  Agree before starting
-                                </strong>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {peer.agree.slice(0, 3).map((item) => (
-                                    <span
-                                      key={item}
-                                      className="rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
-                                    >
-                                      {item}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <p className="rounded-lg border border-border/30 bg-background/35 p-3 text-muted-foreground">
-                              <strong className="text-foreground/80 text-[10px] block mb-0.5">
-                                First move:
-                              </strong>{" "}
-                              {peer.move}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPeerId(peer.student_id);
-                            setActiveTab("details");
-                          }}
-                          className="mt-4 w-full h-9 rounded-lg bg-accent/10 border border-accent/20 hover:bg-accent text-accent hover:text-accent-foreground text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          View details
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+              ) : (
+                <div className="mt-5 rounded-xl border border-dashed border-border bg-background/35 p-8 text-center text-sm text-muted-foreground">
+                  No major watch-outs showed up in your current result.
                 </div>
+              )}
+            </section>
 
-                {/* Pairs to watch */}
-                {orderedAvoid.length > 0 && (
-                  <div className="space-y-4 pt-6 border-t border-border/40">
-                    <div>
-                      <h3 className="text-lg font-display font-semibold tracking-tight text-destructive/90 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                        Pairs to watch
-                      </h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                        Not bad fits — just areas where you'd need to align on expectations early.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-5 md:grid-cols-2">
-                      {orderedAvoid.map((peer) => (
-                        <div
-                          key={peer.student_id}
-                          className={
-                            "rounded-xl border p-5 transition-colors flex flex-col justify-between " +
-                            (peer.friendFlagged
-                              ? "border-amber-500/40 bg-amber-500/[0.04] hover:border-amber-500/60"
-                              : "border-destructive/20 bg-destructive/[0.01] hover:border-destructive/40")
-                          }
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-3 pb-3 border-b border-border/20">
-                              <div>
-                                {peer.friendFlagged && (
-                                  <span className="mb-2 inline-block px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
-                                    Friend flagged
-                                  </span>
-                                )}
-                                <h4 className="font-semibold text-lg text-foreground">
-                                  {peer.name}
-                                </h4>
-                                <span
-                                  className={
-                                    "inline-block mt-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider " +
-                                    (peer.friendFlagged
-                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                                      : "bg-destructive/10 border-destructive/20 text-destructive")
-                                  }
-                                >
-                                  {watchHeadline(peer)}
-                                </span>
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                  {peer.archetype}
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="font-display text-2xl font-extrabold text-destructive">
-                                  {peer.score}%
-                                </span>
-                              </div>
-                            </div>
-
-                            {peer.breakdown && <BreakdownBars breakdown={peer.breakdown} />}
-
-                            <div className="text-xs leading-relaxed space-y-2">
-                              <div
-                                className={
-                                  "rounded-lg border p-3 " +
-                                  (peer.friendFlagged
-                                    ? "border-amber-500/20 bg-amber-500/[0.08]"
-                                    : "border-destructive/10 bg-destructive/[0.02]")
-                                }
-                              >
-                                <strong
-                                  className={
-                                    "text-[10px] uppercase tracking-wider block mb-1.5 " +
-                                    (peer.friendFlagged
-                                      ? "text-amber-700 dark:text-amber-300"
-                                      : "text-destructive")
-                                  }
-                                >
-                                  What will probably go wrong
-                                </strong>
-                                <p className="text-muted-foreground">{likelyFailureMode(peer)}</p>
-                              </div>
-                              <p className="text-muted-foreground">
-                                <strong className="text-foreground/80 text-[10px] block mb-0.5">
-                                  Why this is hard:
-                                </strong>{" "}
-                                {peer.why}
-                              </p>
-                              {peer.friendRisk ? (
-                                <div className="text-amber-900 dark:text-amber-100 bg-amber-500/[0.08] border border-amber-500/20 rounded-lg p-3">
-                                  <strong className="text-amber-700 dark:text-amber-300 text-[10px] block mb-0.5">
-                                    Friend risk:
-                                  </strong>{" "}
-                                  {peer.friendRisk}
-                                </div>
-                              ) : (
-                                <div className="text-destructive/90 bg-destructive/[0.02] border border-destructive/10 rounded-lg p-3">
-                                  <strong className="text-destructive text-[10px] block mb-0.5">
-                                    Watch out:
-                                  </strong>{" "}
-                                  {peer.watch}
-                                </div>
-                              )}
-                              {peer.riskProofs && peer.riskProofs.length > 0 && (
-                                <div className="rounded-lg border border-destructive/10 bg-background/35 p-3">
-                                  <strong className="text-destructive text-[10px] uppercase tracking-wider block mb-1.5">
-                                    Proof
-                                  </strong>
-                                  <ul className="space-y-1 text-muted-foreground">
-                                    {peer.riskProofs.slice(0, 3).map((proof) => (
-                                      <li key={proof} className="flex gap-2">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
-                                        <span>{proof}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                              <p className="rounded-lg border border-border/30 bg-background/35 p-3 text-muted-foreground">
-                                <strong className="text-foreground/80 text-[10px] block mb-0.5">
-                                  If you still choose this pair:
-                                </strong>{" "}
-                                Agree on {firstAgreement(peer).toLowerCase()} before assigning any
-                                work.
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedPeerId(peer.student_id);
-                              setActiveTab("details");
-                            }}
-                            className="mt-4 w-full h-9 rounded-lg bg-destructive/10 border border-destructive/20 hover:bg-destructive text-destructive hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                          >
-                            View details
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-
-        {/* Feedback */}
-        <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-xl font-medium mb-2">After the first week</h2>
-          <p className="text-sm text-muted mb-5">
-            Once you've met your match, mark whether the pairing was useful. If it's not working,
-            ask your class lead to republish or override.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {["Useful", "Unsure", "Not useful"].map((choice) => (
-              <button
-                key={choice}
-                type="button"
-                onClick={() => sendFeedback(choice)}
-                disabled={feedbackBusy}
-                className={
-                  "h-10 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60 " +
-                  (d.feedback_after_week === choice
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background hover:bg-muted")
-                }
-              >
-                {choice}
-              </button>
-            ))}
+            <FeedbackPanel
+              data={d}
+              feedbackBusy={feedbackBusy}
+              feedbackError={feedbackError}
+              onFeedback={sendFeedback}
+            />
           </div>
-          {d.feedback_after_week && (
-            <p className="mt-3 text-xs text-muted">
-              Saved: {d.feedback_after_week}. This helps the lead decide on rematch adjustments.
-            </p>
-          )}
-          {feedbackError && <p className="mt-3 text-xs text-destructive">{feedbackError}</p>}
-        </section>
+        </motion.div>
       </main>
     </div>
   );

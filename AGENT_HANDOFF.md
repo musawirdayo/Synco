@@ -352,6 +352,33 @@ Next recommended survey work:
 - Consider marking new submissions with a survey schema version in the answers JSON before making larger semantic changes.
 - Move the most predictive detail fields into the required flow once real class data shows which ones carry the most signal.
 
+## 2026-06-25 Student Results Profile Redesign
+
+Implemented locally:
+
+- Rebuilt `src/routes/results.tsx` around a profile-style layout:
+  - left rail shows the student's result profile, archetype, report stats, partial-data notice, and work-style meters
+  - main column opens with the assigned team as the headline result
+  - best collaborators are shown as detailed profile cards with score rings, proof bullets, breakdown bars, and next-step chips
+  - watch-outs are shown as distinct risk cards, with friend-reality cards still visually emphasized and sorted first
+  - feedback is kept as a clean final panel using the existing feedback RPC flow
+- Removed the old tabbed detail/overview results layout from the source after replacing it.
+- Kept data fetching, team assignment lookup, match scoring output shape, feedback RPC behavior, and published-result logic unchanged.
+
+Verification passed after this slice:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (88 passing)
+- `npm run build`
+- `git diff --check`
+- Local dev server is running at `http://127.0.0.1:5173/`; `GET /results` returns `200` from the dev server. Full authenticated visual verification still needs a logged-in student with published data.
+
+Next recommended results-page work:
+
+- Add an authenticated visual QA pass with a real/demo student result once credentials are approved for use.
+- Consider extracting the new result panels into smaller components if `results.tsx` grows again.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.
