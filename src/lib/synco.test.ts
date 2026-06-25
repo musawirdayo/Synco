@@ -693,6 +693,50 @@ describe("V2 matching signals", () => {
     expect(balanced.skillCoverage).toBeGreaterThan(duplicate.skillCoverage);
     expect(balanced.score).toBeGreaterThan(duplicate.score);
   });
+
+  it("flags teams that need a teacher review before students start", () => {
+    const riskyTeam: MatchStudent[] = [
+      {
+        id: "a",
+        answers: {
+          ...studentA(),
+          availability: ["Mon morning"],
+          strengths: ["Writing"],
+          weakAreas: ["Design"],
+          targetGrade: "Top score",
+          seriousness: 5,
+        },
+      },
+      {
+        id: "b",
+        answers: {
+          ...studentC(),
+          availability: ["Tue evening"],
+          strengths: ["Writing"],
+          weakAreas: ["Design"],
+          targetGrade: "Pass safely",
+          seriousness: 1,
+        },
+      },
+      {
+        id: "c",
+        answers: {
+          ...studentC(),
+          availability: ["Fri night"],
+          strengths: ["Writing"],
+          weakAreas: ["Design"],
+          targetGrade: "Pass safely",
+          seriousness: 1,
+        },
+      },
+    ];
+
+    const quality = teamBreakdown(riskyTeam);
+
+    expect(quality.needsReview).toBe(true);
+    expect(quality.reviewFlags.length).toBeGreaterThan(0);
+    expect(quality.reviewFlags.join(" ")).toMatch(/Meeting-time|Skill coverage|safety/);
+  });
 });
 
 // ─── pairBlocked tests ───

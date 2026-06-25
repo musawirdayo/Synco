@@ -311,6 +311,8 @@ function ClassPage() {
   const canGenerate = submitted >= 2 && !hasIdentityConflicts;
   const publishVerb = cls.is_published ? "Republish" : "Publish";
   const riskPairs = buildRiskPairs(completed, members).slice(0, 3);
+  const assignedTeamReviewCount =
+    cls.team_assignments?.teams.filter((team) => team.quality?.needsReview).length ?? 0;
   const publishOutcome = cls.is_published
     ? `Republishing will create version ${nextVersion}, refresh every completed student's matches, and include ${submitted} submitted students.`
     : `Publishing will create version ${nextVersion}, include ${submitted} submitted students, and make student result pages visible.`;
@@ -1167,6 +1169,20 @@ function ClassPage() {
                 </span>
               </div>
 
+              {assignedTeamReviewCount > 0 && (
+                <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
+                  <h3 className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    Review {assignedTeamReviewCount} team
+                    {assignedTeamReviewCount === 1 ? "" : "s"} before students start
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    Synco published the best legal assignment it found, but these teams need a
+                    first-plan check so weak schedules, duplicated roles, or isolated members do not
+                    slow the project down.
+                  </p>
+                </div>
+              )}
+
               {cls.team_assignments.teams.length ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {cls.team_assignments.teams.map((team, index) => (
@@ -1178,9 +1194,16 @@ function ClassPage() {
                             {team.members.length} member{team.members.length === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <span className="rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium">
-                          {team.average_score}% avg
-                        </span>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {team.quality?.needsReview && (
+                            <span className="rounded-full border border-amber-500/35 bg-amber-500/[0.08] px-2.5 py-1 text-xs font-medium text-amber-900 dark:text-amber-200">
+                              Needs review
+                            </span>
+                          )}
+                          <span className="rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium">
+                            {team.average_score}% avg
+                          </span>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         {team.members.map((member) => (
@@ -1192,9 +1215,41 @@ function ClassPage() {
                           </div>
                         ))}
                       </div>
-                      <p className="mt-4 border-t border-border/60 pt-3 text-sm text-muted truncate">
+                      <p className="mt-4 border-t border-border/60 pt-3 text-sm leading-relaxed text-muted">
                         {team.rationale}
                       </p>
+                      {team.quality && (
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {[
+                            { label: "Safety", value: team.quality.minPairSafety },
+                            { label: "Skill coverage", value: team.quality.skillCoverage },
+                            { label: "Role mix", value: team.quality.roleCoverage },
+                            { label: "Meeting time", value: team.quality.logistics },
+                          ].map((metric) => (
+                            <div
+                              key={metric.label}
+                              className="rounded-lg border border-border/60 bg-background px-3 py-2"
+                            >
+                              <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
+                                {metric.label}
+                              </p>
+                              <p className="mt-1 text-sm font-medium">{metric.value}%</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {team.quality?.reviewFlags?.length ? (
+                        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3">
+                          <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-900 dark:text-amber-200">
+                            Needs review
+                          </h4>
+                          <ul className="mt-2 space-y-1.5 text-sm text-muted">
+                            {team.quality.reviewFlags.slice(0, 3).map((flag) => (
+                              <li key={flag}>{flag}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

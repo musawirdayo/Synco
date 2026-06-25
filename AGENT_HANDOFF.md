@@ -416,10 +416,30 @@ Important caveat:
 
 - Existing published classes need to be republished before students get full-class comparison search and the updated matching scores. Old result JSON can only search the peers already present in top/watch lists.
 
+## 2026-06-25 Team Safety Review Slice
+
+Commit in progress:
+
+- Adds `needsReview` and `reviewFlags` to `TeamQualityBreakdown`.
+- `teamBreakdown()` now flags weak inside-team safety, meeting-time fit, goal alignment, skill coverage, role balance, and isolated members.
+- Team quality score now takes a bounded review penalty, and assignment comparison prefers fewer severe/review teams before tiny score differences.
+- Teacher class page now surfaces a warning above Assigned Teams and shows per-team review flags plus compact metrics.
+- Existing published classes need a republish before stored `team_assignments` include the new review flags.
+
+Verified before commit:
+
+- `npm test -- --run src/lib/synco.test.ts`
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+- `git diff --check`
+- Local dev server still responds at `http://127.0.0.1:5173/results`.
+
 Next recommended matching work:
 
 - Move from the current TypeScript heuristic toward the deep-research report's constraint/optimization model: pair matrices, hard safety floors, team-size pattern solving, then local swap polishing.
-- Add a teacher-facing “low confidence / needs review” panel for teams before publishing.
+- Add a teacher pre-publish review step if the lead should approve flagged teams before students see them.
 
 ## Supabase Migration Situation
 

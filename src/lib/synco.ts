@@ -66,12 +66,19 @@ export type TeamQualityBreakdown = {
   rolesCovered: string[];
   strengthsCovered: string[];
   weakAreasCovered: string[];
+  needsReview: boolean;
+  reviewFlags: string[];
   watch: string;
   rationale: string;
 };
 
 const ONE_SIDED_REQUEST_BONUS = 12;
 const FRIEND_RISK_SCORE_THRESHOLD = 65;
+const TEAM_REVIEW_MIN_PAIR_SAFETY = 55;
+const TEAM_REVIEW_MIN_LOGISTICS = 48;
+const TEAM_REVIEW_MIN_GOAL_ALIGNMENT = 52;
+const TEAM_REVIEW_MIN_SKILL_COVERAGE = 55;
+const TEAM_REVIEW_MIN_ISOLATION = 55;
 
 // Final match score = weighted sum of 5 sub-scores.
 // Weights reflect real-world team success factors:
@@ -1199,6 +1206,8 @@ export function teamBreakdown(
       rolesCovered: team.map((student) => roleContribution(student.answers)),
       strengthsCovered: uniqueText(team.flatMap((student) => list(student.answers, "strengths"))),
       weakAreasCovered: [],
+      needsReview: true,
+      reviewFlags: ["There is not enough team data to trust this assignment yet."],
       watch: "There is not enough team data yet.",
       rationale:
         "This team was assigned from available submissions, but it needs a first check-in to create a real plan.",
@@ -1254,6 +1263,19 @@ export function teamBreakdown(
     ),
   );
   const requestSatisfaction = requestSatisfactionScore(team);
+  const reviewFlags = teamReviewFlags({
+    minPairSafety,
+    logistics,
+    goalAlignment,
+    skillCoverage: skillStats.score,
+    roleCoverage,
+    roleBalance,
+    isolation,
+  });
+  const reviewPenalty = Math.min(
+    24,
+    reviewFlags.length * 5 + (minPairSafety < 45 ? 8 : 0) + (isolation < 45 ? 6 : 0),
+  );
 
   const score = clampScore(
     minPairSafety * 0.22 +
@@ -1264,7 +1286,8 @@ export function teamBreakdown(
       roleCoverage * 0.11 +
       roleBalance * 0.06 +
       isolation * 0.06 +
-      requestSatisfaction * 0.03,
+      requestSatisfaction * 0.03 -
+      reviewPenalty,
   );
   const factors = [
     ["meeting time", logistics],
@@ -1299,6 +1322,8 @@ export function teamBreakdown(
     rolesCovered,
     strengthsCovered: skillStats.strengthsCovered,
     weakAreasCovered: skillStats.weakAreasCovered,
+    needsReview: reviewFlags.length > 0,
+    reviewFlags,
     watch,
     rationale,
   };
@@ -1319,9 +1344,54 @@ function emptyTeamQuality(team: MatchStudent[]): TeamQualityBreakdown {
     rolesCovered: team.map((student) => roleContribution(student.answers)),
     strengthsCovered: uniqueText(team.flatMap((student) => list(student.answers, "strengths"))),
     weakAreasCovered: [],
+    needsReview: true,
+    reviewFlags: ["This team does not clear Synco's minimum safety checks."],
     watch: "This team needs manual review.",
     rationale: "This team does not clear Synco's minimum safety checks.",
   };
+}
+
+function teamReviewFlags({
+  minPairSafety,
+  logistics,
+  goalAlignment,
+  skillCoverage,
+  roleCoverage,
+  roleBalance,
+  isolation,
+}: {
+  minPairSafety: number;
+  logistics: number;
+  goalAlignment: number;
+  skillCoverage: number;
+  roleCoverage: number;
+  roleBalance: number;
+  isolation: number;
+}) {
+  const flags: string[] = [];
+  if (minPairSafety < TEAM_REVIEW_MIN_PAIR_SAFETY) {
+    flags.push(
+      `Inside-team safety is low (${minPairSafety}%). One weak pair can drag the whole group.`,
+    );
+  }
+  if (logistics < TEAM_REVIEW_MIN_LOGISTICS) {
+    flags.push(`Meeting-time fit is weak (${logistics}%). The team needs a schedule plan.`);
+  }
+  if (goalAlignment < TEAM_REVIEW_MIN_GOAL_ALIGNMENT) {
+    flags.push(`Goal alignment is weak (${goalAlignment}%). Agree on effort level first.`);
+  }
+  if (skillCoverage < TEAM_REVIEW_MIN_SKILL_COVERAGE) {
+    flags.push(`Skill coverage is thin (${skillCoverage}%). The team may share the same gaps.`);
+  }
+  if (Math.min(roleCoverage, roleBalance) < 50) {
+    flags.push("Role balance is weak. Name a coordinator and backup owner before work starts.");
+  }
+  if (isolation < TEAM_REVIEW_MIN_ISOLATION) {
+    flags.push(
+      `One student may be isolated (${isolation}% average fit to teammates). Review this team.`,
+    );
+  }
+  return flags;
 }
 
 function averageScore(values: number[], fallback = 50) {
@@ -1562,6 +1632,8 @@ type TeamAssignmentState = {
 
 type AssignmentMetrics = {
   assignedCount: number;
+  reviewCount: number;
+  severeReviewCount: number;
   minPairSafety: number;
   minTeamScore: number;
   totalQuality: number;
@@ -1813,6 +1885,10 @@ function assignmentMetrics(
 
   return {
     assignedCount,
+    reviewCount: qualities.filter((quality) => quality.needsReview).length,
+    severeReviewCount: qualities.filter(
+      (quality) => quality.minPairSafety < 45 || quality.isolation < 45,
+    ).length,
     minPairSafety: qualities.length
       ? Math.min(...qualities.map((quality) => quality.minPairSafety))
       : 0,
@@ -1830,6 +1906,10 @@ function betterAssignment(
   const left = assignmentMetrics(candidate, blockedPairKeys);
   const right = assignmentMetrics(current, blockedPairKeys);
   if (left.assignedCount !== right.assignedCount) return left.assignedCount > right.assignedCount;
+  if (left.severeReviewCount !== right.severeReviewCount) {
+    return left.severeReviewCount < right.severeReviewCount;
+  }
+  if (left.reviewCount !== right.reviewCount) return left.reviewCount < right.reviewCount;
   if (left.minPairSafety !== right.minPairSafety) return left.minPairSafety > right.minPairSafety;
   if (left.minTeamScore !== right.minTeamScore) return left.minTeamScore > right.minTeamScore;
   if (left.totalQuality !== right.totalQuality) return left.totalQuality > right.totalQuality;
