@@ -188,6 +188,81 @@ function gradeRank(value: string) {
   return null;
 }
 
+function rankChoice(value: string, entries: Array<[string, number]>) {
+  const normalized = key(value);
+  if (!normalized) return null;
+  return entries.find(([label]) => normalized === key(label))?.[1] ?? null;
+}
+
+function deadlineRank(value: string) {
+  return rankChoice(value, [
+    ["As soon as the task is clear", 5],
+    ["Steadily over time", 4],
+    ["Once the team has a solid direction", 3],
+    ["Close to the deadline in a focused burst", 2],
+  ]);
+}
+
+function planningRank(value: string) {
+  return rankChoice(value, [
+    ["Detailed plan early", 5],
+    ["Rough milestones, then adapt", 4],
+    ["Light plan and adjust as we go", 3],
+    ["I prefer someone else to set structure", 2],
+  ]);
+}
+
+function checkInRank(value: string) {
+  return rankChoice(value, [
+    ["Daily short updates", 5],
+    ["2-3 times per week", 4],
+    ["Weekly scheduled check-in", 3],
+    ["Milestone-only check-ins", 2],
+  ]);
+}
+
+function responseRank(value: string) {
+  return rankChoice(value, [
+    ["Within a few hours", 5],
+    ["By the end of the day", 4],
+    ["Within 24 hours", 3],
+    ["Scheduled check-ins over frequent messages", 2],
+  ]);
+}
+
+function deliveryRank(value: string) {
+  return rankChoice(value, [
+    ["Almost always", 5],
+    ["Usually", 4],
+    ["About half the time", 2],
+    ["Often late", 1],
+  ]);
+}
+
+function projectOutcomeRank(value: string) {
+  return rankChoice(value, [
+    ["Mainly pass", 2],
+    ["Solid result", 3],
+    ["Strong grade", 4],
+    ["Excellent result", 5],
+    ["Portfolio/showcase quality", 5],
+  ]);
+}
+
+function rankProximityScore(left: number | null, right: number | null) {
+  if (!left || !right) return null;
+  return prox(left, right) * 100;
+}
+
+function minRankScore(left: number | null, right: number | null) {
+  if (!left || !right) return null;
+  return (Math.min(left, right) / 5) * 100;
+}
+
+function normalizePercent(value: number | null) {
+  return value === null ? null : value / 100;
+}
+
 const NUMERIC_SIGNAL_IDS = Array.from({ length: 22 }, (_, index) => `q${index + 1}`);
 const DETAIL_SIGNAL_IDS = [
   "availability",
@@ -195,6 +270,18 @@ const DETAIL_SIGNAL_IDS = [
   "strengths",
   "weakAreas",
   "studyStyle",
+  "planningStyle",
+  "deadlineBehavior",
+  "ambiguityApproach",
+  "workingMode",
+  "checkInRhythm",
+  "responseExpectation",
+  "deliveryReliability",
+  "momentumStyle",
+  "teamRolePreference",
+  "conflictStyle",
+  "projectOutcome",
+  "roleFlexibility",
   "seriousness",
   "targetGrade",
   "communicationPreference",
@@ -402,6 +489,30 @@ function studyStyleScore(a: Answers, b: Answers) {
       ["hybrid", "online"],
       ["hybrid", "in person"],
     ]),
+    exactOrRelatedScore(text(a, "planningStyle"), text(b, "planningStyle"), [
+      ["detailed", "rough"],
+      ["rough", "light"],
+    ]),
+    exactOrRelatedScore(text(a, "deadlineBehavior"), text(b, "deadlineBehavior"), [
+      ["as soon", "steadily"],
+      ["solid direction", "close"],
+    ]),
+    exactOrRelatedScore(text(a, "workingMode"), text(b, "workingMode"), [
+      ["pairs", "together"],
+      ["depends", "task"],
+    ]),
+    exactOrRelatedScore(text(a, "checkInRhythm"), text(b, "checkInRhythm"), [
+      ["daily", "2 3"],
+      ["weekly", "milestone"],
+    ]),
+    exactOrRelatedScore(text(a, "responseExpectation"), text(b, "responseExpectation"), [
+      ["end of the day", "24 hours"],
+      ["scheduled", "milestone"],
+    ]),
+    exactOrRelatedScore(text(a, "conflictStyle"), text(b, "conflictStyle"), [
+      ["ask questions", "middle ground"],
+      ["try their approach", "middle ground"],
+    ]),
     // Language: exact match only (no related pairs)
     exactOrRelatedScore(text(a, "preferredLanguage"), text(b, "preferredLanguage")),
     // Energy style: ambivert bridges introvert and extrovert
@@ -416,15 +527,41 @@ function studyStyleScore(a: Answers, b: Answers) {
   //   q8: speed/urgency, q11: role flexibility,
   //   q17: comfort with new people, q19: async comfort,
   //   q21: accountability follow-up style
-  const numericStyle = avg([
-    prox(num(a, "q1"), num(b, "q1")),
-    prox(num(a, "q2"), num(b, "q2")),
-    prox(num(a, "q8"), num(b, "q8")),
-    prox(num(a, "q11"), num(b, "q11")),
-    prox(num(a, "q17"), num(b, "q17")),
-    prox(num(a, "q19"), num(b, "q19")),
-    prox(num(a, "q21"), num(b, "q21")),
-  ]);
+  const numericStyle = avg(
+    [
+      prox(num(a, "q1"), num(b, "q1")),
+      prox(num(a, "q2"), num(b, "q2")),
+      prox(num(a, "q8"), num(b, "q8")),
+      prox(num(a, "q11"), num(b, "q11")),
+      prox(num(a, "q17"), num(b, "q17")),
+      prox(num(a, "q19"), num(b, "q19")),
+      prox(num(a, "q21"), num(b, "q21")),
+      normalizePercent(
+        rankProximityScore(
+          planningRank(text(a, "planningStyle")),
+          planningRank(text(b, "planningStyle")),
+        ),
+      ),
+      normalizePercent(
+        rankProximityScore(
+          deadlineRank(text(a, "deadlineBehavior")),
+          deadlineRank(text(b, "deadlineBehavior")),
+        ),
+      ),
+      normalizePercent(
+        rankProximityScore(
+          checkInRank(text(a, "checkInRhythm")),
+          checkInRank(text(b, "checkInRhythm")),
+        ),
+      ),
+      normalizePercent(
+        rankProximityScore(
+          responseRank(text(a, "responseExpectation")),
+          responseRank(text(b, "responseExpectation")),
+        ),
+      ),
+    ].filter((score): score is number => score !== null),
+  );
 
   // When we have categorical data, blend it with numeric (average together).
   if (scores.length) return clampScore(avg([...scores, numericStyle * 100]));
@@ -447,6 +584,19 @@ function goalsScore(a: Answers, b: Answers) {
   const gradeA = gradeRank(text(a, "targetGrade"));
   const gradeB = gradeRank(text(b, "targetGrade"));
   if (gradeA && gradeB) scores.push(Math.max(20, 100 - Math.abs(gradeA - gradeB) * 22));
+
+  const outcomeA = projectOutcomeRank(text(a, "projectOutcome"));
+  const outcomeB = projectOutcomeRank(text(b, "projectOutcome"));
+  const outcomeScore = rankProximityScore(outcomeA, outcomeB);
+  if (outcomeScore !== null) scores.push(outcomeScore);
+
+  const deliveryA = deliveryRank(text(a, "deliveryReliability"));
+  const deliveryB = deliveryRank(text(b, "deliveryReliability"));
+  const deliveryFloor = minRankScore(deliveryA, deliveryB);
+  const deliveryFit = rankProximityScore(deliveryA, deliveryB);
+  if (deliveryFloor !== null && deliveryFit !== null) {
+    scores.push(deliveryFloor * 0.65 + deliveryFit * 0.35);
+  }
 
   // Accountability style: strict ≈ regular, gentle ≈ regular
   const accountability = exactOrRelatedScore(
@@ -530,12 +680,43 @@ export const archetypeBlurb: Record<string, string> = {
 };
 
 export function workStyleMeters(a: Answers) {
+  const planning = planningRank(text(a, "planningStyle"));
+  const deadline = deadlineRank(text(a, "deadlineBehavior"));
+  const checkIn = checkInRank(text(a, "checkInRhythm"));
+  const response = responseRank(text(a, "responseExpectation"));
+  const momentum = key(text(a, "momentumStyle"));
+  const rolePreference = key(text(a, "teamRolePreference"));
+  const roleFlexibility = list(a, "roleFlexibility").map(key);
+  const initiative =
+    momentum.includes("first draft") ||
+    momentum.includes("organised") ||
+    momentum.includes("organized")
+      ? 85
+      : momentum.includes("plan")
+        ? 75
+        : momentum.includes("clear task")
+          ? 45
+          : undefined;
+  const teachingComfort =
+    roleFlexibility.some((role) => role.includes("presenter") || role.includes("researcher")) ||
+    rolePreference.includes("support") ||
+    rolePreference.includes("review")
+      ? 75
+      : undefined;
+  const commRanks = [checkIn, response].filter((value): value is number => Boolean(value));
+
   return {
-    structure: Math.round(100 - ((num(a, "q1") + num(a, "q11")) / 10) * 100),
-    commPace: Math.round((num(a, "q2") / 5) * 100),
-    deadlineBuffer: Math.round(100 - (num(a, "q3") / 5) * 100),
-    initiative: Math.round((num(a, "q7") / 5) * 100),
-    teachingComfort: Math.round((num(a, "q6") / 5) * 100),
+    structure: planning
+      ? clampScore(planning * 20)
+      : Math.round(100 - ((num(a, "q1") + num(a, "q11")) / 10) * 100),
+    commPace: commRanks.length
+      ? clampScore(120 - averageScore(commRanks) * 20)
+      : Math.round((num(a, "q2") / 5) * 100),
+    deadlineBuffer: deadline
+      ? clampScore(deadline * 20)
+      : Math.round(100 - (num(a, "q3") / 5) * 100),
+    initiative: initiative ?? Math.round((num(a, "q7") / 5) * 100),
+    teachingComfort: teachingComfort ?? Math.round((num(a, "q6") / 5) * 100),
   };
 }
 
@@ -554,6 +735,10 @@ export function pairInsight(a: Answers, b: Answers) {
   const styleB = text(b, "studyStyle");
   const communicationA = text(a, "communicationPreference");
   const communicationB = text(b, "communicationPreference");
+  const checkInA = text(a, "checkInRhythm");
+  const checkInB = text(b, "checkInRhythm");
+  const responseA = text(a, "responseExpectation");
+  const responseB = text(b, "responseExpectation");
 
   if (breakdown.commonSlots.length) {
     why.push(
@@ -574,6 +759,12 @@ export function pairInsight(a: Answers, b: Answers) {
   if (communicationA && communicationB && key(communicationA) === key(communicationB)) {
     why.push(`same communication preference (${communicationA})`);
   }
+  if (checkInA && checkInB && key(checkInA) === key(checkInB)) {
+    why.push(`same check-in rhythm (${checkInA})`);
+  }
+  if (responseA && responseB && key(responseA) === key(responseB)) {
+    why.push(`same response expectation (${responseA})`);
+  }
   if (Math.min(num(a, "q16"), num(b, "q16")) >= 4) why.push("reliable online meeting setup");
   if (Math.min(num(a, "q17"), num(b, "q17")) >= 4)
     why.push("both comfortable starting with a new classmate");
@@ -581,15 +772,18 @@ export function pairInsight(a: Answers, b: Answers) {
   if (!why.length) why.push("a workable fit if you agree on expectations early");
 
   const bStrengths = list(b, "strengths");
+  const bRoles = list(b, "roleFlexibility");
   const brings = bStrengths.length
     ? `Strength in ${bStrengths.slice(0, 2).join(" and ")}.`
-    : num(b, "q7") >= 4
-      ? "Natural initiative and a clear sense of direction."
-      : num(b, "q6") >= 4
-        ? "Patience with complexity and a willingness to teach."
-        : num(b, "q3") <= 2
-          ? "Discipline around timelines and early submission."
-          : "Adaptability across roles and shifting plans.";
+    : bRoles.length
+      ? `Can cover ${bRoles.slice(0, 2).join(" and ")} when the team needs it.`
+      : num(b, "q7") >= 4
+        ? "Natural initiative and a clear sense of direction."
+        : num(b, "q6") >= 4
+          ? "Patience with complexity and a willingness to teach."
+          : num(b, "q3") <= 2
+            ? "Discipline around timelines and early submission."
+            : "Adaptability across roles and shifting plans.";
 
   const agree: string[] = [];
   if (breakdown.availability < 70) agree.push("Meeting times");
@@ -598,6 +792,22 @@ export function pairInsight(a: Answers, b: Answers) {
   }
   if (breakdown.goals < 70 || Math.abs(num(a, "q3") - num(b, "q3")) >= 2) {
     agree.push("Deadline rhythm");
+  }
+  if (
+    Math.abs(
+      (responseRank(text(a, "responseExpectation")) ?? num(a, "q2")) -
+        (responseRank(text(b, "responseExpectation")) ?? num(b, "q2")),
+    ) >= 2
+  ) {
+    agree.push("Response time");
+  }
+  if (
+    Math.abs(
+      (checkInRank(text(a, "checkInRhythm")) ?? num(a, "q21")) -
+        (checkInRank(text(b, "checkInRhythm")) ?? num(b, "q21")),
+    ) >= 2
+  ) {
+    agree.push("Check-in rhythm");
   }
   if (Math.abs(num(a, "q11") - num(b, "q11")) >= 2) agree.push("Role clarity");
   if (!agree.length) agree.push("First check-in cadence");
@@ -629,6 +839,16 @@ function pairFrictionDetails(a: Answers, b: Answers) {
   if (Math.min(num(a, "q16"), num(b, "q16")) <= 2) risks.push("online study may be unreliable");
   if (Math.min(num(a, "q17"), num(b, "q17")) <= 2) risks.push("a lead introduction may be needed");
   if (Math.abs(num(a, "q3") - num(b, "q3")) >= 3) risks.push("opposite deadline rhythm");
+  const deliveryA = deliveryRank(text(a, "deliveryReliability"));
+  const deliveryB = deliveryRank(text(b, "deliveryReliability"));
+  if (deliveryA && deliveryB && Math.min(deliveryA, deliveryB) <= 2) {
+    risks.push("task delivery needs extra structure");
+  }
+  const responseA = responseRank(text(a, "responseExpectation"));
+  const responseB = responseRank(text(b, "responseExpectation"));
+  if (responseA && responseB && Math.abs(responseA - responseB) >= 2) {
+    risks.push("different message response expectations");
+  }
   if (!risks.length) risks.push("expectations may still be unclear");
 
   const factors: Array<[FrictionFactorWithGoals, number]> = [
@@ -805,6 +1025,18 @@ export function pairRiskScore(a: Answers, b: Answers) {
   if (breakdown.academic < 42) risk += 12;
   if (breakdown.final < 55) risk += 14;
 
+  const deliveryA = deliveryRank(text(a, "deliveryReliability"));
+  const deliveryB = deliveryRank(text(b, "deliveryReliability"));
+  if (deliveryA && deliveryB && Math.min(deliveryA, deliveryB) <= 2) risk += 14;
+
+  const responseA = responseRank(text(a, "responseExpectation"));
+  const responseB = responseRank(text(b, "responseExpectation"));
+  if (responseA && responseB && Math.abs(responseA - responseB) >= 2) risk += 10;
+
+  const checkInA = checkInRank(text(a, "checkInRhythm"));
+  const checkInB = checkInRank(text(b, "checkInRhythm"));
+  if (checkInA && checkInB && Math.abs(checkInA - checkInB) >= 2) risk += 8;
+
   return clampScore(risk);
 }
 
@@ -845,6 +1077,18 @@ export function matchProofs(a: Answers, b: Answers) {
     );
   }
 
+  const checkInA = text(a, "checkInRhythm");
+  const checkInB = text(b, "checkInRhythm");
+  if (checkInA && checkInB && key(checkInA) === key(checkInB)) {
+    proofs.push(`You both prefer ${checkInA.toLowerCase()}, so updates should feel natural.`);
+  }
+
+  const responseA = text(a, "responseExpectation");
+  const responseB = text(b, "responseExpectation");
+  if (responseA && responseB && key(responseA) === key(responseB)) {
+    proofs.push(`You share the same message response expectation: ${responseA.toLowerCase()}.`);
+  }
+
   if (breakdown.academic >= 72 && breakdown.commonTopics.length) {
     proofs.push(`You share focus on ${breakdown.commonTopics.slice(0, 2).join(" and ")}.`);
   }
@@ -878,6 +1122,20 @@ export function riskProofs(a: Answers, b: Answers) {
     proofs.push(
       "You may be preparing for different topics, so helping each other could take extra time.",
     );
+  }
+
+  const deliveryA = deliveryRank(text(a, "deliveryReliability"));
+  const deliveryB = deliveryRank(text(b, "deliveryReliability"));
+  if (deliveryA && deliveryB && Math.min(deliveryA, deliveryB) <= 2) {
+    proofs.push(
+      "Deadline reliability needs support here, so task ownership should be extra clear.",
+    );
+  }
+
+  const responseA = responseRank(text(a, "responseExpectation"));
+  const responseB = responseRank(text(b, "responseExpectation"));
+  if (responseA && responseB && Math.abs(responseA - responseB) >= 2) {
+    proofs.push("Your expected message response times are far apart.");
   }
 
   if (!proofs.length) {
@@ -1059,6 +1317,26 @@ function uniqueText(values: string[]) {
 }
 
 function roleContribution(answers: Answers) {
+  const momentum = key(text(answers, "momentumStyle"));
+  if (momentum.includes("first draft")) return "starter";
+  if (momentum.includes("organised") || momentum.includes("organized")) return "organizer";
+  if (momentum.includes("plan")) return "organizer";
+  if (momentum.includes("clear task")) return "deadline owner";
+
+  const preference = key(text(answers, "teamRolePreference"));
+  if (preference.includes("coordinating")) return "organizer";
+  if (preference.includes("sharing leadership")) return "starter";
+  if (preference.includes("focused contributor")) return "deadline owner";
+  if (preference.includes("support") || preference.includes("review")) return "reviewer";
+
+  const roles = list(answers, "roleFlexibility").map(key);
+  if (roles.some((role) => role.includes("organiser") || role.includes("scheduler"))) {
+    return "organizer";
+  }
+  if (roles.some((role) => role.includes("quality"))) return "reviewer";
+  if (roles.some((role) => role.includes("presenter"))) return "presenter";
+  if (roles.some((role) => role.includes("builder") || role.includes("coder"))) return "builder";
+
   const label = archetype(answers);
   if (label === "Reliable Finisher") return "deadline owner";
   if (label === "Fast Starter") return "starter";
@@ -1072,6 +1350,9 @@ function roleContribution(answers: Answers) {
 function teamSkillCoverage(team: MatchStudent[], pairs: MatchBreakdown[]) {
   const strengthsCovered = uniqueText(
     team.flatMap((student) => list(student.answers, "strengths")),
+  );
+  const rolesCovered = uniqueText(
+    team.flatMap((student) => list(student.answers, "roleFlexibility")),
   );
   const weakAreas = uniqueText(team.flatMap((student) => list(student.answers, "weakAreas")));
   const strengthKeys = new Set(strengthsCovered.map(key));
@@ -1089,12 +1370,13 @@ function teamSkillCoverage(team: MatchStudent[], pairs: MatchBreakdown[]) {
       weakAreasCovered.length * 10 +
       complementaryTopics.length * 8 -
       sharedWeakCount * 5 -
-      duplicateStrengthPenalty * 4,
+      duplicateStrengthPenalty * 4 +
+      Math.min(rolesCovered.length, team.length * 2) * 4,
   );
 
   return {
     score,
-    strengthsCovered,
+    strengthsCovered: uniqueText([...strengthsCovered, ...rolesCovered]),
     weakAreasCovered: uniqueText([...weakAreasCovered, ...complementaryTopics]),
   };
 }

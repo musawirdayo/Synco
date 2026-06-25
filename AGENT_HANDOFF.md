@@ -257,6 +257,48 @@ Next recommended Matching V2 work:
 - Add more scenario fixtures for hard-to-place students, friend-request conflicts, blocked-pair-heavy classes, and many missing answers.
 - Consider a teacher review UI for low-confidence teams before publish.
 
+## 2026-06-25 Survey V2 Matching Signals
+
+Implemented locally:
+
+- Expanded the optional survey detail flow from broad academic/logistics fields into behavior-first matching signals:
+  - work style
+  - planning style
+  - deadline behavior
+  - ambiguity response
+  - working mode
+  - check-in rhythm
+  - response expectation
+  - delivery reliability
+  - preferred team role
+  - role flexibility
+  - project outcome
+- Kept these as JSON survey-answer fields, so no Supabase migration was required.
+- Removed the old gender/privacy preference from the active survey detail flow.
+- Updated `src/lib/synco.ts` so the matching engine uses the new fields in:
+  - study-style compatibility
+  - goal alignment
+  - risk scoring
+  - proof/rationale bullets
+  - work-style meters
+  - role contribution
+  - team skill/role coverage
+- Added tests proving the new communication/reliability fields affect pair scoring and the role-flexibility field improves team-quality scoring.
+
+Verification passed after this slice:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (83 passing)
+- `npm run build`
+- `git diff --check`
+
+Next recommended Matching V2 work:
+
+- Add scenario fixtures for hard-to-place students, friend-request conflicts, blocked-pair-heavy classes, and many missing answers.
+- Improve student results copy so each suggested/avoided peer gets clearer, punchier plain-language evidence.
+- Consider a teacher review UI for low-confidence teams before publish.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

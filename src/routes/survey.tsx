@@ -23,8 +23,9 @@ export const Route = createFileRoute("/survey")({
 
 const DETAIL_STEPS = [
   { id: "availability", label: "Availability" },
-  { id: "academic", label: "Topics" },
-  { id: "logistics", label: "Study fit" },
+  { id: "workstyle", label: "Work style" },
+  { id: "academic", label: "Skills" },
+  { id: "logistics", label: "Project fit" },
   { id: "preferences", label: "Boundaries" },
 ] as const;
 
@@ -63,6 +64,78 @@ const STUDY_STYLES = [
   "Project sprints",
 ];
 
+const PLANNING_STYLES = [
+  "Detailed plan early",
+  "Rough milestones, then adapt",
+  "Light plan and adjust as we go",
+  "I prefer someone else to set structure",
+];
+const DEADLINE_BEHAVIORS = [
+  "As soon as the task is clear",
+  "Steadily over time",
+  "Once the team has a solid direction",
+  "Close to the deadline in a focused burst",
+];
+const AMBIGUITY_MOVES = [
+  "Brainstorm options",
+  "Research examples or data",
+  "Ask clarifying questions",
+  "Outline a step-by-step plan",
+  "Make a quick draft or prototype",
+];
+const WORKING_MODES = [
+  "Think alone first, then share",
+  "Work in pairs or small splits",
+  "Work together live",
+  "Depends on the task",
+];
+const CHECK_IN_RHYTHMS = [
+  "Daily short updates",
+  "2-3 times per week",
+  "Weekly scheduled check-in",
+  "Milestone-only check-ins",
+];
+const RESPONSE_EXPECTATIONS = [
+  "Within a few hours",
+  "By the end of the day",
+  "Within 24 hours",
+  "Scheduled check-ins over frequent messages",
+];
+const DELIVERY_RELIABILITY = ["Almost always", "Usually", "About half the time", "Often late"];
+const MOMENTUM_STYLES = [
+  "Start the first draft",
+  "Turn ideas into a plan",
+  "Keep people organised",
+  "Wait for a clear task and execute",
+];
+const TEAM_ROLE_PREFERENCES = [
+  "Happy coordinating",
+  "Happy sharing leadership",
+  "Focused contributor role",
+  "Support or review role",
+];
+const CONFLICT_STYLES = [
+  "Raise it early and directly",
+  "Ask questions and look for middle ground",
+  "Try their approach first",
+  "Involve the lead only if stuck",
+];
+const PROJECT_OUTCOMES = [
+  "Mainly pass",
+  "Solid result",
+  "Strong grade",
+  "Excellent result",
+  "Portfolio/showcase quality",
+];
+const ROLE_FLEXIBILITY = [
+  "Organiser/scheduler",
+  "Researcher",
+  "Writer/editor",
+  "Builder/coder",
+  "Analyst",
+  "Presenter",
+  "Quality checker",
+];
 const TARGET_GRADES = ["Pass safely", "B or better", "A range", "Top score"];
 const COMMUNICATION = [
   "WhatsApp/text",
@@ -71,7 +144,7 @@ const COMMUNICATION = [
   "Video call",
   "In-person after class",
 ];
-const MEETING_MODES = ["Online", "In person", "Hybrid"];
+const MEETING_MODES = ["Online", "In person", "Hybrid", "Asynchronous only"];
 const LANGUAGES = ["English", "Urdu", "Arabic", "Spanish", "Other"];
 const ENERGY_STYLES = ["Introvert", "Ambivert", "Extrovert"];
 const ACCOUNTABILITY = ["Gentle reminders", "Regular check-ins", "Strict deadlines"];
@@ -79,12 +152,6 @@ const PRIVACY = [
   "Show my name in results",
   "Show name but keep reasons general",
   "Lead introduction only",
-];
-const GENDER_PRIVACY = [
-  "No gender-based preference",
-  "Prefer same gender if available",
-  "Prefer not to answer",
-  "Discuss with lead privately",
 ];
 
 type DetailStepId = (typeof DETAIL_STEPS)[number]["id"];
@@ -389,10 +456,11 @@ function DetailStep({
       <div className="space-y-9">
         <div>
           <p className="text-sm text-muted mb-3">
-            Pick the course areas that matter for this class.
+            Skills are matched for coverage, not sameness. Pick what you bring and where support
+            would help.
           </p>
           <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
-            What should matching pay attention to academically?
+            What can your team actually cover together?
           </h2>
           <FieldLabel>Subjects or topics you want to study</FieldLabel>
           <OptionGrid
@@ -417,6 +485,73 @@ function DetailStep({
             onToggle={(option) => toggleArrayValue("weakAreas", option)}
           />
         </div>
+        <div>
+          <FieldLabel>Roles you could cover if the team needs it</FieldLabel>
+          <OptionGrid
+            options={ROLE_FLEXIBILITY}
+            selected={answerList(answers, "roleFlexibility")}
+            onToggle={(option) => toggleArrayValue("roleFlexibility", option)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "workstyle") {
+    return (
+      <div className="space-y-8">
+        <div>
+          <p className="text-sm text-muted mb-3">
+            These answers help Synco balance thinking styles without forcing fake personality
+            labels.
+          </p>
+          <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
+            How do you actually work in a team?
+          </h2>
+          <ChoiceStack
+            label="Planning style"
+            options={PLANNING_STYLES}
+            value={answerString(answers, "planningStyle")}
+            onChange={(option) => updateAnswer("planningStyle", option)}
+          />
+        </div>
+
+        <ChoiceStack
+          label="When you usually begin your share"
+          options={DEADLINE_BEHAVIORS}
+          value={answerString(answers, "deadlineBehavior")}
+          onChange={(option) => updateAnswer("deadlineBehavior", option)}
+        />
+        <ChoiceStack
+          label="First move when the brief is unclear"
+          options={AMBIGUITY_MOVES}
+          value={answerString(answers, "ambiguityApproach")}
+          onChange={(option) => updateAnswer("ambiguityApproach", option)}
+        />
+        <ChoiceStack
+          label="How you prefer to work through ideas"
+          options={WORKING_MODES}
+          value={answerString(answers, "workingMode")}
+          onChange={(option) => updateAnswer("workingMode", option)}
+        />
+        <ChoiceStack
+          label="When the team needs momentum"
+          options={MOMENTUM_STYLES}
+          value={answerString(answers, "momentumStyle")}
+          onChange={(option) => updateAnswer("momentumStyle", option)}
+        />
+        <ChoiceStack
+          label="Preferred team role"
+          options={TEAM_ROLE_PREFERENCES}
+          value={answerString(answers, "teamRolePreference")}
+          onChange={(option) => updateAnswer("teamRolePreference", option)}
+        />
+        <ChoiceStack
+          label="When you disagree"
+          options={CONFLICT_STYLES}
+          value={answerString(answers, "conflictStyle")}
+          onChange={(option) => updateAnswer("conflictStyle", option)}
+        />
       </div>
     );
   }
@@ -426,12 +561,12 @@ function DetailStep({
       <div className="space-y-8">
         <div>
           <p className="text-sm text-muted mb-3">
-            These answers keep matches practical after class ends.
+            These answers keep strong-looking matches from falling apart in real life.
           </p>
           <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-8 leading-snug">
-            How do you want a study partnership to work?
+            What does a workable project team need from you?
           </h2>
-          <FieldLabel>Preferred study style</FieldLabel>
+          <FieldLabel>Preferred working session style</FieldLabel>
           <SingleChoice
             options={STUDY_STYLES}
             value={answerString(answers, "studyStyle")}
@@ -468,10 +603,34 @@ function DetailStep({
           onChange={(option) => updateAnswer("targetGrade", option)}
         />
         <ChoiceStack
+          label="Main project outcome"
+          options={PROJECT_OUTCOMES}
+          value={answerString(answers, "projectOutcome")}
+          onChange={(option) => updateAnswer("projectOutcome", option)}
+        />
+        <ChoiceStack
           label="Communication preference"
           options={COMMUNICATION}
           value={answerString(answers, "communicationPreference")}
           onChange={(option) => updateAnswer("communicationPreference", option)}
+        />
+        <ChoiceStack
+          label="Check-in rhythm"
+          options={CHECK_IN_RHYTHMS}
+          value={answerString(answers, "checkInRhythm")}
+          onChange={(option) => updateAnswer("checkInRhythm", option)}
+        />
+        <ChoiceStack
+          label="Reasonable message response time"
+          options={RESPONSE_EXPECTATIONS}
+          value={answerString(answers, "responseExpectation")}
+          onChange={(option) => updateAnswer("responseExpectation", option)}
+        />
+        <ChoiceStack
+          label="How often you deliver agreed tasks on time"
+          options={DELIVERY_RELIABILITY}
+          value={answerString(answers, "deliveryReliability")}
+          onChange={(option) => updateAnswer("deliveryReliability", option)}
         />
         <ChoiceStack
           label="Online vs in-person"
@@ -486,7 +645,7 @@ function DetailStep({
           onChange={(option) => updateAnswer("preferredLanguage", option)}
         />
         <ChoiceStack
-          label="Personality / work energy"
+          label="Work energy"
           options={ENERGY_STYLES}
           value={answerString(answers, "energyStyle")}
           onChange={(option) => updateAnswer("energyStyle", option)}
@@ -517,13 +676,6 @@ function DetailStep({
           onChange={(option) => updateAnswer("privacyPreference", option)}
         />
       </div>
-
-      <ChoiceStack
-        label="Gender/privacy preference, if relevant"
-        options={GENDER_PRIVACY}
-        value={answerString(answers, "genderPreference") || GENDER_PRIVACY[0]}
-        onChange={(option) => updateAnswer("genderPreference", option)}
-      />
 
       {OPTIONAL_TEXT_SURVEY_FIELDS.map((field) => (
         <div key={field.id}>

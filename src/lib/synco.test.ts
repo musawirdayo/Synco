@@ -15,6 +15,7 @@ import {
   formTeams,
   isFlaggedFriend,
   pairIsRisky,
+  pairRiskScore,
   mutualRequest,
   pairBlocked,
   pairKey,
@@ -560,6 +561,74 @@ describe("V2 matching signals", () => {
   it("marks a genuinely risky pair without making every pair risky", () => {
     expect(pairIsRisky(studentA(), studentC())).toBe(true);
     expect(pairIsRisky(studentA(), studentB())).toBe(false);
+  });
+
+  it("uses Survey V2 communication and reliability fields in pair scoring", () => {
+    const base: Answers = {
+      ...studentMinimal(),
+      planningStyle: "Detailed plan early",
+      deadlineBehavior: "As soon as the task is clear",
+      checkInRhythm: "Daily short updates",
+      responseExpectation: "Within a few hours",
+      deliveryReliability: "Almost always",
+      projectOutcome: "Strong grade",
+    };
+    const alignedAnswers: Answers = {
+      ...base,
+      planningStyle: "Detailed plan early",
+      deadlineBehavior: "As soon as the task is clear",
+      checkInRhythm: "Daily short updates",
+      responseExpectation: "Within a few hours",
+      deliveryReliability: "Usually",
+      projectOutcome: "Strong grade",
+    };
+    const mismatchedAnswers: Answers = {
+      ...studentMinimal(),
+      planningStyle: "I prefer someone else to set structure",
+      deadlineBehavior: "Close to the deadline in a focused burst",
+      checkInRhythm: "Milestone-only check-ins",
+      responseExpectation: "Scheduled check-ins over frequent messages",
+      deliveryReliability: "Often late",
+      projectOutcome: "Mainly pass",
+    };
+    const aligned = matchBreakdown(base, alignedAnswers);
+    const mismatched = matchBreakdown(base, mismatchedAnswers);
+
+    expect(aligned.studyStyle).toBeGreaterThan(mismatched.studyStyle);
+    expect(aligned.goals).toBeGreaterThan(mismatched.goals);
+    expect(pairRiskScore(base, mismatchedAnswers)).toBeGreaterThan(
+      pairRiskScore(base, alignedAnswers),
+    );
+  });
+
+  it("uses Survey V2 role flexibility in team quality", () => {
+    const withoutRoles = [
+      { id: "a", answers: { ...studentMinimal(), strengths: ["Writing"] } },
+      { id: "b", answers: { ...studentMinimal(), strengths: ["Writing"] } },
+      { id: "c", answers: { ...studentMinimal(), strengths: ["Writing"] } },
+    ];
+    const withRoles = [
+      {
+        id: "a",
+        answers: { ...studentMinimal(), strengths: ["Writing"], roleFlexibility: ["Researcher"] },
+      },
+      {
+        id: "b",
+        answers: { ...studentMinimal(), strengths: ["Writing"], roleFlexibility: ["Presenter"] },
+      },
+      {
+        id: "c",
+        answers: {
+          ...studentMinimal(),
+          strengths: ["Writing"],
+          roleFlexibility: ["Quality checker"],
+        },
+      },
+    ];
+
+    expect(teamBreakdown(withRoles).skillCoverage).toBeGreaterThan(
+      teamBreakdown(withoutRoles).skillCoverage,
+    );
   });
 
   it("scores balanced teams higher than duplicate-role teams when logistics are similar", () => {
