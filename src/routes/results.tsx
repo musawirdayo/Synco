@@ -492,12 +492,15 @@ function proofFromStrongSignal(row: BreakdownRow, breakdown?: MatchBreakdown): C
 }
 
 function compatibilityProofs(peer: Match | ComparisonPeer) {
-  const seen = new Set<string>();
+  const seenDetails = new Set<string>();
+  const seenLabels = new Set<string>();
   const output: CompatibilityProof[] = [];
   const add = (proof: CompatibilityProof) => {
-    const key = proof.detail.toLowerCase();
-    if (!key || seen.has(key)) return;
-    seen.add(key);
+    const detailKey = proof.detail.toLowerCase();
+    const labelKey = proof.label.toLowerCase();
+    if (!detailKey || seenDetails.has(detailKey) || seenLabels.has(labelKey)) return;
+    seenDetails.add(detailKey);
+    seenLabels.add(labelKey);
     output.push(proof);
   };
 
