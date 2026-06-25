@@ -403,6 +403,184 @@ function firstAgreement(peer: Match | Avoid) {
   return weakest?.label ?? "first check-in cadence";
 }
 
+type CompatibilityProof = {
+  label: string;
+  detail: string;
+  score?: number;
+};
+
+function proofLabelFromText(proof: string) {
+  const normalized = proof.toLowerCase();
+  if (normalized.includes("slot") || normalized.includes("schedule")) return "Meeting proof";
+  if (
+    normalized.includes("skill") ||
+    normalized.includes("strength") ||
+    normalized.includes("weak")
+  ) {
+    return "Skill proof";
+  }
+  if (
+    normalized.includes("rhythm") ||
+    normalized.includes("communication") ||
+    normalized.includes("message") ||
+    normalized.includes("updates")
+  ) {
+    return "Work-style proof";
+  }
+  if (
+    normalized.includes("seriousness") ||
+    normalized.includes("target") ||
+    normalized.includes("outcome")
+  ) {
+    return "Effort proof";
+  }
+  if (normalized.includes("focus") || normalized.includes("academic")) return "Course proof";
+  return "Fit proof";
+}
+
+function proofScoreFromText(proof: string, breakdown?: MatchBreakdown) {
+  if (!breakdown) return undefined;
+  const label = proofLabelFromText(proof);
+  if (label === "Meeting proof") return breakdown.availability;
+  if (label === "Skill proof") return breakdown.complementary;
+  if (label === "Work-style proof") return breakdown.studyStyle;
+  if (label === "Effort proof") return breakdown.goals;
+  if (label === "Course proof") return breakdown.academic;
+  return undefined;
+}
+
+function proofFromStrongSignal(row: BreakdownRow, breakdown?: MatchBreakdown): CompatibilityProof {
+  if (row.key === "availability") {
+    return {
+      label: "Meeting proof",
+      score: row.value,
+      detail: breakdown?.commonSlots?.length
+        ? `${breakdown.commonSlots.length} shared free slot${breakdown.commonSlots.length === 1 ? "" : "s"} gives this pair real time to work.`
+        : "The schedule pattern is strong enough that planning should not eat the whole project.",
+    };
+  }
+  if (row.key === "academic") {
+    return {
+      label: "Course proof",
+      score: row.value,
+      detail: breakdown?.commonTopics?.length
+        ? `You share focus on ${breakdown.commonTopics.slice(0, 2).join(" and ")}, so helping each other should take less translation.`
+        : "Your class focus is close enough that support should feel practical instead of random.",
+    };
+  }
+  if (row.key === "complementary") {
+    return {
+      label: "Skill proof",
+      score: row.value,
+      detail: breakdown?.complementaryTopics?.length
+        ? `${breakdown.complementaryTopics.slice(0, 2).join(" and ")} help cover weak spots instead of duplicating the same strengths.`
+        : "The skill pattern is workable, with no obvious shared gap taking over the pairing.",
+    };
+  }
+  if (row.key === "studyStyle") {
+    return {
+      label: "Work-style proof",
+      score: row.value,
+      detail: "Your planning, communication, and work rhythm signals point in a similar direction.",
+    };
+  }
+  return {
+    label: "Effort proof",
+    score: row.value,
+    detail: "Your seriousness and target outcome are close enough to reduce expectation drama.",
+  };
+}
+
+function compatibilityProofs(peer: Match | ComparisonPeer) {
+  const seen = new Set<string>();
+  const output: CompatibilityProof[] = [];
+  const add = (proof: CompatibilityProof) => {
+    const key = proof.detail.toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    output.push(proof);
+  };
+
+  for (const proof of peer.proofs ?? []) {
+    add({
+      label: proofLabelFromText(proof),
+      detail: proof,
+      score: proofScoreFromText(proof, peer.breakdown),
+    });
+  }
+
+  const strongSignals = breakdownRows(peer.breakdown)
+    .filter((row) => row.value >= 70)
+    .sort((left, right) => right.value - left.value);
+
+  for (const row of strongSignals) {
+    add(proofFromStrongSignal(row, peer.breakdown));
+  }
+
+  if (!output.length) {
+    const strongest = strongestSignal(peer);
+    if (strongest) {
+      add(proofFromStrongSignal(strongest, peer.breakdown));
+    } else {
+      add({
+        label: "Fit proof",
+        detail: peer.why || "This is based on the overall pattern of your survey answers.",
+      });
+    }
+  }
+
+  return output.slice(0, 4);
+}
+
+function CompatibilityProofPanel({
+  peer,
+  compact = false,
+}: {
+  peer: Match | ComparisonPeer;
+  compact?: boolean;
+}) {
+  const proofs = compatibilityProofs(peer);
+  if (!proofs.length) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+            Compatibility proof
+          </div>
+          {!compact && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              The useful signals Synco found in your answers.
+            </p>
+          )}
+        </div>
+        {peer.confidence && (
+          <span className="w-fit rounded-full border border-accent/20 bg-card/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+            {peer.confidence} confidence
+          </span>
+        )}
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {proofs.map((proof) => (
+          <div
+            key={`${proof.label}-${proof.detail}`}
+            className="rounded-lg border border-border/55 bg-background/55 p-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-foreground">{proof.label}</span>
+              {typeof proof.score === "number" && (
+                <span className="font-mono text-xs font-bold text-accent">{proof.score}%</span>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{proof.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function teamSummary(team: StudentTeamAssignment) {
   const quality = team.quality;
   if (!quality) {
@@ -919,6 +1097,8 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
               </div>
             )}
 
+            <CompatibilityProofPanel peer={selected} compact />
+
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-accent">
@@ -984,21 +1164,12 @@ function MatchProfileCard({ peer }: { peer: Match }) {
         <span className="font-semibold text-foreground">They bring:</span> {peer.brings}
       </p>
 
+      <CompatibilityProofPanel peer={peer} />
+
       {peer.breakdown && (
         <div className="mt-4">
           <BreakdownBars breakdown={peer.breakdown} />
         </div>
-      )}
-
-      {peer.proofs && peer.proofs.length > 0 && (
-        <ul className="mt-4 space-y-2 border-t border-border/50 pt-4 text-sm leading-relaxed text-muted-foreground">
-          {peer.proofs.slice(0, 3).map((proof) => (
-            <li key={proof} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-              <span>{proof}</span>
-            </li>
-          ))}
-        </ul>
       )}
 
       {peer.agree.length > 0 && (

@@ -441,6 +441,22 @@ Next recommended matching work:
 - Move from the current TypeScript heuristic toward the deep-research report's constraint/optimization model: pair matrices, hard safety floors, team-size pattern solving, then local swap polishing.
 - Add a teacher pre-publish review step if the lead should approve flagged teams before students see them.
 
+## 2026-06-25 Results Compatibility Proofs
+
+Implemented and ready to push:
+
+- `src/routes/results.tsx` now renders a reusable Compatibility proof panel on match cards and in the Compare panel.
+- Proofs are classified into meeting, skill, work-style, effort, and course evidence.
+- New result JSON uses stored `proofs`; older result JSON falls back to positive breakdown signals so the panel still appears without republishing.
+- The old plain proof bullet list on match cards was replaced with compact evidence cards showing labels, detail, and the relevant score when available.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.
