@@ -379,6 +379,48 @@ Next recommended results-page work:
 - Add an authenticated visual QA pass with a real/demo student result once credentials are approved for use.
 - Consider extracting the new result panels into smaller components if `results.tsx` grows again.
 
+## 2026-06-25 Results UX + Matching Correction Slice
+
+Implemented locally:
+
+- Fixed the weird results-page scrolling by removing the sticky left profile rail in `src/routes/results.tsx`.
+- Replaced the tiny/truncated 5-column percentage bars with readable full-width breakdown bars.
+- Made the assigned-team card more explicit for 3/4/5+ person teams:
+  - shows team number, member count, target team size, average pair fit, and teammate names
+  - still lists every member in the assigned team
+- Added a student-facing comparison/search panel on results:
+  - searches visible classmate names and visible identifiers/roll numbers
+  - shows detailed comparison, score ring, factor bars, upside, difficulty, and first agreement point
+  - falls back to existing match/watch data for old results
+- Updated publish in `src/routes/class.$id.tsx` to store `comparisonPeers` in each student's result JSON for future full-class search after republish.
+- Added `publicPeerIdentifier()` in `src/lib/class-helpers.ts` so hidden-identity classmates do not expose identifiers in search.
+- Deduped stale result displays so the same classmate is not shown as both a best collaborator and a watch-out unless there is a real risk reason.
+- Adjusted `src/lib/synco.ts` scoring so:
+  - complementary skill coverage has more weight
+  - duplicated strengths are no longer over-rewarded
+  - shared weak areas reduce score more strongly
+  - pairs with duplicate skills and no coverage receive a final-score redundancy penalty
+- Updated tests so complementary coverage must beat duplicate-strength pairing.
+
+Verification passed after this slice:
+
+- `npm test -- --run src/lib/synco.test.ts`
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (88 passing)
+- `npm run build`
+- `git diff --check`
+- Local dev server is still running at `http://127.0.0.1:5173/`; `GET /results` returns `200`.
+
+Important caveat:
+
+- Existing published classes need to be republished before students get full-class comparison search and the updated matching scores. Old result JSON can only search the peers already present in top/watch lists.
+
+Next recommended matching work:
+
+- Move from the current TypeScript heuristic toward the deep-research report's constraint/optimization model: pair matrices, hard safety floors, team-size pattern solving, then local swap polishing.
+- Add a teacher-facing “low confidence / needs review” panel for teams before publishing.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

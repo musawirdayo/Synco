@@ -37,6 +37,7 @@ import { normalizeStudentIdentifier } from "@/lib/class-flow";
 import {
   buildRiskPairs,
   publicPeerName,
+  publicPeerIdentifier,
   publicInsightForPeer,
   publicFrictionForPeer,
   buildReadinessCard,
@@ -414,6 +415,50 @@ function ClassPage() {
           assignedTeam?.teammates.map((teammate) => teammate.student_id) ?? [],
         );
         const peerLists = splitPeerLists(ranked, assignedTeammateIds);
+        const comparisonPeers = ranked.map((peer, index) => {
+          const displayName = publicPeerName(peer.answers, peer.name, index);
+          const safeFriendRisk =
+            peer.friendRisk && displayName !== peer.name
+              ? peer.friendRisk.replace(`flagged ${peer.name}`, `flagged ${displayName}`)
+              : peer.friendRisk;
+          const publicInsight = publicInsightForPeer(peer.answers, peer.insight);
+          const publicFriction = publicFrictionForPeer(peer.answers, peer.friction);
+
+          return {
+            student_id: peer.student_id,
+            name: displayName,
+            identifier: publicPeerIdentifier(peer.answers, peer.identifier),
+            archetype: peer.archetype,
+            score: peer.score,
+            assigned: assignedTeammateIds.has(peer.student_id),
+            confidence: peer.breakdown.confidence,
+            breakdown: peer.breakdown,
+            proofs:
+              publicInsight.why === peer.insight.why
+                ? peer.proofs
+                : [
+                    "Private details are hidden by this classmate's visibility choice.",
+                    "Synco still checked schedule, working fit, and project goals.",
+                  ],
+            riskProofs:
+              publicFriction.why === peer.friction.why
+                ? peer.riskProofs
+                : [
+                    "Private details are hidden by this classmate's visibility choice.",
+                    "Ask the lead before assuming the exact reason this pairing needs care.",
+                  ],
+            riskScore: peer.riskScore,
+            isRisky: peer.isRisky,
+            friendFlagged: peer.friendFlagged,
+            friendRisk: safeFriendRisk,
+            why: publicInsight.why,
+            brings: publicInsight.brings,
+            agree: publicInsight.agree,
+            move: publicInsight.move,
+            watch: publicFriction.watch,
+            riskWhy: publicFriction.why,
+          };
+        });
 
         const matches = peerLists.matches.map(
           (
@@ -514,12 +559,13 @@ function ClassPage() {
             meters: workStyleMeters(self.answers),
             matches,
             avoid,
+            comparisonPeers,
             readiness,
             assigned_partner_id: assignedPartnerId,
             assigned_team_id: assignedTeam?.id ?? null,
             matching_algorithm: teamAssignments.algorithm,
             matching_weights:
-              "30% availability, 25% academic fit, 20% complementary skills, 15% study style, 10% goals",
+              "29% availability, 21% academic fit, 24% complementary skills, 16% study style, 10% goals, with a penalty for duplicate skills that do not cover weak areas",
             submitted_count: completed.length,
             expected_count: cls.expected_count,
           } as never,

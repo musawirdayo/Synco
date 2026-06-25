@@ -247,9 +247,13 @@ describe("matchBreakdown", () => {
     expect(similar.final).toBeGreaterThan(dissimilar.final);
   });
 
-  it("identical students get a high score", () => {
-    const bd = matchBreakdown(studentA(), studentA());
-    expect(bd.final).toBeGreaterThanOrEqual(80);
+  it("prefers complementary coverage over duplicate strengths", () => {
+    const duplicate = matchBreakdown(studentA(), studentA());
+    const complementary = matchBreakdown(studentA(), studentB());
+
+    expect(duplicate.complementary).toBeLessThan(55);
+    expect(complementary.complementary).toBeGreaterThan(duplicate.complementary);
+    expect(complementary.final).toBeGreaterThan(duplicate.final);
   });
 
   it("finds common availability slots", () => {

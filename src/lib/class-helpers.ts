@@ -63,6 +63,10 @@ export function publicPeerName(answers: Answers, actualName: string, index: numb
   return privacyMode(answers) === "Lead introduction only" ? `Classmate ${index + 1}` : actualName;
 }
 
+export function publicPeerIdentifier(answers: Answers, identifier: string | null | undefined) {
+  return privacyMode(answers) === "Lead introduction only" ? null : (identifier ?? null);
+}
+
 export function publicInsightForPeer(answers: Answers, insight: ReturnType<typeof pairInsight>) {
   const mode = privacyMode(answers);
   if (mode === "Show name but keep reasons general") {

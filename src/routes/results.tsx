@@ -31,6 +31,7 @@ export const Route = createFileRoute("/results")({
 type Match = {
   student_id: string;
   name: string;
+  identifier?: string | null;
   archetype: string;
   score: number;
   assigned?: boolean;
@@ -45,6 +46,7 @@ type Match = {
 type Avoid = {
   student_id: string;
   name: string;
+  identifier?: string | null;
   archetype: string;
   score: number;
   friendFlagged?: boolean;
@@ -75,6 +77,7 @@ type ResultData = {
   };
   matches: Match[];
   avoid?: Avoid[];
+  comparisonPeers?: ComparisonPeer[];
   readiness?: {
     suggestedGroup: Array<{ name: string; archetype: string; score: number }>;
     why: string;
@@ -85,6 +88,17 @@ type ResultData = {
   };
   submitted_count: number;
   expected_count: number;
+};
+
+type ComparisonPeer = Match & {
+  identifier?: string | null;
+  watch?: string;
+  riskWhy?: string;
+  riskProofs?: string[];
+  riskScore?: number;
+  isRisky?: boolean;
+  friendFlagged?: boolean;
+  friendRisk?: string | null;
 };
 
 /* ─── Component: Score ring ─── */
@@ -153,19 +167,19 @@ function BreakdownBars({ breakdown }: { breakdown: MatchBreakdown }) {
   ];
 
   return (
-    <div className="grid gap-2 grid-cols-2 sm:grid-cols-5 bg-background/30 p-2.5 rounded-xl border border-border/20">
+    <div className="space-y-3 rounded-xl border border-border/40 bg-background/35 p-4">
       {rows.map((row) => (
-        <div
-          key={row.label}
-          className="rounded-lg bg-card/45 p-2 border border-border/10 flex flex-col justify-between"
-        >
-          <div className="mb-1 flex items-center justify-between gap-1 text-[10px] text-muted-foreground font-semibold">
-            <span className="truncate">{row.label}</span>
-            <span className="font-mono text-foreground font-bold shrink-0">{row.value}%</span>
+        <div key={row.label}>
+          <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+            <span className="font-semibold text-foreground">{row.label}</span>
+            <span className="font-mono font-bold text-foreground">{row.value}%</span>
           </div>
-          <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+          <div className="h-2.5 overflow-hidden rounded-full bg-border/60">
             <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
+              className={
+                "h-full rounded-full transition-all duration-500 " +
+                (row.value < 55 ? "bg-destructive" : "bg-primary")
+              }
               style={{ width: `${row.value}%` }}
             />
           </div>
@@ -362,6 +376,27 @@ function likelyFailureMode(peer: Avoid) {
   return "What will probably go wrong: the effort level or target outcome may not match once deadlines get real.";
 }
 
+function comparisonRiskCopy(peer: ComparisonPeer) {
+  if (peer.friendRisk) return peer.friendRisk;
+  if (peer.watch) return peer.watch;
+  if (peer.riskWhy) return peer.riskWhy;
+  const weakest = weakestSignal(peer);
+  if (!weakest) return "No major difficulty is visible, but still agree on expectations first.";
+  if (weakest.key === "availability") {
+    return "Meeting time is the weakest signal, so this pair needs a clear schedule before work starts.";
+  }
+  if (weakest.key === "academic") {
+    return "Course focus is the weakest signal, so you may need extra time to get aligned.";
+  }
+  if (weakest.key === "complementary") {
+    return "Skill coverage is the weakest signal, so this pair may not cover each other's gaps.";
+  }
+  if (weakest.key === "studyStyle") {
+    return "Work rhythm is the weakest signal, so agree on updates and communication early.";
+  }
+  return "Goal alignment is the weakest signal, so agree on effort level before starting.";
+}
+
 function firstAgreement(peer: Match | Avoid) {
   if ("agree" in peer && peer.agree?.length) return peer.agree[0];
   const weakest = weakestSignal(peer);
@@ -535,13 +570,16 @@ function ProfileOverview({
 
 function MetricBar({ label, value, helper }: { label: string; value: number; helper?: string }) {
   return (
-    <div>
+    <div className="rounded-xl border border-border/50 bg-background/35 p-4">
       <div className="mb-1 flex items-center justify-between gap-3 text-xs">
         <span className="font-semibold text-foreground">{label}</span>
         <span className="font-mono font-bold text-accent">{value}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-border/50">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+      <div className="h-2.5 overflow-hidden rounded-full bg-border/60">
+        <div
+          className={"h-full rounded-full " + (value < 55 ? "bg-destructive" : "bg-primary")}
+          style={{ width: `${value}%` }}
+        />
       </div>
       {helper && <p className="mt-1 text-[11px] text-muted-foreground">{helper}</p>}
     </div>
@@ -554,13 +592,17 @@ function TeamProfilePanel({
   isUnmatchedFromTeams,
   userId,
   readiness,
+  teamSize,
 }: {
   assignedTeam: StudentTeamAssignment | null;
   assignedTeamSummary: ReturnType<typeof teamSummary> | null;
   isUnmatchedFromTeams: boolean;
   userId?: string;
   readiness: NonNullable<ResultData["readiness"]>;
+  teamSize?: number;
 }) {
+  const teamNumber = assignedTeam?.id.match(/\d+/)?.[0];
+
   return (
     <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-3 border-b border-border/50 pb-5 md:flex-row md:items-start md:justify-between">
@@ -583,6 +625,26 @@ function TeamProfilePanel({
 
       {assignedTeam ? (
         <div className="mt-6 space-y-6">
+          <div className="rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+              {teamNumber ? `Team ${teamNumber}` : "Assigned team"}
+            </div>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {assignedTeam.members.length} member
+              {assignedTeam.members.length === 1 ? "" : "s"}
+              {teamSize ? ` · target size ${teamSize}` : ""} · {assignedTeam.average_score}% average
+              pair fit
+            </p>
+            {assignedTeam.teammates.length > 0 && (
+              <p className="mt-3 text-sm leading-relaxed text-foreground">
+                Your teammate{assignedTeam.teammates.length === 1 ? "" : "s"}:{" "}
+                <span className="font-semibold">
+                  {assignedTeam.teammates.map((member) => member.name).join(", ")}
+                </span>
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
             <div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -726,6 +788,171 @@ function SuggestedTeamPanel({ readiness }: { readiness: NonNullable<ResultData["
         ))}
       </div>
       <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{readiness.why}</p>
+    </section>
+  );
+}
+
+function comparisonSearchText(peer: ComparisonPeer) {
+  return [peer.name, peer.identifier, peer.archetype].filter(Boolean).join(" ").toLowerCase();
+}
+
+function comparisonPeersForData(data: ResultData): ComparisonPeer[] {
+  const peers = new Map<string, ComparisonPeer>();
+  const add = (peer: ComparisonPeer) => {
+    const current = peers.get(peer.student_id);
+    peers.set(peer.student_id, current ? { ...current, ...peer } : peer);
+  };
+
+  if (data.comparisonPeers?.length) {
+    data.comparisonPeers.forEach(add);
+  }
+  data.matches?.forEach((peer) => add(peer));
+  data.avoid?.forEach((peer) =>
+    add({
+      ...peer,
+      brings: "",
+      agree: [],
+      riskWhy: peer.why,
+    }),
+  );
+
+  return [...peers.values()].sort((left, right) => right.score - left.score);
+}
+
+function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  if (!peers.length) return null;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = normalizedQuery
+    ? peers.filter((peer) => comparisonSearchText(peer).includes(normalizedQuery)).slice(0, 8)
+    : peers.slice(0, 6);
+  const selected =
+    peers.find((peer) => peer.student_id === selectedId) ?? filtered[0] ?? peers[0] ?? null;
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <SectionHeader
+        eyebrow="Compare"
+        title="Check a classmate before teaming up"
+        description="Search a visible name or roll number. Synco compares your result with that classmate and shows the practical upside, risks, and first thing to agree on."
+      />
+      <div className="mt-5 grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Search classmate
+          </label>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelectedId(null);
+            }}
+            placeholder="Name or roll number"
+            className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
+          />
+          <div className="mt-3 space-y-2">
+            {filtered.length ? (
+              filtered.map((peer) => (
+                <button
+                  key={peer.student_id}
+                  type="button"
+                  onClick={() => setSelectedId(peer.student_id)}
+                  className={
+                    "w-full rounded-xl border p-3 text-left transition-colors " +
+                    (selected?.student_id === peer.student_id
+                      ? "border-primary bg-primary/5"
+                      : "border-border/60 bg-background/45 hover:border-primary/40")
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-foreground">
+                        {peer.name}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {peer.identifier ? `${peer.identifier} · ` : ""}
+                        {peer.archetype}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-border bg-card px-2 py-0.5 font-mono text-xs font-bold text-foreground">
+                      {peer.score}%
+                    </span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-border bg-background/35 p-4 text-sm text-muted-foreground">
+                No visible classmate matched that search. Some students may hide their identity
+                until the lead introduces them.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {selected && (
+          <div className="rounded-xl border border-border/60 bg-background/35 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+                  Detailed comparison
+                </div>
+                <h3 className="mt-1 text-2xl font-display font-semibold text-foreground">
+                  {selected.name}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selected.identifier ? `${selected.identifier} · ` : ""}
+                  {selected.archetype}
+                </p>
+              </div>
+              <ScoreRing
+                score={selected.score}
+                isWarning={Boolean(selected.isRisky || selected.friendRisk)}
+                label={selected.isRisky || selected.friendRisk ? "Risk" : "Match"}
+              />
+            </div>
+
+            {selected.breakdown && (
+              <div className="mt-5">
+                <BreakdownBars breakdown={selected.breakdown} />
+              </div>
+            )}
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                  Why it may work
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{selected.why}</p>
+                {selected.brings && (
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">They bring:</span>{" "}
+                    {selected.brings}
+                  </p>
+                )}
+              </div>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/[0.025] p-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-destructive">
+                  What could get difficult
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {comparisonRiskCopy(selected)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-border/60 bg-card/40 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                First thing to agree on
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-foreground">
+                {firstAgreement(selected)} before assigning work.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -1144,6 +1371,19 @@ function Results() {
       return left.index - right.index;
     })
     .map(({ peer }) => peer);
+  const meaningfulAvoid = orderedAvoid.filter(
+    (peer) =>
+      peer.friendFlagged ||
+      peer.isRisky ||
+      (peer.riskScore ?? 0) >= 25 ||
+      peer.score < 65 ||
+      !(d.matches || []).some((match) => match.student_id === peer.student_id),
+  );
+  const meaningfulAvoidIds = new Set(meaningfulAvoid.map((peer) => peer.student_id));
+  const displayMatches = (d.matches || []).filter(
+    (peer) => !meaningfulAvoidIds.has(peer.student_id),
+  );
+  const comparisonPeers = comparisonPeersForData(d);
   const assignedTeam = state.assignedTeam ?? null;
   const assignmentSnapshot = state.assignmentSnapshot ?? null;
   const isUnmatchedFromTeams =
@@ -1190,7 +1430,7 @@ function Results() {
           transition={{ duration: 0.28 }}
           className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]"
         >
-          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <aside className="space-y-6 lg:self-start">
             <ProfileOverview
               name={state.name}
               className={state.className}
@@ -1207,9 +1447,12 @@ function Results() {
               isUnmatchedFromTeams={isUnmatchedFromTeams}
               userId={user?.id}
               readiness={readiness}
+              teamSize={assignmentSnapshot?.team_size}
             />
 
             {!assignedTeam && <SuggestedTeamPanel readiness={readiness} />}
+
+            <ComparePanel peers={comparisonPeers} />
 
             <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
               <SectionHeader
@@ -1217,9 +1460,9 @@ function Results() {
                 title="People you should consider working with"
                 description="These are not just high scores. Synco looks for practical fit: meeting time, effort level, thinking style, and skills that fill your gaps."
               />
-              {(d.matches || []).length > 0 ? (
+              {displayMatches.length > 0 ? (
                 <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                  {(d.matches || []).map((peer) => (
+                  {displayMatches.map((peer) => (
                     <MatchProfileCard key={peer.student_id} peer={peer} />
                   ))}
                 </div>
@@ -1237,9 +1480,9 @@ function Results() {
                 description="This list exists so group work does not become awkward later. It points out where the data says you would need a strict plan before choosing that person."
                 tone="warning"
               />
-              {orderedAvoid.length > 0 ? (
+              {meaningfulAvoid.length > 0 ? (
                 <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                  {orderedAvoid.map((peer) => (
+                  {meaningfulAvoid.map((peer) => (
                     <WatchProfileCard key={peer.student_id} peer={peer} />
                   ))}
                 </div>

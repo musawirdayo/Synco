@@ -81,10 +81,10 @@ const FRIEND_RISK_SCORE_THRESHOLD = 65;
 //   - Study style (15%): Compatible work rhythms and communication.
 //   - Goals (10%): Similar ambition and grade targets.
 export const MATCH_WEIGHTS = {
-  availability: 0.3,
-  academic: 0.25,
-  complementary: 0.2,
-  studyStyle: 0.15,
+  availability: 0.29,
+  academic: 0.21,
+  complementary: 0.24,
+  studyStyle: 0.16,
   goals: 0.1,
 } as const;
 
@@ -145,6 +145,22 @@ function intersect(left: string[], right: string[]) {
     (item, index) =>
       rightKeys.has(key(item)) && left.findIndex((x) => key(x) === key(item)) === index,
   );
+}
+
+function relatedIntersect(left: string[], right: string[]) {
+  const output: string[] = [];
+  for (const item of left) {
+    const itemKey = key(item);
+    if (!itemKey) continue;
+    const matched = right.some((candidate) => {
+      const candidateKey = key(candidate);
+      return (
+        candidateKey === itemKey || candidateKey.includes(itemKey) || itemKey.includes(candidateKey)
+      );
+    });
+    if (matched && !output.some((existing) => key(existing) === itemKey)) output.push(item);
+  }
+  return output;
 }
 
 function unionSize(left: string[], right: string[]) {
@@ -380,33 +396,31 @@ function academicScore(a: Answers, b: Answers) {
           )
         : NEUTRAL_ACADEMIC;
 
-    // Shared strengths: base 70 + 10 per overlap (rewards having common ground).
-    // 58 if no overlap (below neutral — having strengths but none shared is mildly negative).
+    // Shared strengths give a little common ground, but they are not the main value of a team.
+    // Two students bringing the same scarce skill should not outrank a pair that covers gaps.
     const strengthFit =
       aStrengths.length && bStrengths.length
         ? commonStrengths.length
-          ? clampScore(70 + commonStrengths.length * 10)
+          ? clampScore(60 + commonStrengths.length * 5)
           : 58
         : NEUTRAL_ACADEMIC;
 
-    // Shared weaknesses: base 55 + 12 per overlap.
-    // Sharing weak areas is slightly positive (mutual support) but the low base reflects
-    // that two students struggling in the same area won't cover each other.
-    // 70 if no shared weaknesses = mildly good (gaps don't compound).
+    // Shared weaknesses are a real drag because neither student covers that gap.
     const weakFit =
       aWeak.length && bWeak.length
         ? sharedWeakAreas.length
-          ? clampScore(55 + sharedWeakAreas.length * 12)
-          : 70
+          ? clampScore(48 - Math.min(12, (sharedWeakAreas.length - 1) * 4))
+          : 72
         : NEUTRAL_ACADEMIC;
 
-    // Blend: topics matter most (45%), then strengths (22%), weaknesses (18%),
+    // Blend: topics matter most (55%), then shared gaps (20%),
+    // with duplicated strengths kept deliberately low (10%),
     // plus q22 (project/support focus, 15% via proximity scaled to 0-15).
     return {
       score: clampScore(
-        topicFit * 0.45 +
-          strengthFit * 0.22 +
-          weakFit * 0.18 +
+        topicFit * 0.55 +
+          strengthFit * 0.1 +
+          weakFit * 0.2 +
           prox(num(a, "q22"), num(b, "q22")) * 15,
       ),
       commonTopics,
@@ -436,11 +450,13 @@ function complementaryScore(a: Answers, b: Answers) {
   const bStrengths = list(b, "strengths");
   const aWeak = list(a, "weakAreas");
   const bWeak = list(b, "weakAreas");
-  const aHelpsB = intersect(aStrengths, bWeak); // A's strengths covering B's gaps
-  const bHelpsA = intersect(bStrengths, aWeak); // B's strengths covering A's gaps
+  const aHelpsB = relatedIntersect(aStrengths, bWeak); // A's strengths covering B's gaps
+  const bHelpsA = relatedIntersect(bStrengths, aWeak); // B's strengths covering A's gaps
   const complementaryTopics = [...aHelpsB, ...bHelpsA].filter(
     (item, index, all) => all.findIndex((x) => key(x) === key(item)) === index,
   );
+  const sharedWeakAreas = relatedIntersect(aWeak, bWeak);
+  const sharedStrengths = relatedIntersect(aStrengths, bStrengths);
 
   if (aStrengths.length || bStrengths.length || aWeak.length || bWeak.length) {
     // Found complementary coverage: base 62 + 12 per topic covered.
@@ -449,10 +465,12 @@ function complementaryScore(a: Answers, b: Answers) {
     if (complementaryTopics.length) {
       return { score: clampScore(62 + complementaryTopics.length * 12), complementaryTopics };
     }
-    // 52: they share weak areas but no complementary coverage — mild negative.
-    if (intersect(aWeak, bWeak).length) return { score: 52, complementaryTopics };
-    // 44: no complementary match at all — clearly below neutral.
-    return { score: 44, complementaryTopics };
+    // Shared gaps with no coverage are one of the clearest bad team signals.
+    if (sharedWeakAreas.length) return { score: 36, complementaryTopics };
+    // Duplicate strengths are not useless, but they do not broaden the team.
+    if (sharedStrengths.length) return { score: 42, complementaryTopics };
+    // No complementary match at all — clearly below neutral.
+    return { score: 46, complementaryTopics };
   }
 
   // No topic data → estimate from numeric signals:
@@ -464,6 +482,13 @@ function complementaryScore(a: Answers, b: Answers) {
     ),
     complementaryTopics,
   };
+}
+
+function skillRedundancyPenalty(a: Answers, b: Answers, complementaryTopics: string[]) {
+  if (complementaryTopics.length) return 0;
+  const sharedStrengths = relatedIntersect(list(a, "strengths"), list(b, "strengths"));
+  const sharedWeakAreas = relatedIntersect(list(a, "weakAreas"), list(b, "weakAreas"));
+  return Math.min(18, sharedStrengths.length * 5 + sharedWeakAreas.length * 7);
 }
 
 // Study style compatibility: blends categorical matches with numeric proximity signals.
@@ -632,7 +657,8 @@ export function matchBreakdown(a: Answers, b: Answers): MatchBreakdown {
       academic.score * MATCH_WEIGHTS.academic +
       complementary.score * MATCH_WEIGHTS.complementary +
       studyStyle * MATCH_WEIGHTS.studyStyle +
-      goals * MATCH_WEIGHTS.goals,
+      goals * MATCH_WEIGHTS.goals -
+      skillRedundancyPenalty(a, b, complementary.complementaryTopics),
   );
 
   return {
