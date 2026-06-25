@@ -457,6 +457,27 @@ Verified:
 - `npm test`
 - `npm run build`
 
+## 2026-06-26 Premium Results Cleanup
+
+Implemented and ready to push:
+
+- `src/routes/results.tsx` now uses lighter proof chips instead of boxed proof cards.
+- Match cards were redesigned as cleaner report entries: verdict, proof chips, why it works, first move, and collapsible detailed signals.
+- Watch-out cards now read more like risk memos, with stronger warning/friend treatment and collapsible risk signals.
+- Compare panel was flattened so score breakdowns live behind a details control instead of dominating the first view.
+- Work style panel was simplified into divided profile rows rather than five nested mini-cards.
+- `src/lib/synco.ts` removes duplicate/large-class polishing work so the 24-person formTeams test no longer hits Vitest's 5s timeout.
+
+Verified:
+
+- `npm test -- --run src/lib/synco.test.ts -t "scales a 24-person class"`
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+- `git diff --check`
+- Local dev server still responds at `http://127.0.0.1:5173/results`.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

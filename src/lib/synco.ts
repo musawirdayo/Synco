@@ -1590,7 +1590,6 @@ export function formTeams(
   const targetTeamSize = Number.isFinite(teamSize) ? Math.max(3, Math.floor(teamSize)) : 3;
   const unassigned = [...students];
   const teamMembers = forcedRequestSubgroups(unassigned, targetTeamSize, blockedPairKeys);
-  const forcedTeamCount = teamMembers.length;
 
   for (const team of teamMembers) {
     while (team.length < targetTeamSize) {
@@ -1612,9 +1611,7 @@ export function formTeams(
     removeStudent(unassigned, student.id);
   }
 
-  const polishedTeams =
-    forcedTeamCount > 0 ? teamMembers : polishTeams(teamMembers, blockedPairKeys);
-  const teams = polishedTeams.map((team) => summarizeTeam(team, blockedPairKeys));
+  const teams = teamMembers.map((team) => summarizeTeam(team, blockedPairKeys));
 
   return {
     algorithm: "greedy-clustering",
@@ -1671,7 +1668,7 @@ function solveTeamAssignment(
       blockedPairKeys,
     );
   return {
-    teams: polishTeams(best.teams, blockedPairKeys),
+    teams: best.teams.length > 5 ? best.teams : polishTeams(best.teams, blockedPairKeys),
     unmatched: best.unmatched,
   };
 }
@@ -1763,7 +1760,7 @@ function solvePatternGreedy(
   }
 
   return {
-    teams: polishTeams(teams, blockedPairKeys),
+    teams,
     unmatched: remaining,
   };
 }

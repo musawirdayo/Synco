@@ -167,7 +167,7 @@ function BreakdownBars({ breakdown }: { breakdown: MatchBreakdown }) {
   ];
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/40 bg-background/35 p-4">
+    <div className="space-y-3">
       {rows.map((row) => (
         <div key={row.label}>
           <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
@@ -255,19 +255,22 @@ function WorkStyleSection({ meters }: { meters: ResultData["meters"] }) {
   ];
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-      <h2 className="text-2xl font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-6">
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+      <h2 className="mb-2 flex items-center gap-2 font-display text-2xl font-semibold tracking-tight text-foreground">
         <Activity className="h-5 w-5 text-accent" />
         Your Work Style
       </h2>
-      <div className="space-y-5">
+      <p className="mb-2 text-sm leading-relaxed text-muted-foreground">
+        A quick read on how you tend to work inside a team.
+      </p>
+      <div className="divide-y divide-border/50">
         {items.map((m, i) => (
           <motion.div
             key={m.label}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: i * 0.05 }}
-            className="p-4 rounded-xl bg-background/40 border border-border/40"
+            className="py-4 first:pt-5 last:pb-0"
           >
             <div className="flex justify-between text-sm mb-2">
               <span className="font-semibold text-foreground/90">{m.label}</span>
@@ -285,9 +288,7 @@ function WorkStyleSection({ meters }: { meters: ResultData["meters"] }) {
               <span>{m.left}</span>
               <span>{m.right}</span>
             </div>
-            <p className="text-xs text-foreground/70 leading-relaxed mt-2 pl-2.5 border-l-2 border-accent/30">
-              {m.note}
-            </p>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{m.note}</p>
           </motion.div>
         ))}
       </div>
@@ -546,40 +547,32 @@ function CompatibilityProofPanel({
   if (!proofs.length) return null;
 
   return (
-    <div className="mt-4 rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
-            Compatibility proof
-          </div>
-          {!compact && (
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              The useful signals Synco found in your answers.
-            </p>
-          )}
-        </div>
+    <div className="mt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+          Proof
+        </span>
+        {proofs.slice(0, compact ? 3 : 4).map((proof) => (
+          <span
+            key={`${proof.label}-${proof.detail}`}
+            title={proof.detail}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-xs font-semibold text-accent"
+          >
+            <span className="truncate">{proof.label.replace(" proof", "")}</span>
+            {typeof proof.score === "number" && (
+              <span className="font-mono text-[11px] text-foreground/70">{proof.score}%</span>
+            )}
+          </span>
+        ))}
         {peer.confidence && (
-          <span className="w-fit rounded-full border border-accent/20 bg-card/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+          <span className="inline-flex rounded-full border border-border bg-background/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             {peer.confidence} confidence
           </span>
         )}
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {proofs.map((proof) => (
-          <div
-            key={`${proof.label}-${proof.detail}`}
-            className="rounded-lg border border-border/55 bg-background/55 p-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-semibold text-foreground">{proof.label}</span>
-              {typeof proof.score === "number" && (
-                <span className="font-mono text-xs font-bold text-accent">{proof.score}%</span>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{proof.detail}</p>
-          </div>
-        ))}
-      </div>
+      {!compact && proofs[0] && (
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{proofs[0].detail}</p>
+      )}
     </div>
   );
 }
@@ -1073,7 +1066,7 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
         </div>
 
         {selected && (
-          <div className="rounded-xl border border-border/60 bg-background/35 p-5">
+          <div className="rounded-xl border border-border/70 bg-background/25 p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
@@ -1094,16 +1087,10 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
               />
             </div>
 
-            {selected.breakdown && (
-              <div className="mt-5">
-                <BreakdownBars breakdown={selected.breakdown} />
-              </div>
-            )}
-
             <CompatibilityProofPanel peer={selected} compact />
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-accent/20 bg-accent/[0.035] p-4">
+            <div className="mt-5 grid gap-5 border-t border-border/50 pt-5 lg:grid-cols-2">
+              <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-accent">
                   Why it may work
                 </div>
@@ -1115,7 +1102,7 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-destructive/20 bg-destructive/[0.025] p-4">
+              <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-destructive">
                   What could get difficult
                 </div>
@@ -1125,7 +1112,7 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
               </div>
             </div>
 
-            <div className="mt-5 rounded-xl border border-border/60 bg-card/40 p-4">
+            <div className="mt-5 border-t border-border/50 pt-5">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 First thing to agree on
               </div>
@@ -1133,6 +1120,17 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
                 {firstAgreement(selected)} before assigning work.
               </p>
             </div>
+
+            {selected.breakdown && (
+              <details className="mt-5 border-t border-border/50 pt-4">
+                <summary className="cursor-pointer text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
+                  View score breakdown
+                </summary>
+                <div className="mt-4">
+                  <BreakdownBars breakdown={selected.breakdown} />
+                </div>
+              </details>
+            )}
           </div>
         )}
       </div>
@@ -1142,51 +1140,69 @@ function ComparePanel({ peers }: { peers: ComparisonPeer[] }) {
 
 function MatchProfileCard({ peer }: { peer: Match }) {
   return (
-    <article className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-accent/35">
+    <article className="group rounded-2xl border border-border/80 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-lg font-semibold text-foreground">{peer.name}</h3>
+            <span className="inline-flex rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1 text-xs font-semibold text-accent">
+              {matchHeadline(peer)}
+            </span>
             {peer.assigned && (
               <span className="rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
                 Teammate
               </span>
             )}
           </div>
+          <h3 className="mt-3 truncate text-xl font-semibold text-foreground">{peer.name}</h3>
           <div className="mt-1 text-xs text-muted-foreground">{peer.archetype}</div>
-          <div className="mt-3 inline-flex rounded-full border border-accent/20 bg-accent/[0.05] px-3 py-1 text-xs font-semibold text-accent">
-            {matchHeadline(peer)}
-          </div>
         </div>
         <ScoreRing score={peer.score} />
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-foreground">{matchBenefit(peer)}</p>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        <span className="font-semibold text-foreground">They bring:</span> {peer.brings}
-      </p>
+      <p className="mt-4 text-base leading-relaxed text-foreground">{matchBenefit(peer)}</p>
 
       <CompatibilityProofPanel peer={peer} />
 
-      {peer.breakdown && (
-        <div className="mt-4">
-          <BreakdownBars breakdown={peer.breakdown} />
+      <div className="mt-5 grid gap-4 border-t border-border/50 pt-5 md:grid-cols-2">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+            Why it works
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
         </div>
-      )}
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            First move
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {peer.move || `Agree on ${firstAgreement(peer).toLowerCase()} before assigning work.`}
+          </p>
+        </div>
+      </div>
 
-      {peer.agree.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {peer.agree.slice(0, 3).map((item) => (
-            <span
-              key={item}
-              className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-semibold text-muted-foreground"
-            >
-              Agree on {item}
-            </span>
-          ))}
+      <details className="mt-4 border-t border-border/50 pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
+          View detailed signals
+        </summary>
+        <div className="mt-4 space-y-4">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">They bring:</span> {peer.brings}
+          </p>
+          {peer.breakdown && <BreakdownBars breakdown={peer.breakdown} />}
+          {peer.agree.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {peer.agree.slice(0, 3).map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-semibold text-muted-foreground"
+                >
+                  Agree on {item}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </details>
     </article>
   );
 }
@@ -1196,7 +1212,7 @@ function WatchProfileCard({ peer }: { peer: Avoid }) {
   return (
     <article
       className={
-        "rounded-2xl border p-5 shadow-sm transition-colors " +
+        "rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md " +
         (friend
           ? "border-amber-500/40 bg-amber-500/[0.035] hover:border-amber-500/60"
           : "border-destructive/20 bg-card hover:border-destructive/35")
@@ -1204,16 +1220,9 @@ function WatchProfileCard({ peer }: { peer: Avoid }) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          {friend && (
-            <span className="mb-2 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-              Friend flagged
-            </span>
-          )}
-          <h3 className="truncate text-lg font-semibold text-foreground">{peer.name}</h3>
-          <div className="mt-1 text-xs text-muted-foreground">{peer.archetype}</div>
           <div
             className={
-              "mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold " +
+              "inline-flex rounded-full border px-3 py-1 text-xs font-semibold " +
               (friend
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                 : "border-destructive/20 bg-destructive/10 text-destructive")
@@ -1221,49 +1230,75 @@ function WatchProfileCard({ peer }: { peer: Avoid }) {
           >
             {watchHeadline(peer)}
           </div>
+          {friend && (
+            <span className="ml-2 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              Friend flagged
+            </span>
+          )}
+          <h3 className="mt-3 truncate text-xl font-semibold text-foreground">{peer.name}</h3>
+          <div className="mt-1 text-xs text-muted-foreground">{peer.archetype}</div>
         </div>
         <ScoreRing score={peer.score} isWarning label="Risk" />
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-foreground">{likelyFailureMode(peer)}</p>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
+      <p className="mt-4 text-base leading-relaxed text-foreground">{likelyFailureMode(peer)}</p>
 
       {peer.friendRisk ? (
-        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-4 text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+        <div className="mt-4 border-l-2 border-amber-500 pl-4 text-sm leading-relaxed text-amber-900 dark:text-amber-100">
           {peer.friendRisk}
         </div>
       ) : (
-        <div className="mt-4 rounded-xl border border-destructive/15 bg-destructive/[0.025] p-4 text-sm leading-relaxed text-destructive/90">
+        <div className="mt-4 border-l-2 border-destructive pl-4 text-sm leading-relaxed text-destructive/90">
           {peer.watch}
         </div>
       )}
 
-      {peer.breakdown && (
-        <div className="mt-4">
-          <BreakdownBars breakdown={peer.breakdown} />
+      {peer.riskProofs && peer.riskProofs.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {peer.riskProofs.slice(0, 3).map((proof) => (
+            <span
+              key={proof}
+              title={proof}
+              className={
+                "inline-flex rounded-full border px-3 py-1 text-xs font-semibold " +
+                (friend
+                  ? "border-amber-500/25 bg-amber-500/[0.08] text-amber-700 dark:text-amber-300"
+                  : "border-destructive/20 bg-destructive/[0.06] text-destructive")
+              }
+            >
+              {proofLabelFromText(proof).replace(" proof", "")}
+            </span>
+          ))}
         </div>
       )}
 
-      {peer.riskProofs && peer.riskProofs.length > 0 && (
-        <ul className="mt-4 space-y-2 border-t border-border/50 pt-4 text-sm leading-relaxed text-muted-foreground">
-          {peer.riskProofs.slice(0, 3).map((proof) => (
-            <li key={proof} className="flex gap-2">
-              <span
-                className={
-                  "mt-2 h-1.5 w-1.5 shrink-0 rounded-full " +
-                  (friend ? "bg-amber-500" : "bg-destructive")
-                }
-              />
-              <span>{proof}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-5 grid gap-4 border-t border-border/50 pt-5 md:grid-cols-2">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Why it is risky
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{peer.why}</p>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Only if
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Agree on {firstAgreement(peer).toLowerCase()} before assigning work.
+          </p>
+        </div>
+      </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        If you still choose this pair, agree on {firstAgreement(peer).toLowerCase()} before
-        assigning work.
-      </p>
+      {peer.breakdown && (
+        <details className="mt-4 border-t border-border/50 pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
+            View risk signals
+          </summary>
+          <div className="mt-4">
+            <BreakdownBars breakdown={peer.breakdown} />
+          </div>
+        </details>
+      )}
     </article>
   );
 }
