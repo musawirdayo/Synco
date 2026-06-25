@@ -328,6 +328,30 @@ Next recommended Matching V2 work:
 - Add analytics for which match reasons students click/expand most, if the product needs evidence that the result page is engaging.
 - Consider regrouping the long survey into fewer visual screens once enough real responses reveal which fields carry the most signal.
 
+## 2026-06-25 Core Question Copy V2
+
+Implemented locally:
+
+- Rewrote the 22 core slider questions in `src/lib/questions.ts` to be more practical, student-friendly, and project/team-behavior focused.
+- Kept the stable `q1` through `q22` IDs and low/high directions, so existing JSON survey-answer storage and scoring logic do not require a migration.
+- Updated the survey guide copy to describe the flow as quick behavior questions plus project details.
+- Updated internal `src/lib/synco.ts` comments where the old question labels no longer matched the improved wording.
+- Added `src/lib/questions.test.ts` to guard the stable question IDs and keep protected-trait questions out of the core survey.
+
+Verification passed after this slice:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (88 passing)
+- `npm run build`
+- `git diff --check`
+
+Next recommended survey work:
+
+- Regroup the 22 core sliders into fewer multi-question screens so the survey feels shorter without losing signal.
+- Consider marking new submissions with a survey schema version in the answers JSON before making larger semantic changes.
+- Move the most predictive detail fields into the required flow once real class data shows which ones carry the most signal.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

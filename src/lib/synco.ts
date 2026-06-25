@@ -401,7 +401,7 @@ function academicScore(a: Answers, b: Answers) {
         : NEUTRAL_ACADEMIC;
 
     // Blend: topics matter most (45%), then strengths (22%), weaknesses (18%),
-    // plus q22 (self-rated course preparation, 15% via proximity scaled to 0-15).
+    // plus q22 (project/support focus, 15% via proximity scaled to 0-15).
     return {
       score: clampScore(
         topicFit * 0.45 +
@@ -417,7 +417,7 @@ function academicScore(a: Answers, b: Answers) {
   // No topic/strength data → fall back to numeric-only signals.
   //   q5: depth vs breadth preference
   //   q9: research intensity
-  //   q22: course preparation level
+  //   q22: project/support focus
   return {
     score: clampScore(
       avg([
@@ -525,7 +525,7 @@ function studyStyleScore(a: Answers, b: Answers) {
   // Numeric work-rhythm signals:
   //   q1: structure preference, q2: communication frequency,
   //   q8: speed/urgency, q11: role flexibility,
-  //   q17: comfort with new people, q19: async comfort,
+  //   q17: comfort with new people, q19: explanation style,
   //   q21: accountability follow-up style
   const numericStyle = avg(
     [
@@ -609,7 +609,7 @@ function goalsScore(a: Answers, b: Answers) {
   );
   if (accountability !== null) scores.push(accountability);
 
-  // q18: milestone planning style (how far ahead they plan)
+  // q18: preferred level of team push and follow-through
   scores.push(prox(num(a, "q18"), num(b, "q18")) * 100);
 
   if (scores.length) return clampScore(avg(scores));

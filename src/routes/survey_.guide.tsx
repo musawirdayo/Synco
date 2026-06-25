@@ -19,7 +19,7 @@ const principles = [
   {
     icon: CheckCircle,
     t: "No right answers",
-    b: "Honest responses create better matches. There's no scoring.",
+    b: "Honest responses create better matches. This is not a test or grade.",
   },
   {
     icon: Clock,
@@ -78,7 +78,7 @@ function Guide() {
           </div>
 
           <p className="text-sm text-muted mb-6">
-            {QUESTIONS.length} core questions + optional details · Saved automatically
+            {QUESTIONS.length} quick behavior questions + project details · Saved automatically
           </p>
           <button
             onClick={() => navigate({ to: "/survey" })}
