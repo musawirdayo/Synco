@@ -43,12 +43,32 @@ export type TeamMatchingPlan = {
     averageScore: number;
     pairScoreTotal: number;
     pairs: MatchingPlan["pairs"];
+    quality: TeamQualityBreakdown;
+    rationale: string;
   }>;
   unmatchedIds: string[];
   totalScore: number;
 };
 
 export type TeamFormationPlan = MatchingPlan | TeamMatchingPlan;
+
+export type TeamQualityBreakdown = {
+  score: number;
+  minPairSafety: number;
+  averagePairFit: number;
+  logistics: number;
+  goalAlignment: number;
+  skillCoverage: number;
+  roleCoverage: number;
+  roleBalance: number;
+  isolation: number;
+  requestSatisfaction: number;
+  rolesCovered: string[];
+  strengthsCovered: string[];
+  weakAreasCovered: string[];
+  watch: string;
+  rationale: string;
+};
 
 const ONE_SIDED_REQUEST_BONUS = 12;
 const FRIEND_RISK_SCORE_THRESHOLD = 65;
@@ -749,6 +769,431 @@ function friendCostForFactor(factor: FrictionFactor | undefined) {
   return "Friendship doesn't fix the mismatch - this pairing will cost you time you don't have.";
 }
 
+export function pairSafetyScore(a: Answers, b: Answers) {
+  return pairSafetyFromBreakdown(matchBreakdown(a, b));
+}
+
+function pairSafetyFromBreakdown(breakdown: MatchBreakdown) {
+  return clampScore(
+    Math.min(
+      breakdown.final,
+      breakdown.availability * 0.34 +
+        breakdown.goals * 0.24 +
+        breakdown.studyStyle * 0.2 +
+        breakdown.academic * 0.12 +
+        breakdown.complementary * 0.1,
+    ),
+  );
+}
+
+export function pairRiskScore(a: Answers, b: Answers) {
+  const breakdown = matchBreakdown(a, b);
+  let risk = 0;
+
+  if (breakdown.availability < 35) risk += 34;
+  else if (breakdown.availability < 50) risk += 18;
+
+  if (breakdown.goals < 45) risk += 24;
+  else if (breakdown.goals < 58) risk += 12;
+
+  if (breakdown.studyStyle < 45) risk += 18;
+  else if (breakdown.studyStyle < 58) risk += 9;
+
+  if (breakdown.complementary < 42) risk += 16;
+  else if (breakdown.complementary < 52) risk += 8;
+
+  if (breakdown.academic < 42) risk += 12;
+  if (breakdown.final < 55) risk += 14;
+
+  return clampScore(risk);
+}
+
+export function pairIsRisky(a: Answers, b: Answers) {
+  const breakdown = matchBreakdown(a, b);
+  return pairRiskScore(a, b) >= 35 || breakdown.final < FRIEND_RISK_SCORE_THRESHOLD;
+}
+
+export function matchProofs(a: Answers, b: Answers) {
+  const breakdown = matchBreakdown(a, b);
+  const proofs: string[] = [];
+
+  if (breakdown.commonSlots.length) {
+    proofs.push(
+      `${breakdown.commonSlots.length} shared free slot${breakdown.commonSlots.length === 1 ? "" : "s"} means this match has real meeting time.`,
+    );
+  } else if (breakdown.availability >= 70) {
+    proofs.push("Your schedules look workable enough to plan without constant rescheduling.");
+  }
+
+  if (breakdown.complementaryTopics.length) {
+    proofs.push(
+      `Skill coverage is useful: ${breakdown.complementaryTopics.slice(0, 2).join(" and ")} help cover weak spots.`,
+    );
+  } else if (breakdown.complementary >= 60) {
+    proofs.push(
+      "Your strengths and weak areas do not clash badly, so the work can be divided cleanly.",
+    );
+  }
+
+  if (breakdown.studyStyle >= 72) {
+    proofs.push("Your work rhythm and communication preferences point in the same direction.");
+  }
+
+  if (breakdown.goals >= 72) {
+    proofs.push(
+      "Your seriousness and target outcome are aligned enough to reduce expectation drama.",
+    );
+  }
+
+  if (breakdown.academic >= 72 && breakdown.commonTopics.length) {
+    proofs.push(`You share focus on ${breakdown.commonTopics.slice(0, 2).join(" and ")}.`);
+  }
+
+  if (!proofs.length) {
+    proofs.push(
+      "This is mostly a steady fit: no single signal carries it, but the overall pattern is workable.",
+    );
+  }
+
+  return proofs.slice(0, 4);
+}
+
+export function riskProofs(a: Answers, b: Answers) {
+  const breakdown = matchBreakdown(a, b);
+  const proofs: string[] = [];
+
+  if (breakdown.availability < 45) {
+    proofs.push("Meeting time is the main problem: the schedule overlap is thin.");
+  }
+  if (breakdown.goals < 55) {
+    proofs.push("The effort level or target outcome looks far enough apart to create resentment.");
+  }
+  if (breakdown.studyStyle < 55) {
+    proofs.push("Your working rhythm or communication style may pull in different directions.");
+  }
+  if (breakdown.complementary < 52) {
+    proofs.push("Skill coverage is weak: the strengths do not clearly cover the gaps.");
+  }
+  if (breakdown.academic < 50) {
+    proofs.push(
+      "You may be preparing for different topics, so helping each other could take extra time.",
+    );
+  }
+
+  if (!proofs.length) {
+    const lowest = [
+      ["availability", breakdown.availability],
+      ["goal alignment", breakdown.goals],
+      ["work rhythm", breakdown.studyStyle],
+      ["skill coverage", breakdown.complementary],
+      ["academic fit", breakdown.academic],
+    ].sort((left, right) => Number(left[1]) - Number(right[1]))[0]?.[0];
+    proofs.push(
+      `The weakest signal is ${lowest ?? "overall fit"}, so this pairing needs a clearer first plan.`,
+    );
+  }
+
+  return proofs.slice(0, 4);
+}
+
+export function teamBreakdown(
+  team: MatchStudent[],
+  blockedPairKeys = new Set<string>(),
+): TeamQualityBreakdown {
+  if (team.length <= 1) {
+    return {
+      score: 50,
+      minPairSafety: 50,
+      averagePairFit: 50,
+      logistics: 50,
+      goalAlignment: 50,
+      skillCoverage: 50,
+      roleCoverage: 50,
+      roleBalance: 50,
+      isolation: 50,
+      requestSatisfaction: 50,
+      rolesCovered: team.map((student) => roleContribution(student.answers)),
+      strengthsCovered: uniqueText(team.flatMap((student) => list(student.answers, "strengths"))),
+      weakAreasCovered: [],
+      watch: "There is not enough team data yet.",
+      rationale:
+        "This team was assigned from available submissions, but it needs a first check-in to create a real plan.",
+    };
+  }
+
+  const pairs: MatchBreakdown[] = [];
+  const pairSafeties: number[] = [];
+  const studentTotals = new Map(team.map((student) => [student.id, { total: 0, count: 0 }]));
+  let blocked = false;
+
+  for (let i = 0; i < team.length; i += 1) {
+    for (let j = i + 1; j < team.length; j += 1) {
+      const left = team[i];
+      const right = team[j];
+      if (!left || !right) continue;
+      if (!pairAllowed(left, right, blockedPairKeys)) blocked = true;
+      const breakdown = matchBreakdown(left.answers, right.answers);
+      pairs.push(breakdown);
+      pairSafeties.push(pairSafetyFromBreakdown(breakdown));
+      const leftTotal = studentTotals.get(left.id);
+      const rightTotal = studentTotals.get(right.id);
+      if (leftTotal) {
+        leftTotal.total += breakdown.final;
+        leftTotal.count += 1;
+      }
+      if (rightTotal) {
+        rightTotal.total += breakdown.final;
+        rightTotal.count += 1;
+      }
+    }
+  }
+
+  if (blocked) {
+    return {
+      ...emptyTeamQuality(team),
+      watch: "This team contains a blocked pair and should not be used.",
+      rationale: "A blocked pairing was detected, so this team is not considered viable.",
+    };
+  }
+
+  const averagePairFit = averageScore(pairs.map((pair) => pair.final));
+  const minPairSafety = Math.min(...pairSafeties);
+  const logistics = averageScore(pairs.map((pair) => pair.availability));
+  const goalAlignment = averageScore(pairs.map((pair) => pair.goals));
+  const skillStats = teamSkillCoverage(team, pairs);
+  const rolesCovered = uniqueText(team.map((student) => roleContribution(student.answers)));
+  const roleCoverage = clampScore((rolesCovered.length / Math.min(4, team.length)) * 100);
+  const roleBalance = roleBalanceScore(team);
+  const isolation = Math.min(
+    ...[...studentTotals.values()].map((entry) =>
+      entry.count ? Math.round(entry.total / entry.count) : 45,
+    ),
+  );
+  const requestSatisfaction = requestSatisfactionScore(team);
+
+  const score = clampScore(
+    minPairSafety * 0.22 +
+      averagePairFit * 0.16 +
+      logistics * 0.13 +
+      goalAlignment * 0.09 +
+      skillStats.score * 0.14 +
+      roleCoverage * 0.11 +
+      roleBalance * 0.06 +
+      isolation * 0.06 +
+      requestSatisfaction * 0.03,
+  );
+  const factors = [
+    ["meeting time", logistics],
+    ["goal alignment", goalAlignment],
+    ["skill coverage", skillStats.score],
+    ["role balance", Math.min(roleCoverage, roleBalance)],
+    ["inside-team safety", minPairSafety],
+  ].sort((left, right) => Number(left[1]) - Number(right[1]));
+  const watch = teamWatchCopy(String(factors[0]?.[0] ?? "first plan"));
+  const rationale = teamRationaleCopy({
+    score,
+    logistics,
+    skillCoverage: skillStats.score,
+    roleCoverage,
+    rolesCovered,
+    strengthsCovered: skillStats.strengthsCovered,
+    weakAreasCovered: skillStats.weakAreasCovered,
+    watch,
+  });
+
+  return {
+    score,
+    minPairSafety,
+    averagePairFit,
+    logistics,
+    goalAlignment,
+    skillCoverage: skillStats.score,
+    roleCoverage,
+    roleBalance,
+    isolation,
+    requestSatisfaction,
+    rolesCovered,
+    strengthsCovered: skillStats.strengthsCovered,
+    weakAreasCovered: skillStats.weakAreasCovered,
+    watch,
+    rationale,
+  };
+}
+
+function emptyTeamQuality(team: MatchStudent[]): TeamQualityBreakdown {
+  return {
+    score: 0,
+    minPairSafety: 0,
+    averagePairFit: 0,
+    logistics: 0,
+    goalAlignment: 0,
+    skillCoverage: 0,
+    roleCoverage: 0,
+    roleBalance: 0,
+    isolation: 0,
+    requestSatisfaction: 0,
+    rolesCovered: team.map((student) => roleContribution(student.answers)),
+    strengthsCovered: uniqueText(team.flatMap((student) => list(student.answers, "strengths"))),
+    weakAreasCovered: [],
+    watch: "This team needs manual review.",
+    rationale: "This team does not clear Synco's minimum safety checks.",
+  };
+}
+
+function averageScore(values: number[], fallback = 50) {
+  return values.length
+    ? clampScore(values.reduce((sum, value) => sum + value, 0) / values.length)
+    : fallback;
+}
+
+function uniqueText(values: string[]) {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const value of values) {
+    const normalized = key(value);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    output.push(value);
+  }
+  return output;
+}
+
+function roleContribution(answers: Answers) {
+  const label = archetype(answers);
+  if (label === "Reliable Finisher") return "deadline owner";
+  if (label === "Fast Starter") return "starter";
+  if (label === "Concept Explainer") return "explainer";
+  if (label === "Steady Organizer") return "organizer";
+  if (label === "Deep Thinker") return "reviewer";
+  if (label === "Flexible Collaborator") return "handoff helper";
+  return "flex support";
+}
+
+function teamSkillCoverage(team: MatchStudent[], pairs: MatchBreakdown[]) {
+  const strengthsCovered = uniqueText(
+    team.flatMap((student) => list(student.answers, "strengths")),
+  );
+  const weakAreas = uniqueText(team.flatMap((student) => list(student.answers, "weakAreas")));
+  const strengthKeys = new Set(strengthsCovered.map(key));
+  const weakAreasCovered = weakAreas.filter((area) => strengthKeys.has(key(area)));
+  const complementaryTopics = uniqueText(pairs.flatMap((pair) => pair.complementaryTopics));
+  const sharedWeakCount = uniqueText(pairs.flatMap((pair) => pair.sharedWeakAreas)).length;
+  const duplicateStrengthPenalty = Math.max(
+    0,
+    team.length * 2 - strengthsCovered.length - complementaryTopics.length,
+  );
+
+  const score = clampScore(
+    42 +
+      Math.min(strengthsCovered.length, team.length * 2) * 6 +
+      weakAreasCovered.length * 10 +
+      complementaryTopics.length * 8 -
+      sharedWeakCount * 5 -
+      duplicateStrengthPenalty * 4,
+  );
+
+  return {
+    score,
+    strengthsCovered,
+    weakAreasCovered: uniqueText([...weakAreasCovered, ...complementaryTopics]),
+  };
+}
+
+function roleBalanceScore(team: MatchStudent[]) {
+  const roleCounts = new Map<string, number>();
+  for (const student of team) {
+    const role = roleContribution(student.answers);
+    roleCounts.set(role, (roleCounts.get(role) ?? 0) + 1);
+  }
+  const maxCount = Math.max(...roleCounts.values());
+  const duplicatePenalty = Math.max(0, maxCount - 1) * 20;
+  const missingCoordinatorPenalty =
+    roleCounts.has("organizer") || roleCounts.has("starter") || roleCounts.has("deadline owner")
+      ? 0
+      : 12;
+  return clampScore(100 - duplicatePenalty - missingCoordinatorPenalty);
+}
+
+function requestSatisfactionScore(team: MatchStudent[]) {
+  let requestCount = 0;
+  let satisfied = 0;
+
+  for (let i = 0; i < team.length; i += 1) {
+    for (let j = i + 1; j < team.length; j += 1) {
+      const left = team[i];
+      const right = team[j];
+      if (!left || !right) continue;
+      if (mutualRequest(left, right)) {
+        requestCount += 2;
+        satisfied += 2;
+      } else if (oneSidedRequest(left, right)) {
+        requestCount += 1;
+        satisfied += 1;
+      }
+    }
+  }
+
+  const outsideRequests = team.reduce(
+    (sum, student) => sum + requestEntries(student).length,
+    requestCount,
+  );
+  if (!outsideRequests) return 65;
+  return clampScore((satisfied / outsideRequests) * 100);
+}
+
+function teamWatchCopy(lowestFactor: string) {
+  if (lowestFactor === "meeting time")
+    return "Meeting time is the first thing this team should lock down.";
+  if (lowestFactor === "goal alignment")
+    return "This team should agree on effort level and target outcome before dividing work.";
+  if (lowestFactor === "skill coverage")
+    return "This team needs a clear task split so the same skill gaps do not slow everyone down.";
+  if (lowestFactor === "role balance")
+    return "This team should name one coordinator and one backup owner early.";
+  return "This team should set expectations before starting real work.";
+}
+
+function teamRationaleCopy({
+  score,
+  logistics,
+  skillCoverage,
+  roleCoverage,
+  rolesCovered,
+  strengthsCovered,
+  weakAreasCovered,
+  watch,
+}: {
+  score: number;
+  logistics: number;
+  skillCoverage: number;
+  roleCoverage: number;
+  rolesCovered: string[];
+  strengthsCovered: string[];
+  weakAreasCovered: string[];
+  watch: string;
+}) {
+  const strengths =
+    weakAreasCovered.length > 0
+      ? `covers gaps in ${weakAreasCovered.slice(0, 2).join(" and ")}`
+      : strengthsCovered.length > 1
+        ? `brings coverage across ${strengthsCovered.slice(0, 2).join(" and ")}`
+        : "has a workable skill spread";
+  const roles =
+    rolesCovered.length > 1
+      ? `with ${rolesCovered.slice(0, 3).join(", ")} in the mix`
+      : "with a simple role setup";
+  const practical =
+    logistics >= 65
+      ? "The meeting-time signal is workable"
+      : "The meeting-time signal needs planning";
+  const coverage =
+    skillCoverage >= 65 || roleCoverage >= 65
+      ? `${strengths} ${roles}`
+      : "the team needs a deliberate task split because coverage is not automatic";
+
+  return `${practical}; this team ${coverage}. Team quality score: ${score}%. ${watch}`;
+}
+
 export function maximumWeightMatching(
   students: MatchStudent[],
   blockedPairKeys = new Set<string>(),
@@ -802,7 +1247,7 @@ export function formTeams(
     removeStudent(unassigned, student.id);
   }
 
-  const teams = teamMembers.map((team) => summarizeTeam(team));
+  const teams = teamMembers.map((team) => summarizeTeam(team, blockedPairKeys));
 
   return {
     algorithm: "greedy-clustering",
@@ -893,17 +1338,21 @@ function bestFitStudentForTeam(
   team: MatchStudent[],
   blockedPairKeys: Set<string>,
 ) {
-  let best: { student: MatchStudent; averageScore: number } | null = null;
+  let best: { student: MatchStudent; teamScore: number; averageScore: number } | null = null;
 
   for (const student of candidates) {
     const averageScore = averageFitForTeam(student, team, blockedPairKeys);
     if (averageScore === null) continue;
+    const teamScore = teamBreakdown([...team, student], blockedPairKeys).score;
     if (
       !best ||
-      averageScore > best.averageScore ||
-      (averageScore === best.averageScore && student.id < best.student.id)
+      teamScore > best.teamScore ||
+      (teamScore === best.teamScore && averageScore > best.averageScore) ||
+      (teamScore === best.teamScore &&
+        averageScore === best.averageScore &&
+        student.id < best.student.id)
     ) {
-      best = { student, averageScore };
+      best = { student, teamScore, averageScore };
     }
   }
 
@@ -1005,7 +1454,7 @@ function bestFitExistingTeam(
   targetTeamSize: number,
   blockedPairKeys: Set<string>,
 ) {
-  let best: { teamIndex: number; averageScore: number } | null = null;
+  let best: { teamIndex: number; teamScore: number; averageScore: number } | null = null;
 
   for (let teamIndex = 0; teamIndex < teams.length; teamIndex += 1) {
     const team = teams[teamIndex];
@@ -1015,12 +1464,16 @@ function bestFitExistingTeam(
     }
     const averageScore = averageFitForTeam(student, team, blockedPairKeys);
     if (averageScore === null) continue;
+    const teamScore = teamBreakdown([...team, student], blockedPairKeys).score;
     if (
       !best ||
-      averageScore > best.averageScore ||
-      (averageScore === best.averageScore && teamIndex < best.teamIndex)
+      teamScore > best.teamScore ||
+      (teamScore === best.teamScore && averageScore > best.averageScore) ||
+      (teamScore === best.teamScore &&
+        averageScore === best.averageScore &&
+        teamIndex < best.teamIndex)
     ) {
-      best = { teamIndex, averageScore };
+      best = { teamIndex, teamScore, averageScore };
     }
   }
 
@@ -1032,7 +1485,10 @@ function removeStudent(students: MatchStudent[], id: string) {
   if (index >= 0) students.splice(index, 1);
 }
 
-function summarizeTeam(team: MatchStudent[]): TeamMatchingPlan["teams"][number] {
+function summarizeTeam(
+  team: MatchStudent[],
+  blockedPairKeys: Set<string>,
+): TeamMatchingPlan["teams"][number] {
   const pairs: MatchingPlan["pairs"] = [];
 
   for (let i = 0; i < team.length; i += 1) {
@@ -1051,12 +1507,15 @@ function summarizeTeam(team: MatchStudent[]): TeamMatchingPlan["teams"][number] 
   }
 
   const pairScoreTotal = pairs.reduce((sum, pair) => sum + pair.score, 0);
+  const quality = teamBreakdown(team, blockedPairKeys);
 
   return {
     memberIds: team.map((student) => student.id),
     averageScore: pairs.length ? Math.round(pairScoreTotal / pairs.length) : 0,
     pairScoreTotal,
     pairs,
+    quality,
+    rationale: quality.rationale,
   };
 }
 

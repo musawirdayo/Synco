@@ -10,12 +10,16 @@ import {
   pairInsight,
   pairFrictionInsight,
   friendRiskInsight,
+  matchProofs,
   maximumWeightMatching,
   formTeams,
   isFlaggedFriend,
+  pairIsRisky,
   mutualRequest,
   pairBlocked,
   pairKey,
+  riskProofs,
+  teamBreakdown,
   MATCH_WEIGHTS,
   type Answers,
   type MatchStudent,
@@ -542,6 +546,79 @@ describe("friendRiskInsight", () => {
 
     expect(friendRiskInsight(a, b)).toBeNull();
     expect(pairFrictionInsight(a.answers, b.answers).why).toMatch(/^Why this is hard:/);
+  });
+});
+
+// ─── V2 scoring tests ───
+
+describe("V2 matching signals", () => {
+  it("creates plain-language proof bullets for strong and risky pairs", () => {
+    expect(matchProofs(studentA(), studentB()).length).toBeGreaterThan(0);
+    expect(riskProofs(studentA(), studentC()).length).toBeGreaterThan(0);
+  });
+
+  it("marks a genuinely risky pair without making every pair risky", () => {
+    expect(pairIsRisky(studentA(), studentC())).toBe(true);
+    expect(pairIsRisky(studentA(), studentB())).toBe(false);
+  });
+
+  it("scores balanced teams higher than duplicate-role teams when logistics are similar", () => {
+    const base = {
+      ...studentMinimal(),
+      availability: ["Mon morning", "Wed afternoon"],
+      topics: ["Project"],
+      studyStyle: "Quiet co-working",
+      seriousness: 4,
+      targetGrade: "A range",
+      communicationPreference: "WhatsApp/text",
+      meetingMode: "Hybrid",
+      preferredLanguage: "English",
+      energyStyle: "Ambivert",
+      accountabilityPreference: "Regular check-ins",
+    };
+    const duplicateTeam: MatchStudent[] = [
+      {
+        id: "a",
+        answers: { ...base, q3: 1, q10: 1, strengths: ["Writing"], weakAreas: ["Research"] },
+      },
+      {
+        id: "b",
+        answers: { ...base, q3: 1, q10: 1, strengths: ["Writing"], weakAreas: ["Research"] },
+      },
+      {
+        id: "c",
+        answers: { ...base, q3: 1, q10: 1, strengths: ["Writing"], weakAreas: ["Research"] },
+      },
+      {
+        id: "d",
+        answers: { ...base, q3: 1, q10: 1, strengths: ["Writing"], weakAreas: ["Research"] },
+      },
+    ];
+    const balancedTeam: MatchStudent[] = [
+      {
+        id: "a",
+        answers: { ...base, q3: 1, q10: 1, strengths: ["Writing"], weakAreas: ["Research"] },
+      },
+      {
+        id: "b",
+        answers: { ...base, q8: 5, q7: 5, strengths: ["Research"], weakAreas: ["Design"] },
+      },
+      {
+        id: "c",
+        answers: { ...base, q6: 5, q5: 1, strengths: ["Programming"], weakAreas: ["Writing"] },
+      },
+      {
+        id: "d",
+        answers: { ...base, q1: 1, q11: 1, strengths: ["Design"], weakAreas: ["Programming"] },
+      },
+    ];
+
+    const duplicate = teamBreakdown(duplicateTeam);
+    const balanced = teamBreakdown(balancedTeam);
+
+    expect(balanced.roleCoverage).toBeGreaterThan(duplicate.roleCoverage);
+    expect(balanced.skillCoverage).toBeGreaterThan(duplicate.skillCoverage);
+    expect(balanced.score).toBeGreaterThan(duplicate.score);
   });
 });
 

@@ -1,4 +1,10 @@
-import type { MatchBreakdown, MatchingPlan, MatchStudent, TeamFormationPlan } from "@/lib/synco";
+import type {
+  MatchBreakdown,
+  MatchingPlan,
+  MatchStudent,
+  TeamFormationPlan,
+  TeamQualityBreakdown,
+} from "@/lib/synco";
 
 export type TeamAssignmentMember = {
   student_id: string;
@@ -12,6 +18,8 @@ export type TeamAssignment = {
   member_ids: string[];
   members: TeamAssignmentMember[];
   average_score: number;
+  quality_score?: number;
+  quality?: TeamQualityBreakdown;
   pair_score_total: number;
   rationale: string;
 };
@@ -41,6 +49,15 @@ type PairSummary = {
   breakdown: MatchBreakdown;
 };
 
+type TeamInput = {
+  memberIds: string[];
+  averageScore: number;
+  pairScoreTotal: number;
+  pairs: MatchingPlan["pairs"];
+  quality?: TeamQualityBreakdown;
+  rationale?: string;
+};
+
 const SCORE_COMPONENTS = [
   ["Availability", "availability"],
   ["Academic fit", "academic"],
@@ -63,7 +80,7 @@ export function buildTeamAssignmentSnapshot({
   generatedAt: string;
 }): TeamAssignmentSnapshot {
   const studentById = new Map(students.map((student) => [student.id, student]));
-  const teamInputs = "teams" in plan ? plan.teams : pairsAsTeams(plan.pairs);
+  const teamInputs: TeamInput[] = "teams" in plan ? plan.teams : pairsAsTeams(plan.pairs);
   const teams = teamInputs.map((team, index) => {
     const members = team.memberIds
       .map((memberId) => studentById.get(memberId))
@@ -74,8 +91,10 @@ export function buildTeamAssignmentSnapshot({
       member_ids: members.map((member) => member.student_id),
       members,
       average_score: team.averageScore,
+      quality_score: team.quality?.score ?? team.averageScore,
+      quality: team.quality,
       pair_score_total: team.pairScoreTotal,
-      rationale: teamRationale(team.pairs, team.averageScore),
+      rationale: team.rationale ?? teamRationale(team.pairs, team.averageScore),
     };
   });
 

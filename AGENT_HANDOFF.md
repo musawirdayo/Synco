@@ -194,6 +194,40 @@ Verification passed after this cleanup:
 
 Note: the build still emits `.output/public/wrangler.json` from the underlying TanStack/Nitro/Lovable tooling, but the repo no longer has a root Cloudflare deployment config or a direct Cloudflare Vite dependency.
 
+## 2026-06-25 Matching Algorithm V2 Slice
+
+Implemented locally from `deep-research-report.md`:
+
+- Added V2 pair helpers in `src/lib/synco.ts`:
+  - `pairSafetyScore`
+  - `pairRiskScore`
+  - `pairIsRisky`
+  - `matchProofs`
+  - `riskProofs`
+  - `teamBreakdown`
+- Kept `matchBreakdown()` and existing scoring weights stable for backward compatibility.
+- Updated `formTeams()` so adding a student to a team is judged by whole-team quality, not only average pair score.
+- Team quality now scores minimum pair safety, average pair fit, logistics, goal alignment, skill coverage, role coverage, role balance, isolation, and request satisfaction.
+- Saved team assignments now include `quality`, `quality_score`, and richer rationale text.
+- Fixed the result-generation bug where small classes could show the same peer in both top matches and watch/avoid lists.
+  - Lists are now split into separate pools with no duplicate student across the two sections.
+  - The product still aims for up to 5 top matches and up to 5 watch-outs where class size allows.
+- Student results now show proof bullets on strong-match cards and watch/avoid cards, plus team-quality proof metrics on the assigned team card.
+- Added tests for proof generation, risky pair detection, and the duplicate-role problem: balanced teams must score higher than same-role/same-strength teams when logistics are similar.
+
+Verification passed after this slice:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (78 passing)
+- `npm run build`
+
+Next recommended Matching V2 work:
+
+- Replace the current greedy team builder with a generated-team-candidate + local-swap solver.
+- Redesign the survey questions around behavior/work preferences from the research report.
+- Add scenario fixtures for class sizes 6, 7, and 24, plus hard-to-place students and friend-request conflicts.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

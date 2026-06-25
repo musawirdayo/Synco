@@ -24,6 +24,10 @@ import {
   formTeams,
   friendRiskInsight,
   isFlaggedFriend,
+  matchProofs,
+  pairIsRisky,
+  pairRiskScore,
+  riskProofs,
   type Answers,
   type MatchBreakdown,
   type MatchStudent,
@@ -75,9 +79,57 @@ type RankedPeer = {
   friction: ReturnType<typeof pairFrictionInsight>;
   friendFlagged: boolean;
   friendRisk: string | null;
+  proofs: string[];
+  riskProofs: string[];
+  riskScore: number;
+  isRisky: boolean;
   answers: Answers;
   identifier: string | null;
 };
+
+function splitPeerLists(ranked: RankedPeer[], assignedTeammateIds: Set<string>) {
+  const maxPerList = 5;
+  const watchTarget = ranked.length <= 1 ? 0 : Math.min(maxPerList, Math.floor(ranked.length / 2));
+  const selectedWatch = new Map<string, RankedPeer>();
+  const watchEligible = ranked.filter((peer) => !assignedTeammateIds.has(peer.student_id));
+
+  const hardRisks = watchEligible
+    .filter((peer) => peer.isRisky || Boolean(peer.friendRisk))
+    .sort((left, right) => {
+      if (left.friendFlagged !== right.friendFlagged) return left.friendFlagged ? -1 : 1;
+      if (left.riskScore !== right.riskScore) return right.riskScore - left.riskScore;
+      return left.score - right.score;
+    });
+
+  for (const peer of hardRisks) {
+    if (selectedWatch.size >= watchTarget) break;
+    selectedWatch.set(peer.student_id, peer);
+  }
+
+  const softWatch = [...watchEligible]
+    .filter((peer) => !selectedWatch.has(peer.student_id))
+    .sort((left, right) => {
+      if (left.score !== right.score) return left.score - right.score;
+      return right.riskScore - left.riskScore;
+    });
+
+  for (const peer of softWatch) {
+    if (selectedWatch.size >= watchTarget) break;
+    selectedWatch.set(peer.student_id, peer);
+  }
+
+  const watchIds = new Set(selectedWatch.keys());
+  return {
+    matches: ranked.filter((peer) => !watchIds.has(peer.student_id)).slice(0, maxPerList),
+    avoid: [...selectedWatch.values()]
+      .sort((left, right) => {
+        if (left.friendFlagged !== right.friendFlagged) return left.friendFlagged ? -1 : 1;
+        if (left.riskScore !== right.riskScore) return right.riskScore - left.riskScore;
+        return left.score - right.score;
+      })
+      .slice(0, maxPerList),
+  };
+}
 type PublishedResultData = {
   results_version?: number;
   generated_at?: string;
@@ -301,6 +353,7 @@ function ClassPage() {
           identifier: otherMember?.identifier ?? null,
         };
         const breakdown = matchBreakdown(self.answers, o.answers);
+        const riskScore = pairRiskScore(self.answers, o.answers);
         return {
           student_id: o.student_id,
           name: actualName,
@@ -312,6 +365,10 @@ function ClassPage() {
           friction: pairFrictionInsight(self.answers, o.answers),
           friendFlagged: isFlaggedFriend(selfCandidate, otherCandidate),
           friendRisk: friendRiskInsight(selfCandidate, otherCandidate),
+          proofs: matchProofs(self.answers, o.answers),
+          riskProofs: riskProofs(self.answers, o.answers),
+          riskScore,
+          isRisky: pairIsRisky(self.answers, o.answers),
           answers: o.answers,
           identifier: otherMember?.identifier ?? null,
         };
@@ -356,59 +413,73 @@ function ClassPage() {
         const assignedTeammateIds = new Set(
           assignedTeam?.teammates.map((teammate) => teammate.student_id) ?? [],
         );
+        const peerLists = splitPeerLists(ranked, assignedTeammateIds);
 
-        const matches = ranked
-          .slice(0, 5)
-          .map(
-            (
-              {
-                insight,
-                friction: _f,
-                friendFlagged: _ff,
-                friendRisk: _fr,
-                answers,
-                identifier: _id,
-                publicName: _p,
-                ...rest
-              },
-              index,
-            ) => ({
-              ...rest,
-              name: publicPeerName(answers, rest.name, index),
-              assigned: assignedTeammateIds.has(rest.student_id),
-              ...publicInsightForPeer(answers, insight),
-            }),
-          );
-        const avoid = ranked
-          .slice(-5)
-          .reverse()
-          .map(
-            (
-              {
-                friction,
-                friendRisk,
-                insight: _i,
-                answers,
-                identifier: _id,
-                publicName: _p,
-                ...rest
-              },
-              index,
-            ) => {
-              const displayName = publicPeerName(answers, rest.name, index);
-              const safeFriendRisk =
-                friendRisk && displayName !== rest.name
-                  ? friendRisk.replace(`flagged ${rest.name}`, `flagged ${displayName}`)
-                  : friendRisk;
-
-              return {
-                ...rest,
-                name: displayName,
-                friendRisk: safeFriendRisk,
-                ...publicFrictionForPeer(answers, friction),
-              };
+        const matches = peerLists.matches.map(
+          (
+            {
+              insight,
+              friction: _f,
+              friendFlagged: _ff,
+              friendRisk: _fr,
+              riskProofs: _rp,
+              riskScore: _rs,
+              isRisky: _ir,
+              answers,
+              identifier: _id,
+              publicName: _p,
+              ...rest
             },
-          );
+            index,
+          ) => ({
+            ...rest,
+            name: publicPeerName(answers, rest.name, index),
+            assigned: assignedTeammateIds.has(rest.student_id),
+            proofs:
+              publicInsightForPeer(answers, insight).why === insight.why
+                ? rest.proofs
+                : [
+                    "Private details are hidden by this classmate's visibility choice.",
+                    "Synco still checked schedule, working fit, and project goals.",
+                  ],
+            ...publicInsightForPeer(answers, insight),
+          }),
+        );
+        const avoid = peerLists.avoid.map(
+          (
+            {
+              friction,
+              friendRisk,
+              insight: _i,
+              proofs: _pfs,
+              answers,
+              identifier: _id,
+              publicName: _p,
+              ...rest
+            },
+            index,
+          ) => {
+            const displayName = publicPeerName(answers, rest.name, index);
+            const safeFriendRisk =
+              friendRisk && displayName !== rest.name
+                ? friendRisk.replace(`flagged ${rest.name}`, `flagged ${displayName}`)
+                : friendRisk;
+
+            return {
+              ...rest,
+              name: displayName,
+              friendRisk: safeFriendRisk,
+              riskProofs:
+                publicFrictionForPeer(answers, friction).why === friction.why
+                  ? rest.riskProofs
+                  : [
+                      "Private details are hidden by this classmate's visibility choice.",
+                      "Ask the lead before assuming the exact reason this pairing needs care.",
+                    ],
+              ...publicFrictionForPeer(answers, friction),
+            };
+          },
+        );
         const baseReadiness = buildReadinessCard(archetype(self.answers), matches, avoid);
         const assignedSuggestedGroup =
           assignedTeam?.teammates.map((member) => {

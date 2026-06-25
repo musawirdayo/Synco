@@ -36,6 +36,7 @@ type Match = {
   assigned?: boolean;
   confidence?: "High" | "Moderate" | "Low";
   breakdown?: MatchBreakdown;
+  proofs?: string[];
   why: string;
   brings: string;
   agree: string[];
@@ -50,6 +51,9 @@ type Avoid = {
   friendRisk?: string | null;
   confidence?: "High" | "Moderate" | "Low";
   breakdown?: MatchBreakdown;
+  riskProofs?: string[];
+  riskScore?: number;
+  isRisky?: boolean;
   why: string;
   watch: string;
   move: string;
@@ -321,6 +325,44 @@ function PeerDetail({
           </h4>
           <p className="text-sm leading-relaxed text-foreground">{peer.why}</p>
         </div>
+
+        {((isAvoid && "riskProofs" in peer && peer.riskProofs?.length) ||
+          (!isAvoid && "proofs" in peer && peer.proofs?.length)) && (
+          <div
+            className={`rounded-xl p-4 border ${
+              isAvoid
+                ? "bg-destructive/[0.025] border-destructive/15"
+                : "bg-accent/[0.035] border-accent/15"
+            }`}
+          >
+            <h4
+              className={`text-xs uppercase tracking-wider font-bold mb-2 ${
+                isAvoid ? "text-destructive" : "text-accent"
+              }`}
+            >
+              {isAvoid ? "Proof signals" : "Proof signals"}
+            </h4>
+            <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
+              {(isAvoid && "riskProofs" in peer
+                ? peer.riskProofs
+                : "proofs" in peer
+                  ? peer.proofs
+                  : []
+              )
+                ?.slice(0, 4)
+                .map((proof) => (
+                  <li key={proof} className="flex gap-2">
+                    <span
+                      className={`mt-2 h-1.5 w-1.5 rounded-full shrink-0 ${
+                        isAvoid ? "bg-destructive" : "bg-accent"
+                      }`}
+                    />
+                    <span>{proof}</span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
 
         {"watch" in peer && peer.watch && (
           <div className="text-sm leading-relaxed text-destructive/90 bg-destructive/[0.02] rounded-xl p-3.5 border border-destructive/15 flex items-start gap-2">
@@ -755,6 +797,50 @@ function Results() {
                     {assignedTeam.rationale}
                   </p>
                 </div>
+                {assignedTeam.quality && (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {[
+                      ["Team quality", assignedTeam.quality.score, "overall balance"],
+                      ["Pair safety", assignedTeam.quality.minPairSafety, "no weak hidden pair"],
+                      ["Skill coverage", assignedTeam.quality.skillCoverage, "gaps covered"],
+                      ["Role balance", assignedTeam.quality.roleCoverage, "different work roles"],
+                    ].map(([label, value, helper]) => (
+                      <div
+                        key={label}
+                        className="rounded-xl border border-border/40 bg-background/45 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {label}
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">{helper}</div>
+                          </div>
+                          <span className="font-display text-2xl font-bold text-accent">
+                            {value}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {(assignedTeam.quality.rolesCovered.length > 0 ||
+                      assignedTeam.quality.weakAreasCovered.length > 0) && (
+                      <div className="sm:col-span-2 rounded-xl border border-accent/15 bg-accent/[0.035] p-4 text-sm text-muted-foreground">
+                        {assignedTeam.quality.rolesCovered.length > 0 && (
+                          <p>
+                            <strong className="text-foreground">Role mix:</strong>{" "}
+                            {assignedTeam.quality.rolesCovered.join(", ")}.
+                          </p>
+                        )}
+                        {assignedTeam.quality.weakAreasCovered.length > 0 && (
+                          <p className="mt-2">
+                            <strong className="text-foreground">Coverage proof:</strong>{" "}
+                            {assignedTeam.quality.weakAreasCovered.slice(0, 3).join(", ")}.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -1026,6 +1112,21 @@ function Results() {
                               </strong>{" "}
                               {peer.brings}
                             </p>
+                            {peer.proofs && peer.proofs.length > 0 && (
+                              <div className="rounded-lg border border-accent/15 bg-accent/[0.035] p-3">
+                                <strong className="text-accent text-[10px] uppercase tracking-wider block mb-1.5">
+                                  Proof
+                                </strong>
+                                <ul className="space-y-1 text-muted-foreground">
+                                  {peer.proofs.slice(0, 3).map((proof) => (
+                                    <li key={proof} className="flex gap-2">
+                                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
+                                      <span>{proof}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -1119,6 +1220,21 @@ function Results() {
                                     Watch out:
                                   </strong>{" "}
                                   {peer.watch}
+                                </div>
+                              )}
+                              {peer.riskProofs && peer.riskProofs.length > 0 && (
+                                <div className="rounded-lg border border-destructive/10 bg-background/35 p-3">
+                                  <strong className="text-destructive text-[10px] uppercase tracking-wider block mb-1.5">
+                                    Proof
+                                  </strong>
+                                  <ul className="space-y-1 text-muted-foreground">
+                                    {peer.riskProofs.slice(0, 3).map((proof) => (
+                                      <li key={proof} className="flex gap-2">
+                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
+                                        <span>{proof}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
                                 </div>
                               )}
                             </div>
