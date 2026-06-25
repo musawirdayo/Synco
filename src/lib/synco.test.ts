@@ -799,6 +799,42 @@ describe("maximumWeightMatching", () => {
 // ─── formTeams tests ───
 
 describe("formTeams", () => {
+  function roleBalancedStudent(
+    id: string,
+    role: "finisher" | "starter" | "explainer" | "organizer",
+    strength: string,
+    weakArea: string,
+  ): MatchStudent {
+    const roleAnswers =
+      role === "finisher"
+        ? { q3: 1, q10: 1 }
+        : role === "starter"
+          ? { q8: 5, q7: 5 }
+          : role === "explainer"
+            ? { q6: 5, q5: 1 }
+            : { q1: 1, q11: 1 };
+
+    return {
+      id,
+      answers: {
+        ...studentMinimal(),
+        ...roleAnswers,
+        availability: ["Mon morning", "Wed afternoon"],
+        topics: ["Project"],
+        strengths: [strength],
+        weakAreas: [weakArea],
+        studyStyle: "Quiet co-working",
+        seriousness: 4,
+        targetGrade: "A range",
+        communicationPreference: "WhatsApp/text",
+        meetingMode: "Hybrid",
+        preferredLanguage: "English",
+        energyStyle: "Ambivert",
+        accountabilityPreference: "Regular check-ins",
+      },
+    };
+  }
+
   it("groups a mutual request pair before greedy filling", () => {
     const aliceBase = teamStudent("a", "calculus");
     const bobBase = teamStudent("b", "design");
@@ -947,6 +983,54 @@ describe("formTeams", () => {
     const blocked = new Set([pairKey("a", "b")]);
 
     expect(formTeams(students, 2, blocked)).toEqual(maximumWeightMatching(students, blocked));
+  });
+
+  it("uses a balanced 4+3 pattern for a 7-person class with target size 4", () => {
+    const students: MatchStudent[] = [
+      teamStudent("a", "calculus"),
+      teamStudent("b", "design"),
+      teamStudent("c", "writing"),
+      teamStudent("d", "research"),
+      teamStudent("e", "presentation"),
+      teamStudent("f", "programming"),
+      teamStudent("g", "data"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 4));
+    expect(plan.teams.map((team) => team.memberIds.length).sort((a, b) => a - b)).toEqual([3, 4]);
+    expect(plan.unmatchedIds).toHaveLength(0);
+  });
+
+  it("scales a 24-person class into six target-size teams", () => {
+    const topics = ["calculus", "design", "writing", "research", "presentation", "programming"];
+    const students = Array.from({ length: 24 }, (_, index) =>
+      teamStudent(`student-${index + 1}`, topics[index % topics.length] ?? "project"),
+    );
+
+    const plan = expectTeamPlan(formTeams(students, 4));
+    expect(plan.teams).toHaveLength(6);
+    expect(plan.teams.every((team) => team.memberIds.length === 4)).toBe(true);
+    expect(plan.unmatchedIds).toHaveLength(0);
+  });
+
+  it("does not stack three duplicate roles together when balanced alternatives exist", () => {
+    const students: MatchStudent[] = [
+      roleBalancedStudent("a", "finisher", "Writing", "Research"),
+      roleBalancedStudent("b", "finisher", "Writing", "Design"),
+      roleBalancedStudent("c", "finisher", "Writing", "Programming"),
+      roleBalancedStudent("d", "starter", "Research", "Writing"),
+      roleBalancedStudent("e", "explainer", "Programming", "Design"),
+      roleBalancedStudent("f", "organizer", "Design", "Programming"),
+    ];
+
+    const plan = expectTeamPlan(formTeams(students, 3));
+    for (const team of plan.teams) {
+      const roles = team.memberIds.map((memberId) => {
+        const student = students.find((candidate) => candidate.id === memberId);
+        return student ? archetype(student.answers) : "";
+      });
+      expect(roles.filter((role) => role === "Reliable Finisher").length).toBeLessThan(3);
+    }
   });
 });
 

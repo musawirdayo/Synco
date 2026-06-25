@@ -1212,6 +1212,7 @@ export function formTeams(
   const targetTeamSize = Number.isFinite(teamSize) ? Math.max(3, Math.floor(teamSize)) : 3;
   const unassigned = [...students];
   const teamMembers = forcedRequestSubgroups(unassigned, targetTeamSize, blockedPairKeys);
+  const forcedTeamCount = teamMembers.length;
 
   for (const team of teamMembers) {
     while (team.length < targetTeamSize) {
@@ -1222,23 +1223,9 @@ export function formTeams(
     }
   }
 
-  while (unassigned.length >= targetTeamSize) {
-    const seed = bestSeedPair(unassigned, blockedPairKeys);
-    if (!seed) break;
-
-    const team = [seed.left, seed.right];
-    removeStudent(unassigned, seed.left.id);
-    removeStudent(unassigned, seed.right.id);
-
-    while (team.length < targetTeamSize) {
-      const next = bestFitStudentForTeam(unassigned, team, blockedPairKeys);
-      if (!next) break;
-      team.push(next.student);
-      removeStudent(unassigned, next.student.id);
-    }
-
-    teamMembers.push(team);
-  }
+  const solved = solveTeamAssignment(unassigned, targetTeamSize, blockedPairKeys);
+  teamMembers.push(...solved.teams);
+  unassigned.splice(0, unassigned.length, ...solved.unmatched);
 
   for (const student of [...unassigned]) {
     const fit = bestFitExistingTeam(student, teamMembers, targetTeamSize, blockedPairKeys);
@@ -1247,15 +1234,346 @@ export function formTeams(
     removeStudent(unassigned, student.id);
   }
 
-  const teams = teamMembers.map((team) => summarizeTeam(team, blockedPairKeys));
+  const polishedTeams =
+    forcedTeamCount > 0 ? teamMembers : polishTeams(teamMembers, blockedPairKeys);
+  const teams = polishedTeams.map((team) => summarizeTeam(team, blockedPairKeys));
 
   return {
     algorithm: "greedy-clustering",
     teamSize: targetTeamSize,
     teams,
     unmatchedIds: unassigned.map((student) => student.id),
-    totalScore: teams.reduce((sum, team) => sum + team.pairScoreTotal, 0),
+    totalScore: teams.reduce((sum, team) => sum + team.quality.score, 0),
   };
+}
+
+type TeamAssignmentState = {
+  teams: MatchStudent[][];
+  unmatched: MatchStudent[];
+};
+
+type AssignmentMetrics = {
+  assignedCount: number;
+  minPairSafety: number;
+  minTeamScore: number;
+  totalQuality: number;
+  variance: number;
+};
+
+const EXACT_TEAM_SEARCH_LIMIT = 14;
+const MAX_TEAM_PATTERNS = 24;
+
+function solveTeamAssignment(
+  students: MatchStudent[],
+  targetTeamSize: number,
+  blockedPairKeys: Set<string>,
+): TeamAssignmentState {
+  if (students.length <= 1) return { teams: [], unmatched: [...students] };
+
+  const patterns = teamSizePatterns(students.length, targetTeamSize);
+  const patternsToTry =
+    students.length <= EXACT_TEAM_SEARCH_LIMIT ? patterns : patterns.slice(0, 4);
+  let best: TeamAssignmentState | null = null;
+
+  for (const pattern of patternsToTry) {
+    const candidate =
+      students.length <= EXACT_TEAM_SEARCH_LIMIT
+        ? solvePatternExact(students, pattern, blockedPairKeys)
+        : solvePatternGreedy(students, pattern, blockedPairKeys);
+    if (!candidate) continue;
+    if (!best || betterAssignment(candidate, best, blockedPairKeys)) best = candidate;
+  }
+
+  if (!best)
+    return solvePatternGreedy(
+      students,
+      [Math.min(targetTeamSize, students.length)],
+      blockedPairKeys,
+    );
+  return {
+    teams: polishTeams(best.teams, blockedPairKeys),
+    unmatched: best.unmatched,
+  };
+}
+
+function teamSizePatterns(studentCount: number, targetTeamSize: number) {
+  if (studentCount <= 1) return [];
+  if (studentCount < targetTeamSize) return [[studentCount]];
+
+  const minSize = Math.max(2, targetTeamSize - 1);
+  const maxSize = Math.min(studentCount, targetTeamSize + 1);
+  const patterns: number[][] = [];
+
+  function walk(remaining: number, current: number[], maxNext: number) {
+    if (patterns.length > MAX_TEAM_PATTERNS * 5) return;
+    if (remaining === 0) {
+      patterns.push([...current]);
+      return;
+    }
+    for (let size = Math.min(maxNext, maxSize, remaining); size >= minSize; size -= 1) {
+      if (remaining - size === 1) continue;
+      current.push(size);
+      walk(remaining - size, current, size);
+      current.pop();
+    }
+  }
+
+  walk(studentCount, [], maxSize);
+
+  return patterns
+    .sort(
+      (left, right) => patternPenalty(left, targetTeamSize) - patternPenalty(right, targetTeamSize),
+    )
+    .slice(0, MAX_TEAM_PATTERNS);
+}
+
+function patternPenalty(pattern: number[], targetTeamSize: number) {
+  const distance = pattern.reduce((sum, size) => sum + Math.abs(size - targetTeamSize), 0);
+  const overage = pattern.reduce((sum, size) => sum + Math.max(0, size - targetTeamSize), 0);
+  const spread = Math.max(...pattern) - Math.min(...pattern);
+  return distance * 100 + overage * 20 + spread * 8 + pattern.length;
+}
+
+function solvePatternExact(
+  students: MatchStudent[],
+  pattern: number[],
+  blockedPairKeys: Set<string>,
+): TeamAssignmentState | null {
+  let best: TeamAssignmentState | null = null;
+
+  function search(remaining: MatchStudent[], patternIndex: number, teams: MatchStudent[][]) {
+    if (patternIndex >= pattern.length) {
+      const candidate = { teams: teams.map((team) => [...team]), unmatched: [...remaining] };
+      if (!best || betterAssignment(candidate, best, blockedPairKeys)) best = candidate;
+      return;
+    }
+
+    const size = pattern[patternIndex] ?? 0;
+    if (remaining.length < size || size < 2) return;
+    const anchor = remaining[0];
+    if (!anchor) return;
+    const rest = remaining.slice(1);
+
+    for (const combo of combinations(rest, size - 1)) {
+      const team = [anchor, ...combo];
+      if (!teamAllowed(team, blockedPairKeys)) continue;
+      const nextRemaining = withoutStudents(rest, combo);
+      search(nextRemaining, patternIndex + 1, [...teams, team]);
+    }
+  }
+
+  search(students, 0, []);
+  return best;
+}
+
+function solvePatternGreedy(
+  students: MatchStudent[],
+  pattern: number[],
+  blockedPairKeys: Set<string>,
+): TeamAssignmentState {
+  const remaining = [...students];
+  const teams: MatchStudent[][] = [];
+
+  for (const size of pattern) {
+    if (remaining.length < size) break;
+    const team = bestGreedyTeamOfSize(remaining, size, blockedPairKeys);
+    if (!team) break;
+    teams.push(team);
+    for (const student of team) removeStudent(remaining, student.id);
+  }
+
+  return {
+    teams: polishTeams(teams, blockedPairKeys),
+    unmatched: remaining,
+  };
+}
+
+function bestGreedyTeamOfSize(
+  students: MatchStudent[],
+  teamSize: number,
+  blockedPairKeys: Set<string>,
+) {
+  let best: MatchStudent[] | null = null;
+  const seeds = bestSeedPairs(students, blockedPairKeys).slice(0, Math.min(8, students.length));
+
+  for (const seed of seeds) {
+    const team = [seed.left, seed.right];
+    const candidates = students.filter(
+      (student) => !team.some((member) => member.id === student.id),
+    );
+    while (team.length < teamSize) {
+      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys);
+      if (!next) break;
+      team.push(next.student);
+      removeStudent(candidates, next.student.id);
+    }
+    if (team.length !== teamSize || !teamAllowed(team, blockedPairKeys)) continue;
+    if (
+      !best ||
+      teamBreakdown(team, blockedPairKeys).score > teamBreakdown(best, blockedPairKeys).score
+    ) {
+      best = team;
+    }
+  }
+
+  if (!best && students.length >= teamSize) {
+    const team = [students[0]].filter((student): student is MatchStudent => Boolean(student));
+    const candidates = students.slice(1);
+    while (team.length < teamSize) {
+      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys);
+      if (!next) break;
+      team.push(next.student);
+      removeStudent(candidates, next.student.id);
+    }
+    if (team.length === teamSize && teamAllowed(team, blockedPairKeys)) best = team;
+  }
+
+  return best;
+}
+
+function bestSeedPairs(students: MatchStudent[], blockedPairKeys: Set<string>) {
+  const pairs: Array<{
+    left: MatchStudent;
+    right: MatchStudent;
+    pair: MatchingPlan["pairs"][number];
+  }> = [];
+
+  for (let i = 0; i < students.length; i += 1) {
+    for (let j = i + 1; j < students.length; j += 1) {
+      const left = students[i];
+      const right = students[j];
+      if (!left || !right) continue;
+      const pair = buildPair(left, right, blockedPairKeys, true);
+      if (pair) pairs.push({ left, right, pair });
+    }
+  }
+
+  return pairs.sort((left, right) => right.pair.score - left.pair.score);
+}
+
+function combinations<T>(items: T[], size: number) {
+  const output: T[][] = [];
+  const current: T[] = [];
+
+  function walk(start: number) {
+    if (current.length === size) {
+      output.push([...current]);
+      return;
+    }
+    const needed = size - current.length;
+    for (let index = start; index <= items.length - needed; index += 1) {
+      const item = items[index];
+      if (item === undefined) continue;
+      current.push(item);
+      walk(index + 1);
+      current.pop();
+    }
+  }
+
+  walk(0);
+  return output;
+}
+
+function withoutStudents(students: MatchStudent[], removed: MatchStudent[]) {
+  const removedIds = new Set(removed.map((student) => student.id));
+  return students.filter((student) => !removedIds.has(student.id));
+}
+
+function teamAllowed(team: MatchStudent[], blockedPairKeys: Set<string>) {
+  for (let i = 0; i < team.length; i += 1) {
+    for (let j = i + 1; j < team.length; j += 1) {
+      const left = team[i];
+      const right = team[j];
+      if (!left || !right || !pairAllowed(left, right, blockedPairKeys)) return false;
+    }
+  }
+  return true;
+}
+
+function assignmentMetrics(
+  assignment: TeamAssignmentState,
+  blockedPairKeys: Set<string>,
+): AssignmentMetrics {
+  const qualities = assignment.teams.map((team) => teamBreakdown(team, blockedPairKeys));
+  const assignedCount = assignment.teams.reduce((sum, team) => sum + team.length, 0);
+  const totalQuality = qualities.reduce((sum, quality) => sum + quality.score, 0);
+  const averageQuality = qualities.length ? totalQuality / qualities.length : 0;
+  const variance = qualities.length
+    ? qualities.reduce((sum, quality) => sum + (quality.score - averageQuality) ** 2, 0) /
+      qualities.length
+    : Number.POSITIVE_INFINITY;
+
+  return {
+    assignedCount,
+    minPairSafety: qualities.length
+      ? Math.min(...qualities.map((quality) => quality.minPairSafety))
+      : 0,
+    minTeamScore: qualities.length ? Math.min(...qualities.map((quality) => quality.score)) : 0,
+    totalQuality,
+    variance,
+  };
+}
+
+function betterAssignment(
+  candidate: TeamAssignmentState,
+  current: TeamAssignmentState,
+  blockedPairKeys: Set<string>,
+) {
+  const left = assignmentMetrics(candidate, blockedPairKeys);
+  const right = assignmentMetrics(current, blockedPairKeys);
+  if (left.assignedCount !== right.assignedCount) return left.assignedCount > right.assignedCount;
+  if (left.minPairSafety !== right.minPairSafety) return left.minPairSafety > right.minPairSafety;
+  if (left.minTeamScore !== right.minTeamScore) return left.minTeamScore > right.minTeamScore;
+  if (left.totalQuality !== right.totalQuality) return left.totalQuality > right.totalQuality;
+  return left.variance < right.variance;
+}
+
+function polishTeams(teams: MatchStudent[][], blockedPairKeys: Set<string>) {
+  let current = teams.map((team) => [...team]);
+  let improved = true;
+  let passes = 0;
+
+  while (improved && passes < 5) {
+    improved = false;
+    passes += 1;
+
+    for (let leftIndex = 0; leftIndex < current.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < current.length; rightIndex += 1) {
+        const leftTeam = current[leftIndex];
+        const rightTeam = current[rightIndex];
+        if (!leftTeam || !rightTeam) continue;
+
+        for (let a = 0; a < leftTeam.length; a += 1) {
+          for (let b = 0; b < rightTeam.length; b += 1) {
+            const swapped = current.map((team) => [...team]);
+            const leftStudent = swapped[leftIndex]?.[a];
+            const rightStudent = swapped[rightIndex]?.[b];
+            if (!leftStudent || !rightStudent) continue;
+            swapped[leftIndex]![a] = rightStudent;
+            swapped[rightIndex]![b] = leftStudent;
+            if (
+              !teamAllowed(swapped[leftIndex] ?? [], blockedPairKeys) ||
+              !teamAllowed(swapped[rightIndex] ?? [], blockedPairKeys)
+            ) {
+              continue;
+            }
+            if (
+              betterAssignment(
+                { teams: swapped, unmatched: [] },
+                { teams: current, unmatched: [] },
+                blockedPairKeys,
+              )
+            ) {
+              current = swapped;
+              improved = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return current;
 }
 
 function pairAllowed(a: MatchStudent, b: MatchStudent, blockedPairKeys: Set<string>) {

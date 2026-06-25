@@ -228,6 +228,35 @@ Next recommended Matching V2 work:
 - Redesign the survey questions around behavior/work preferences from the research report.
 - Add scenario fixtures for class sizes 6, 7, and 24, plus hard-to-place students and friend-request conflicts.
 
+## 2026-06-25 Matching Algorithm V2 Phase 2
+
+Implemented locally:
+
+- Replaced the purely sequential team builder with a two-mode team solver:
+  - Small classes use exact search across valid team-size patterns.
+  - Larger classes use a bounded candidate-team heuristic so publish stays fast.
+- Team-size patterns now handle uneven classes more naturally, for example target size 4 with 7 students becomes `4 + 3` instead of forcing leftovers into bad shapes.
+- Added a local swap-polish pass that improves full-class assignments after initial solving.
+- Kept forced mutual-request groups protected so the swap pass cannot separate hard-honored mutual requests.
+- Large-class solving is bounded to the highest-priority patterns to avoid slow publishes/tests.
+- Added scenario tests for:
+  - 7-person class with target size 4 -> `4 + 3`
+  - 24-person class with target size 4 -> six teams of 4
+  - avoiding a team of three duplicate Reliable Finisher roles when balanced alternatives exist
+
+Verification passed after this phase:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (81 passing)
+- `npm run build`
+
+Next recommended Matching V2 work:
+
+- Survey V2: replace/reshape questions around behavior, work rhythm, thinking style, reliability, communication, and skill complementarity from `deep-research-report.md`.
+- Add more scenario fixtures for hard-to-place students, friend-request conflicts, blocked-pair-heavy classes, and many missing answers.
+- Consider a teacher review UI for low-confidence teams before publish.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.
