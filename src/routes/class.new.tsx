@@ -7,11 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Field, PrimaryButton, inputClass } from "@/components/auth-shell";
 import { copyText } from "@/lib/clipboard";
-import { normalizeStudentIdentifier } from "@/lib/class-flow";
+import {
+  exampleClassIdentifier,
+  normalizeClassIdentifier,
+  normalizeIdentifierPrefix,
+} from "@/lib/class-flow";
 
 export const Route = createFileRoute("/class/new")({ component: NewClass });
 
 const TEAM_SIZE_OPTIONS = [2, 3, 4, 5, 6] as const;
+const ROLL_SUFFIX_DIGIT_OPTIONS = [2, 3, 4, 5, 6] as const;
 const MAX_INVITE_CODE_ATTEMPTS = 6;
 const classBasicsSchema = z.object({
   name: z.string().trim().min(2, "Class name needs at least 2 characters."),
@@ -56,13 +61,27 @@ function NewClass() {
   const [rosterLock, setRosterLock] = useState(false);
   const [rosterText, setRosterText] = useState("");
   const [identType, setIdentType] = useState<"roll" | "email" | "id">("roll");
+  const [rollPrefix, setRollPrefix] = useState("");
+  const [rollSuffixDigits, setRollSuffixDigits] = useState(3);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<{ id: string; code: string } | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const identifierFormat = {
+    identifierType: identType,
+    identifierPrefix: identType === "roll" ? rollPrefix : null,
+    identifierSuffixDigits: identType === "roll" ? rollSuffixDigits : null,
+  };
+  const normalizedRollPrefix = normalizeIdentifierPrefix(rollPrefix);
+  const rollExample = exampleClassIdentifier(identifierFormat).toUpperCase();
   const rosterEntries = Array.from(
-    new Set(rosterText.split("\n").map(normalizeStudentIdentifier).filter(Boolean)),
+    new Set(
+      rosterText
+        .split("\n")
+        .map((entry) => normalizeClassIdentifier(entry, identifierFormat))
+        .filter(Boolean),
+    ),
   );
 
   async function createClass() {
@@ -91,6 +110,9 @@ function NewClass() {
             invite_code: code,
             roster_lock_enabled: rosterLock,
             identifier_type: identType,
+            identifier_prefix:
+              identType === "roll" && normalizedRollPrefix ? normalizedRollPrefix : null,
+            identifier_suffix_digits: identType === "roll" ? rollSuffixDigits : null,
           })
           .select("id,invite_code")
           .single();
@@ -264,8 +286,10 @@ function NewClass() {
               exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.25 }}
             >
-              <h1 className="font-display text-3xl mb-2">Lock down who can join.</h1>
-              <p className="text-muted text-sm mb-8">Optional, but recommended for real classes.</p>
+              <h1 className="font-display text-3xl mb-2">Set student identity rules.</h1>
+              <p className="text-muted text-sm mb-8">
+                Pick how Synco should read roll numbers, then optionally lock joining to a roster.
+              </p>
               <div className="space-y-5">
                 <label className="flex items-start gap-3 p-4 rounded-lg border border-border bg-card cursor-pointer hover:border-primary transition-colors">
                   <input
@@ -279,29 +303,80 @@ function NewClass() {
                     <p className="text-sm text-muted">Only listed identifiers can join.</p>
                   </div>
                 </label>
+                <Field label="Identifier type">
+                  <select
+                    value={identType}
+                    onChange={(e) => {
+                      setIdentType(e.target.value as "roll" | "email" | "id");
+                      setRosterText("");
+                    }}
+                    className={inputClass}
+                  >
+                    <option value="roll">Roll number</option>
+                    <option value="email">Email</option>
+                    <option value="id">Student ID</option>
+                  </select>
+                </Field>
+                {identType === "roll" && (
+                  <div className="rounded-lg border border-border bg-background p-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
+                      <Field
+                        label="Roll prefix (optional)"
+                        hint="For formats like SP25-BCS-006, enter SP25-BCS."
+                      >
+                        <input
+                          value={rollPrefix}
+                          onChange={(e) => setRollPrefix(e.target.value)}
+                          className={inputClass + " font-mono uppercase"}
+                          placeholder="SP25-BCS"
+                        />
+                      </Field>
+                      <Field label="Ending digits">
+                        <select
+                          value={rollSuffixDigits}
+                          onChange={(e) => setRollSuffixDigits(Number(e.target.value))}
+                          className={inputClass}
+                        >
+                          {ROLL_SUFFIX_DIGIT_OPTIONS.map((digits) => (
+                            <option key={digits} value={digits}>
+                              {digits}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    <p className="mt-3 text-xs text-muted">
+                      Students can type only{" "}
+                      <span className="font-mono text-foreground">
+                        {"6".padStart(rollSuffixDigits, "0")}
+                      </span>
+                      . Synco will save it as{" "}
+                      <span className="font-mono text-foreground">{rollExample}</span>.
+                    </p>
+                  </div>
+                )}
                 {rosterLock && (
                   <>
-                    <Field label="Identifier type">
-                      <select
-                        value={identType}
-                        onChange={(e) => setIdentType(e.target.value as "roll" | "email" | "id")}
-                        className={inputClass}
-                      >
-                        <option value="roll">Roll number</option>
-                        <option value="email">Email</option>
-                        <option value="id">Student ID</option>
-                      </select>
-                    </Field>
                     <Field
                       label="Roster"
-                      hint={`${rosterEntries.length} entries detected · one per line`}
+                      hint={`${rosterEntries.length} entries detected · one per line${
+                        identType === "roll" ? " · endings or full roll numbers both work" : ""
+                      }`}
                     >
                       <textarea
                         value={rosterText}
                         onChange={(e) => setRosterText(e.target.value)}
                         rows={6}
                         className={inputClass + " h-auto py-3 font-mono text-sm"}
-                        placeholder={"22K-1234\n22K-1235"}
+                        placeholder={
+                          identType === "email"
+                            ? "student1@school.edu\nstudent2@school.edu"
+                            : identType === "id"
+                              ? "STU-001\nSTU-002"
+                              : normalizedRollPrefix
+                                ? "001\n002\n003"
+                                : "006\n007\n008"
+                        }
                       />
                     </Field>
                   </>

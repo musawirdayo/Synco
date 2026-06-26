@@ -14,7 +14,59 @@ export function normalizeInviteCode(code: string) {
 }
 
 export function normalizeStudentIdentifier(identifier: string) {
-  return identifier.trim().replace(/\s+/g, " ").toLowerCase();
+  return identifier
+    .trim()
+    .replace(/\s*-\s*/g, "-")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+export type IdentifierFormat = {
+  identifierType?: string | null;
+  identifierPrefix?: string | null;
+  identifierSuffixDigits?: number | null;
+};
+
+export function normalizeIdentifierPrefix(prefix: string) {
+  return normalizeStudentIdentifier(prefix)
+    .replace(/\s+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function normalizeClassIdentifier(identifier: string, format: IdentifierFormat = {}) {
+  const base = normalizeStudentIdentifier(identifier);
+  if (!base) return "";
+  if (format.identifierType && format.identifierType !== "roll") return base;
+
+  const prefix = normalizeIdentifierPrefix(format.identifierPrefix ?? "");
+  const suffixDigits =
+    typeof format.identifierSuffixDigits === "number" &&
+    Number.isFinite(format.identifierSuffixDigits) &&
+    format.identifierSuffixDigits > 0
+      ? Math.floor(format.identifierSuffixDigits)
+      : null;
+
+  if (!prefix && !suffixDigits) return base;
+
+  const compact = base.replace(/[^a-z0-9]+/g, "");
+  const suffix = compact.match(/(\d+)$/)?.[1];
+  if (!suffix) return base;
+
+  const paddedSuffix =
+    suffixDigits && suffix.length < suffixDigits ? suffix.padStart(suffixDigits, "0") : suffix;
+
+  return prefix ? `${prefix}-${paddedSuffix}` : paddedSuffix;
+}
+
+export function exampleClassIdentifier(format: IdentifierFormat = {}) {
+  const suffixDigits =
+    typeof format.identifierSuffixDigits === "number" &&
+    Number.isFinite(format.identifierSuffixDigits) &&
+    format.identifierSuffixDigits > 0
+      ? Math.floor(format.identifierSuffixDigits)
+      : 3;
+  const suffix = "6".padStart(suffixDigits, "0");
+  return normalizeClassIdentifier(suffix, { ...format, identifierSuffixDigits: suffixDigits });
 }
 
 export function getActiveClassId() {

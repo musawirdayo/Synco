@@ -102,6 +102,8 @@ export type Database = {
           created_at: string;
           expected_count: number;
           id: string;
+          identifier_prefix: string | null;
+          identifier_suffix_digits: number | null;
           identifier_type: string | null;
           institution: string | null;
           invite_code: string;
@@ -116,6 +118,8 @@ export type Database = {
           created_at?: string;
           expected_count?: number;
           id?: string;
+          identifier_prefix?: string | null;
+          identifier_suffix_digits?: number | null;
           identifier_type?: string | null;
           institution?: string | null;
           invite_code: string;
@@ -130,6 +134,8 @@ export type Database = {
           created_at?: string;
           expected_count?: number;
           id?: string;
+          identifier_prefix?: string | null;
+          identifier_suffix_digits?: number | null;
           identifier_type?: string | null;
           institution?: string | null;
           invite_code?: string;
@@ -400,10 +406,20 @@ export type Database = {
       lookup_class_by_code: {
         Args: { _code: string };
         Returns: {
+          identifier_prefix: string | null;
+          identifier_suffix_digits: number | null;
           identifier_type: string;
           requires_identifier: boolean;
           roster_lock_enabled: boolean;
         }[];
+      };
+      normalize_class_identifier: {
+        Args: { _class_id: string; _identifier: string };
+        Returns: string | null;
+      };
+      normalize_roll_prefix: {
+        Args: { _prefix: string };
+        Returns: string | null;
       };
       normalize_student_identifier: {
         Args: { _identifier: string };

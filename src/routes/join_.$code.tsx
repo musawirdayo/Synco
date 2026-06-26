@@ -7,8 +7,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Field, PrimaryButton, inputClass } from "@/components/auth-shell";
 import {
   clearPendingJoinCode,
+  exampleClassIdentifier,
+  normalizeClassIdentifier,
   normalizeInviteCode,
-  normalizeStudentIdentifier,
   rememberPendingJoinCode,
   setActiveClassId,
 } from "@/lib/class-flow";
@@ -29,6 +30,8 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
   const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState(lockedCode);
   const [identType, setIdentType] = useState<string>("roll");
+  const [identifierPrefix, setIdentifierPrefix] = useState<string | null>(null);
+  const [identifierSuffixDigits, setIdentifierSuffixDigits] = useState<number | null>(null);
   const [rosterLock, setRosterLock] = useState(false);
   const [knownClass, setKnownClass] = useState(false);
   const [checkedClass, setCheckedClass] = useState(false);
@@ -98,14 +101,20 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         const row = Array.isArray(data) ? data[0] : data;
         if (row) {
           setIdentType(row.identifier_type ?? "roll");
+          setIdentifierPrefix(row.identifier_prefix ?? null);
+          setIdentifierSuffixDigits(row.identifier_suffix_digits ?? null);
           setRosterLock(!!row.roster_lock_enabled);
           setKnownClass(true);
         } else {
           setKnownClass(false);
+          setIdentifierPrefix(null);
+          setIdentifierSuffixDigits(null);
         }
       } catch (e) {
         console.error(e);
         setKnownClass(false);
+        setIdentifierPrefix(null);
+        setIdentifierSuffixDigits(null);
       } finally {
         setIsCheckingClass(false);
         setCheckedClass(true);
@@ -124,7 +133,12 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
     setErr(undefined);
     setBusy(true);
     const inviteCode = normalizeInviteCode(code);
-    const normalizedIdentifier = normalizeStudentIdentifier(identifier);
+    const identifierFormat = {
+      identifierType: identType,
+      identifierPrefix,
+      identifierSuffixDigits,
+    };
+    const normalizedIdentifier = normalizeClassIdentifier(identifier, identifierFormat);
     if (!inviteCode) {
       setErr("Enter your class invite code.");
       setBusy(false);
@@ -177,8 +191,33 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
       ? "Email on roster"
       : identType === "id"
         ? "Student ID"
-        : "Roll number"
+        : identifierPrefix
+          ? "Roll number ending"
+          : "Roll number"
     : "Student ID / Roll number";
+
+  const identifierFormat = {
+    identifierType: identType,
+    identifierPrefix,
+    identifierSuffixDigits,
+  };
+  const identifierPreview =
+    identType === "roll" && identifier.trim()
+      ? normalizeClassIdentifier(identifier, identifierFormat).toUpperCase()
+      : "";
+  const identifierExample =
+    identType === "roll" ? exampleClassIdentifier(identifierFormat).toUpperCase() : "";
+  const identifierHint =
+    identType === "roll" && identifierPrefix
+      ? `Enter the last ${identifierSuffixDigits ?? 3} digits. Example: ${"6".padStart(
+          identifierSuffixDigits ?? 3,
+          "0",
+        )} becomes ${identifierExample}.`
+      : identType === "roll" && identifierSuffixDigits
+        ? `Enter your roll number digits. Example: 6 becomes ${identifierExample}.`
+        : rosterLock
+          ? "Must match the class roster."
+          : "Required to prevent duplicate submissions.";
 
   const showDeletedScreen = hasCodeFromLink && checkedClass && !knownClass && !isCheckingClass;
 
@@ -285,22 +324,29 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
               className={inputClass}
             />
           </Field>
-          <Field
-            label={identLabel}
-            hint={
-              rosterLock
-                ? "Must match the class roster."
-                : "Required to prevent duplicate submissions."
-            }
-          >
+          <Field label={identLabel} hint={identifierHint}>
             <input
               required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className={inputClass}
-              placeholder={identType === "email" ? "you@school.edu" : "e.g. 22K-1234"}
+              placeholder={
+                identType === "email"
+                  ? "you@school.edu"
+                  : identType === "roll" && identifierPrefix
+                    ? "006"
+                    : identType === "roll"
+                      ? "006"
+                      : "e.g. STU-001"
+              }
             />
           </Field>
+          {identifierPreview && (
+            <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted">
+              Synco will read this as{" "}
+              <span className="font-mono text-foreground">{identifierPreview}</span>.
+            </div>
+          )}
           {hasCodeFromLink ? (
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="text-xs font-medium uppercase tracking-wider text-muted mb-1">

@@ -609,3 +609,30 @@ Verified:
 - `npm test` (93 passing)
 - `npm run build`
 - `git diff --check`
+
+## 2026-06-26 Roll Number Format Normalization
+
+Implemented:
+
+- Added `identifier_prefix` and `identifier_suffix_digits` to `classes` via `20260626001000_add_roll_number_format.sql`.
+- Added server-side `normalize_class_identifier(class_id, identifier)` and `normalize_roll_prefix(prefix)`.
+- Reworked `lookup_class_by_code` to return roll format metadata.
+- Reworked `join_class_by_code`, roster triggers, and class-member triggers so roster claims and duplicate checks use class-aware identifier normalization.
+- Class creation now asks for identifier type and roll format even when roster lock is off.
+- Leads can set a format like prefix `SP25-BCS` + ending digits `3`; students may enter `006`, `6`, or `sp25bcs006`, and Synco treats all as `SP25-BCS-006`.
+- If a class only uses numeric endings, the lead leaves prefix blank and keeps ending digits, e.g. `006`.
+- Join page now shows a simpler "Roll number ending" field when a prefix exists and previews how Synco will read the entered value.
+- Added `src/lib/class-flow.test.ts` coverage for dash/case normalization, prefix handling, suffix-only roll numbers, and examples.
+
+Remote backend:
+
+- Applied `20260626001000_add_roll_number_format.sql` to Supabase with `supabase db query --linked --file ...`.
+- Repaired only migration version `20260626001000` as applied.
+- `supabase migration list --linked` is clean after the repair.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (99 passing)
+- `npm run build`
