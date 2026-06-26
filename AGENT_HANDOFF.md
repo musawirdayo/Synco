@@ -655,3 +655,21 @@ Verified:
 - `npm test` (99 passing)
 - `npm run build`
 - `git diff --check`
+
+## 2026-06-26 Platform Documentation
+
+Added a proper documentation set:
+
+- `README.md` as the main entrypoint.
+- `docs/PRODUCT_GUIDE.md` for roles, flows, route map, and feature status.
+- `docs/ARCHITECTURE.md` for frontend/backend structure and data flows.
+- `docs/SUPABASE_AND_DATA_MODEL.md` for schema, RLS, RPCs, and migration workflow.
+- `docs/MATCHING_ENGINE.md` for scoring, peer references, team formation, and result payloads.
+- `docs/OPERATIONS.md` for setup, env vars, checks, deploy, Supabase CLI, and admin setup.
+- `docs/SECURITY_AND_PRIVACY.md` for auth, privacy, admin access, key handling, and incident checklist.
+
+Verified:
+
+- `npx prettier --write README.md docs/*.md AGENT_HANDOFF.md`
+- `git diff --check`
+- Basic secret scan for pasted Supabase/user credentials in the new docs.
