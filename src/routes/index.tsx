@@ -297,6 +297,7 @@ function Landing() {
               <Reveal
                 as="p"
                 blur={false}
+                immediate
                 className="text-sm font-medium text-[color:var(--color-primary)]"
               >
                 For classes forming student teams
@@ -304,6 +305,7 @@ function Landing() {
               <Reveal
                 as="h1"
                 delay={0.08}
+                immediate
                 className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
                 Smarter project teams, with the reasons included.
@@ -312,6 +314,7 @@ function Landing() {
                 as="p"
                 blur={false}
                 delay={0.16}
+                immediate
                 className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
                 Synco uses real class data to form teams, explain why they make sense, and show each
@@ -321,6 +324,7 @@ function Landing() {
               <Reveal
                 blur={false}
                 delay={0.24}
+                immediate
                 className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
                 <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
@@ -331,12 +335,12 @@ function Landing() {
                 </a>
               </Reveal>
 
-              <Reveal blur={false} delay={0.32} className="mt-7">
+              <Reveal blur={false} delay={0.32} immediate className="mt-7">
                 <WorkflowLine />
               </Reveal>
             </div>
 
-            <Reveal delay={0.18} mask scale={0.97}>
+            <Reveal delay={0.18} immediate mask scale={0.97}>
               <MockMatchCard />
             </Reveal>
           </div>

@@ -249,16 +249,12 @@ function Dashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                 >
-                  <Link
-                    to="/class/$id"
-                    params={{ id: c.id }}
-                    className="block rounded-xl border border-border bg-card p-6 hover:border-primary hover:-translate-y-0.5 transition-all"
-                  >
+                  <article className="rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-primary)]/30 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div>
+                      <Link to="/class/$id" params={{ id: c.id }} className="min-w-0 flex-1">
                         <h3 className="font-medium text-lg mb-1">{c.name}</h3>
                         {c.institution && <p className="text-sm text-muted">{c.institution}</p>}
-                      </div>
+                      </Link>
                       <span
                         className={
                           "text-xs font-medium uppercase tracking-wide px-2.5 py-1 rounded-full " +
@@ -271,11 +267,17 @@ function Dashboard() {
                       </span>
                     </div>
                     <div className="mt-5 flex items-center gap-4 text-sm text-muted flex-wrap">
-                      <span>
-                        <span className="text-foreground font-medium">{sub}</span> of{" "}
-                        {c.expected_count} submitted
-                      </span>
-                      <span className="font-mono text-xs">{pct}%</span>
+                      <Link
+                        to="/class/$id"
+                        params={{ id: c.id }}
+                        className="flex min-w-0 flex-1 items-center gap-4 transition-colors hover:text-foreground"
+                      >
+                        <span>
+                          <span className="text-foreground font-medium">{sub}</span> of{" "}
+                          {c.expected_count} submitted
+                        </span>
+                        <span className="font-mono text-xs">{pct}%</span>
+                      </Link>
                       <div className="ml-auto flex items-center gap-2">
                         <button
                           onClick={(e) => handleCopy(e, c.invite_code, c.id)}
@@ -304,7 +306,7 @@ function Dashboard() {
                         </button>
                       </div>
                     </div>
-                  </Link>
+                  </article>
                 </motion.div>
               );
             })}

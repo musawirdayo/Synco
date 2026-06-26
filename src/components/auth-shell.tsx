@@ -14,27 +14,54 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="px-4 sm:px-6 md:px-12 py-5 sm:py-6">
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="px-4 py-5 sm:px-6 sm:py-6 md:px-12">
         <Link
           to="/"
-          className="font-display text-lg sm:text-xl md:text-2xl tracking-tight hover:opacity-80 transition-opacity"
+          className="font-sans text-base font-semibold tracking-normal transition-colors hover:text-[color:var(--color-primary)] sm:text-lg"
         >
           Synco
         </Link>
       </header>
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="w-full max-w-md"
-        >
-          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl mb-2">{title}</h1>
-          {subtitle && <p className="text-xs sm:text-sm text-muted mb-6 sm:mb-8">{subtitle}</p>}
-          {children}
-          {footer && <div className="mt-6 text-xs sm:text-sm text-muted text-center">{footer}</div>}
-        </motion.div>
+      <main className="grid flex-1 gap-6 px-4 pb-8 sm:px-6 sm:pb-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-12">
+        <aside className="hidden min-h-[calc(100vh-8rem)] rounded-[8px] border border-primary/15 bg-primary p-8 text-primary-foreground shadow-[0_18px_50px_oklch(0.18_0_0_/_0.08)] lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary-foreground/70">One account</p>
+            <h2 className="mt-4 max-w-sm font-sans text-4xl font-semibold leading-tight tracking-normal">
+              Keep every class, survey, and result in one place.
+            </h2>
+            <p className="mt-5 max-w-sm text-sm leading-7 text-primary-foreground/75">
+              Sign in from any device and Synco keeps your classes, responses, and results connected
+              to your account.
+            </p>
+          </div>
+          <div className="grid gap-3 text-sm text-primary-foreground/80">
+            <div className="rounded-[8px] border border-white/15 bg-white/[0.08] p-4">
+              Survey progress stays tied to your email.
+            </div>
+            <div className="rounded-[8px] border border-white/15 bg-white/[0.08] p-4">
+              Results reopen cleanly when teams are published.
+            </div>
+            <div className="rounded-[8px] border border-white/15 bg-white/[0.08] p-4">
+              Privacy settings travel with your student profile.
+            </div>
+          </div>
+        </aside>
+        <section className="flex items-center justify-center py-6 sm:py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-full max-w-md rounded-[8px] border border-border bg-card/95 p-6 shadow-[0_16px_42px_oklch(0.18_0_0_/_0.05)] sm:p-8"
+          >
+            <h1 className="font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              {title}
+            </h1>
+            {subtitle && <p className="mt-2 mb-6 text-sm leading-6 text-muted">{subtitle}</p>}
+            {children}
+            {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
+          </motion.div>
+        </section>
       </main>
     </div>
   );
