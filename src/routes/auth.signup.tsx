@@ -14,6 +14,7 @@ const AUTH_TIMEOUT_MESSAGE =
 
 function Signup() {
   const navigate = useNavigate();
+  const pendingJoinCode = getPendingJoinCode();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,8 +44,7 @@ function Signup() {
         setErrors({ form: signupErrorMessage(error) });
         return;
       }
-      const pendingCode = getPendingJoinCode();
-      if (pendingCode) {
+      if (pendingJoinCode) {
         if (data.user) {
           await withTimeout(
             supabase.from("profiles").upsert({
@@ -56,7 +56,7 @@ function Signup() {
             AUTH_TIMEOUT_MESSAGE,
           );
         }
-        navigate({ to: "/join/$code", params: { code: pendingCode } });
+        navigate({ to: "/join/$code", params: { code: pendingJoinCode } });
         return;
       }
       navigate({ to: "/onboarding/role" });
@@ -72,8 +72,12 @@ function Signup() {
 
   return (
     <AuthShell
-      title="Create your account."
-      subtitle="One account works for both leads and students."
+      title={pendingJoinCode ? "Create your student account." : "Create your account."}
+      subtitle={
+        pendingJoinCode
+          ? "Use an email and password you can remember. Your results will open from any device with this account."
+          : "One account works for both leads and students."
+      }
       footer={
         <>
           Already have one?{" "}

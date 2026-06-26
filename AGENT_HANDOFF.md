@@ -636,3 +636,22 @@ Verified:
 - `npm run lint`
 - `npm test` (99 passing)
 - `npm run build`
+
+## 2026-06-26 Student Account Join Flow
+
+Implemented:
+
+- Join links now show an explicit account step for signed-out students instead of silently redirecting to login.
+- Students can choose "Create student account" or "I already have an account" from the class link.
+- The invite code is still remembered through signup/login, so returning students can open results from another device by signing in with the same email and password.
+- Signup from a class link sets the new profile role to `student` and returns directly to the class join flow.
+- Login/signup copy now explains the device-independent account behavior when reached from a class link.
+- Duplicate roll-number errors now tell students to sign in with the first account they used instead of creating another account.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (99 passing)
+- `npm run build`
+- `git diff --check`

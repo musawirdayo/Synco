@@ -13,6 +13,7 @@ const AUTH_TIMEOUT_MESSAGE =
 
 function Login() {
   const navigate = useNavigate();
+  const pendingJoinCode = getPendingJoinCode();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
@@ -32,9 +33,8 @@ function Login() {
         setErrors({ form: "That email or password didn't match. Try again." });
         return;
       }
-      const pendingCode = getPendingJoinCode();
-      if (pendingCode) {
-        navigate({ to: "/join/$code", params: { code: pendingCode } });
+      if (pendingJoinCode) {
+        navigate({ to: "/join/$code", params: { code: pendingJoinCode } });
         return;
       }
 
@@ -78,8 +78,12 @@ function Login() {
 
   return (
     <AuthShell
-      title="Welcome back."
-      subtitle="Sign in to your class workspace."
+      title={pendingJoinCode ? "Sign in to continue." : "Welcome back."}
+      subtitle={
+        pendingJoinCode
+          ? "Use the same email and password you used when you first joined this class."
+          : "Sign in to your class workspace."
+      }
       footer={
         <>
           Don't have an account?{" "}

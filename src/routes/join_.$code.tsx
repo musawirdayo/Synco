@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, LogIn, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Field, PrimaryButton, inputClass } from "@/components/auth-shell";
@@ -43,12 +43,11 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
     if (!loading && !user) {
       if (hasCodeFromLink) {
         rememberPendingJoinCode(code);
-        navigate({ to: "/auth/login" });
       }
       return;
     }
     if (user?.user_metadata?.full_name) setFullName(user.user_metadata.full_name);
-  }, [user, loading, navigate, hasCodeFromLink, code]);
+  }, [user, loading, hasCodeFromLink, code]);
 
   useEffect(() => {
     if (!user || !code || code.length < 4) return;
@@ -88,6 +87,11 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
   }, [user, code, navigate]);
 
   useEffect(() => {
+    if (!user) {
+      setIsCheckingClass(false);
+      setCheckedClass(false);
+      return;
+    }
     if (!code || code.length < 4) {
       setKnownClass(false);
       setCheckedClass(false);
@@ -120,14 +124,14 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         setCheckedClass(true);
       }
     })();
-  }, [code]);
+  }, [code, user]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) {
       const inviteCode = normalizeInviteCode(code);
       if (inviteCode) rememberPendingJoinCode(inviteCode);
-      navigate({ to: "/auth/login" });
+      setErr("Create an account or sign in first. Your results are tied to that account.");
       return;
     }
     setErr(undefined);
@@ -163,7 +167,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           : msg.includes("roster_taken")
             ? "This roster spot is already taken."
             : msg.includes("identifier_taken")
-              ? "This identifier has already joined this class. Use the original account or ask your class lead to help."
+              ? "This roll number is already connected to an account. Sign in with the same email and password you used first, or ask your class lead for help."
               : msg.includes("identifier_required")
                 ? `Please enter your ${identLabel.toLowerCase()}.`
                 : "We couldn't join you to this class. Please try again.";
@@ -220,6 +224,37 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           : "Required to prevent duplicate submissions.";
 
   const showDeletedScreen = hasCodeFromLink && checkedClass && !knownClass && !isCheckingClass;
+
+  function startAuth(mode: "login" | "signup") {
+    const inviteCode = normalizeInviteCode(code);
+    if (!inviteCode) {
+      setErr("Enter your class invite code first.");
+      return;
+    }
+    if (inviteCode) rememberPendingJoinCode(inviteCode);
+    navigate({ to: mode === "login" ? "/auth/login" : "/auth/signup" });
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center px-6 text-sm text-muted">
+        Loading join link...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <JoinAccountGate
+        code={code}
+        setCode={setCode}
+        hasCodeFromLink={hasCodeFromLink}
+        error={err}
+        onLogin={() => startAuth("login")}
+        onSignup={() => startAuth("signup")}
+      />
+    );
+  }
 
   if (showDeletedScreen) {
     return (
@@ -371,6 +406,110 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
             {hasCodeFromLink ? "Continue" : "Join class"}
           </PrimaryButton>
         </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function JoinAccountGate({
+  code,
+  setCode,
+  hasCodeFromLink,
+  error,
+  onLogin,
+  onSignup,
+}: {
+  code: string;
+  setCode: (code: string) => void;
+  hasCodeFromLink: boolean;
+  error?: string;
+  onLogin: () => void;
+  onSignup: () => void;
+}) {
+  return (
+    <div className="min-h-screen grid md:grid-cols-2">
+      <div className="hidden md:flex flex-col justify-between p-12 bg-primary text-primary-foreground">
+        <Link to="/" className="inline-flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg bg-primary-foreground grid place-items-center text-primary font-display text-sm">
+            S
+          </div>
+          <span className="font-display text-lg">Synco</span>
+        </Link>
+        <div>
+          <h2 className="font-display text-4xl leading-tight mb-4">
+            One account,
+            <br />
+            every device.
+          </h2>
+          <p className="text-primary-foreground/70 max-w-sm">
+            Your survey and results stay attached to your email and password, not this browser.
+          </p>
+        </div>
+        <span className="font-mono text-xs text-primary-foreground/50">
+          account-based · private · portable
+        </span>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="flex items-center justify-center p-6 md:p-12"
+      >
+        <div className="w-full max-w-sm space-y-5">
+          <div>
+            <h1 className="font-display text-3xl mb-2">
+              {hasCodeFromLink ? "Join with an account." : "Join your class."}
+            </h1>
+            <p className="text-muted text-sm">
+              Create a student account once. When results are published, sign in with the same email
+              and password from any device.
+            </p>
+          </div>
+
+          {hasCodeFromLink ? (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-xs font-medium uppercase tracking-wider text-muted mb-1">
+                Invite code
+              </div>
+              <div className="font-mono text-lg tracking-widest">{code}</div>
+            </div>
+          ) : (
+            <Field label="Invite code">
+              <input
+                required
+                value={code}
+                onChange={(e) => setCode(normalizeInviteCode(e.target.value))}
+                className={inputClass + " font-mono tracking-widest uppercase"}
+                maxLength={6}
+                placeholder="ABCD12"
+              />
+            </Field>
+          )}
+
+          <div className="grid gap-3">
+            <button
+              type="button"
+              onClick={onSignup}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-[color:var(--color-primary-hover)] transition-colors"
+            >
+              <UserPlus className="h-4 w-4" /> Create student account
+            </button>
+            <button
+              type="button"
+              onClick={onLogin}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 text-sm font-medium hover:bg-muted transition-colors"
+            >
+              <LogIn className="h-4 w-4" /> I already have an account
+            </button>
+          </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <p className="rounded-lg border border-border bg-card p-3 text-xs leading-relaxed text-muted">
+            Do not create a second account for the same roll number. If Synco says your roll number
+            already joined, sign in with the first account you used.
+          </p>
+        </div>
       </motion.div>
     </div>
   );
