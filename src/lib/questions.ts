@@ -18,19 +18,19 @@ export const OPTIONAL_TEXT_SURVEY_FIELDS: OptionalTextSurveyField[] = [
     id: "wantToWorkWith",
     label: "Would like to work with (optional)",
     placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
-    hint: "Mutual requests are prioritized when teams are formed.",
+    hint: "Mutual requests are prioritized. Use a roll number or identifier if two classmates share a name.",
   },
   {
     id: "friendsInClass",
     label: "Friends in this class",
     placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
-    hint: "We'll check if the data agrees with you.",
+    hint: "We'll check if the data agrees with you. Use a roll number or identifier if names repeat.",
   },
   {
     id: "doNotPairWith",
     label: "Do not pair me with",
     placeholder: "Names or identifiers, separated by commas. Leave blank if none.",
-    hint: "This is treated as a hard constraint before scores are calculated.",
+    hint: "This is treated as a hard constraint. Use a roll number or identifier if names repeat.",
   },
 ];
 

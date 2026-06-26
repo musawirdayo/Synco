@@ -72,6 +72,23 @@ export type TeamQualityBreakdown = {
   rationale: string;
 };
 
+type PeerReferenceField = "doNotPairWith" | "wantToWorkWith" | "friendsInClass";
+
+export type PeerReferenceAmbiguity = {
+  studentId: string;
+  field: PeerReferenceField;
+  entry: string;
+  candidateIds: string[];
+};
+
+export type PeerSignalMap = {
+  blockedPairKeys: Set<string>;
+  requestPairKeys: Set<string>;
+  mutualRequestPairKeys: Set<string>;
+  flaggedFriendPairKeys: Set<string>;
+  ambiguousReferences: PeerReferenceAmbiguity[];
+};
+
 const ONE_SIDED_REQUEST_BONUS = 12;
 const FRIEND_RISK_SCORE_THRESHOLD = 65;
 const TEAM_REVIEW_MIN_PAIR_SAFETY = 55;
@@ -931,6 +948,22 @@ export function pairKey(aId: string, bId: string) {
   return [aId, bId].sort().join("::");
 }
 
+function directedPairKey(fromId: string, toId: string) {
+  return `${fromId}::${toId}`;
+}
+
+const PEER_ID_FIELDS: Record<PeerReferenceField, string> = {
+  doNotPairWith: "doNotPairWithIds",
+  wantToWorkWith: "wantToWorkWithIds",
+  friendsInClass: "friendsInClassIds",
+};
+
+const PEER_REFERENCE_FIELDS: PeerReferenceField[] = [
+  "doNotPairWith",
+  "wantToWorkWith",
+  "friendsInClass",
+];
+
 function blockTargets(student: MatchStudent) {
   return [student.name, student.identifier, student.id]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -938,23 +971,45 @@ function blockTargets(student: MatchStudent) {
 }
 
 function blockEntries(student: MatchStudent) {
-  return textEntries(student, "doNotPairWith");
+  return peerEntries(student, "doNotPairWith");
 }
 
 function requestEntries(student: MatchStudent) {
-  return textEntries(student, "wantToWorkWith");
+  return peerEntries(student, "wantToWorkWith");
 }
 
 function friendEntries(student: MatchStudent) {
-  return textEntries(student, "friendsInClass");
+  return peerEntries(student, "friendsInClass");
 }
 
-function textEntries(student: MatchStudent, field: string) {
-  const raw = text(student.answers, field);
-  return raw
-    .split(/[,;\n]+/)
+function rawAnswerEntries(value: AnswerValue) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .flatMap((item) => item.split(/[,;\n]+/))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/[,;\n]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function peerEntryValues(student: MatchStudent, field: PeerReferenceField) {
+  return [
+    ...rawAnswerEntries(student.answers[field]),
+    ...rawAnswerEntries(student.answers[PEER_ID_FIELDS[field]]),
+  ];
+}
+
+function peerEntries(student: MatchStudent, field: PeerReferenceField) {
+  return peerEntryValues(student, field)
     .map(key)
-    .filter((entry) => entry.length >= 2);
+    .filter((entry, index, entries) => entry.length >= 2 && entries.indexOf(entry) === index);
 }
 
 function matchesTarget(entries: string[], targets: string[]) {
@@ -983,8 +1038,181 @@ export function isFlaggedFriend(a: MatchStudent, b: MatchStudent) {
   return matchesTarget(friendEntries(a), blockTargets(b));
 }
 
-export function friendRiskInsight(a: MatchStudent, b: MatchStudent) {
-  if (!isFlaggedFriend(a, b)) return null;
+type PeerTarget = {
+  studentId: string;
+  idKey: string;
+  identifierKey: string;
+  nameKey: string;
+};
+
+function targetIndex(students: MatchStudent[]) {
+  return students.map((student) => ({
+    studentId: student.id,
+    idKey: key(student.id),
+    identifierKey: key(student.identifier ?? ""),
+    nameKey: key(student.name ?? ""),
+  }));
+}
+
+function uniqueCandidateIds(candidates: PeerTarget[]) {
+  return Array.from(new Set(candidates.map((candidate) => candidate.studentId))).sort();
+}
+
+function exactCandidates(
+  entryKey: string,
+  candidates: PeerTarget[],
+  targetField: keyof PeerTarget,
+) {
+  return uniqueCandidateIds(candidates.filter((candidate) => candidate[targetField] === entryKey));
+}
+
+function looseReferenceMatches(entryKey: string, targetKey: string) {
+  if (entryKey.length < 3 || !targetKey) return false;
+  if (entryKey === targetKey) return true;
+
+  const entryWords = entryKey.split(" ").filter(Boolean);
+  const targetWords = targetKey.split(" ").filter(Boolean);
+  if (!entryWords.length || !targetWords.length) return false;
+
+  if (entryWords.length === 1) {
+    return targetWords.includes(entryWords[0] ?? "");
+  }
+
+  return entryWords.every((word) =>
+    targetWords.some((targetWord) => targetWord === word || targetWord.startsWith(word)),
+  );
+}
+
+function looseCandidates(entryKey: string, candidates: PeerTarget[]) {
+  return uniqueCandidateIds(
+    candidates.filter(
+      (candidate) =>
+        looseReferenceMatches(entryKey, candidate.identifierKey) ||
+        looseReferenceMatches(entryKey, candidate.nameKey),
+    ),
+  );
+}
+
+function resolvePeerEntry(
+  requester: MatchStudent,
+  field: PeerReferenceField,
+  entry: string,
+  candidates: PeerTarget[],
+): { targetId: string | null; ambiguity: PeerReferenceAmbiguity | null } {
+  const entryKey = key(entry);
+  if (entryKey.length < 2) return { targetId: null, ambiguity: null };
+
+  const available = candidates.filter((candidate) => candidate.studentId !== requester.id);
+  const candidateGroups = [
+    exactCandidates(entryKey, available, "idKey"),
+    exactCandidates(entryKey, available, "identifierKey"),
+    exactCandidates(entryKey, available, "nameKey"),
+    looseCandidates(entryKey, available),
+  ];
+
+  for (const candidateIds of candidateGroups) {
+    if (candidateIds.length === 1) return { targetId: candidateIds[0] ?? null, ambiguity: null };
+    if (candidateIds.length > 1) {
+      return {
+        targetId: null,
+        ambiguity: {
+          studentId: requester.id,
+          field,
+          entry,
+          candidateIds,
+        },
+      };
+    }
+  }
+
+  return { targetId: null, ambiguity: null };
+}
+
+export function buildPeerSignalMap(students: MatchStudent[]): PeerSignalMap {
+  const signals: PeerSignalMap = {
+    blockedPairKeys: new Set<string>(),
+    requestPairKeys: new Set<string>(),
+    mutualRequestPairKeys: new Set<string>(),
+    flaggedFriendPairKeys: new Set<string>(),
+    ambiguousReferences: [],
+  };
+  const candidates = targetIndex(students);
+
+  for (const student of students) {
+    for (const field of PEER_REFERENCE_FIELDS) {
+      const resolvedTargets = new Set<string>();
+      for (const entry of peerEntryValues(student, field)) {
+        const { targetId, ambiguity } = resolvePeerEntry(student, field, entry, candidates);
+        if (ambiguity) signals.ambiguousReferences.push(ambiguity);
+        if (targetId) resolvedTargets.add(targetId);
+      }
+
+      for (const targetId of resolvedTargets) {
+        if (field === "doNotPairWith") signals.blockedPairKeys.add(pairKey(student.id, targetId));
+        if (field === "wantToWorkWith") {
+          signals.requestPairKeys.add(directedPairKey(student.id, targetId));
+        }
+        if (field === "friendsInClass") {
+          signals.flaggedFriendPairKeys.add(directedPairKey(student.id, targetId));
+        }
+      }
+    }
+  }
+
+  for (const requestKey of signals.requestPairKeys) {
+    const [fromId, toId] = requestKey.split("::");
+    if (!fromId || !toId) continue;
+    if (signals.requestPairKeys.has(directedPairKey(toId, fromId))) {
+      signals.mutualRequestPairKeys.add(pairKey(fromId, toId));
+    }
+  }
+
+  return signals;
+}
+
+function peerSignalBlocked(a: MatchStudent, b: MatchStudent, signals: PeerSignalMap) {
+  return signals.blockedPairKeys.has(pairKey(a.id, b.id));
+}
+
+function peerSignalRequested(
+  requester: MatchStudent,
+  target: MatchStudent,
+  signals: PeerSignalMap,
+) {
+  return signals.requestPairKeys.has(directedPairKey(requester.id, target.id));
+}
+
+export function pairBlockedBySignals(
+  a: MatchStudent,
+  b: MatchStudent,
+  signals: PeerSignalMap,
+  blockedPairKeys = new Set<string>(),
+) {
+  return blockedPairKeys.has(pairKey(a.id, b.id)) || peerSignalBlocked(a, b, signals);
+}
+
+export function mutualRequestBySignals(a: MatchStudent, b: MatchStudent, signals: PeerSignalMap) {
+  return signals.mutualRequestPairKeys.has(pairKey(a.id, b.id));
+}
+
+export function isFlaggedFriendBySignals(a: MatchStudent, b: MatchStudent, signals: PeerSignalMap) {
+  return signals.flaggedFriendPairKeys.has(directedPairKey(a.id, b.id));
+}
+
+function requestedBySignalAware(
+  requester: MatchStudent,
+  target: MatchStudent,
+  signals?: PeerSignalMap,
+) {
+  return signals ? peerSignalRequested(requester, target, signals) : requestedBy(requester, target);
+}
+
+function mutualRequestSignalAware(a: MatchStudent, b: MatchStudent, signals?: PeerSignalMap) {
+  return signals ? mutualRequestBySignals(a, b, signals) : mutualRequest(a, b);
+}
+
+export function friendRiskInsight(a: MatchStudent, b: MatchStudent, signals?: PeerSignalMap) {
+  if (signals ? !isFlaggedFriendBySignals(a, b, signals) : !isFlaggedFriend(a, b)) return null;
 
   const details = pairFrictionDetails(a.answers, b.answers);
   if (details.breakdown.final >= FRIEND_RISK_SCORE_THRESHOLD) return null;
@@ -1190,6 +1418,7 @@ export function riskProofs(a: Answers, b: Answers) {
 export function teamBreakdown(
   team: MatchStudent[],
   blockedPairKeys = new Set<string>(),
+  signals?: PeerSignalMap,
 ): TeamQualityBreakdown {
   if (team.length <= 1) {
     return {
@@ -1224,7 +1453,7 @@ export function teamBreakdown(
       const left = team[i];
       const right = team[j];
       if (!left || !right) continue;
-      if (!pairAllowed(left, right, blockedPairKeys)) blocked = true;
+      if (!pairAllowed(left, right, blockedPairKeys, signals)) blocked = true;
       const breakdown = matchBreakdown(left.answers, right.answers);
       pairs.push(breakdown);
       pairSafeties.push(pairSafetyFromBreakdown(breakdown));
@@ -1262,7 +1491,7 @@ export function teamBreakdown(
       entry.count ? Math.round(entry.total / entry.count) : 45,
     ),
   );
-  const requestSatisfaction = requestSatisfactionScore(team);
+  const requestSatisfaction = requestSatisfactionScore(team, signals);
   const reviewFlags = teamReviewFlags({
     minPairSafety,
     logistics,
@@ -1492,7 +1721,7 @@ function roleBalanceScore(team: MatchStudent[]) {
   return clampScore(100 - duplicatePenalty - missingCoordinatorPenalty);
 }
 
-function requestSatisfactionScore(team: MatchStudent[]) {
+function requestSatisfactionScore(team: MatchStudent[], signals?: PeerSignalMap) {
   let requestCount = 0;
   let satisfied = 0;
 
@@ -1501,10 +1730,10 @@ function requestSatisfactionScore(team: MatchStudent[]) {
       const left = team[i];
       const right = team[j];
       if (!left || !right) continue;
-      if (mutualRequest(left, right)) {
+      if (mutualRequestSignalAware(left, right, signals)) {
         requestCount += 2;
         satisfied += 2;
-      } else if (oneSidedRequest(left, right)) {
+      } else if (oneSidedRequest(left, right, signals)) {
         requestCount += 1;
         satisfied += 1;
       }
@@ -1588,30 +1817,50 @@ export function formTeams(
   if (teamSize === 2) return maximumWeightMatching(students, blockedPairKeys);
 
   const targetTeamSize = Number.isFinite(teamSize) ? Math.max(3, Math.floor(teamSize)) : 3;
+  const peerSignals = buildPeerSignalMap(students);
+  const effectiveBlockedPairKeys = new Set([...blockedPairKeys, ...peerSignals.blockedPairKeys]);
   const unassigned = [...students];
-  const teamMembers = forcedRequestSubgroups(unassigned, targetTeamSize, blockedPairKeys);
+  const teamMembers = forcedRequestSubgroups(
+    unassigned,
+    targetTeamSize,
+    effectiveBlockedPairKeys,
+    peerSignals,
+  );
 
   for (const team of teamMembers) {
     while (team.length < targetTeamSize) {
-      const next = bestFitStudentForTeam(unassigned, team, blockedPairKeys);
+      const next = bestFitStudentForTeam(unassigned, team, effectiveBlockedPairKeys, peerSignals);
       if (!next) break;
       team.push(next.student);
       removeStudent(unassigned, next.student.id);
     }
   }
 
-  const solved = solveTeamAssignment(unassigned, targetTeamSize, blockedPairKeys);
+  const solved = solveTeamAssignment(
+    unassigned,
+    targetTeamSize,
+    effectiveBlockedPairKeys,
+    peerSignals,
+  );
   teamMembers.push(...solved.teams);
   unassigned.splice(0, unassigned.length, ...solved.unmatched);
 
   for (const student of [...unassigned]) {
-    const fit = bestFitExistingTeam(student, teamMembers, targetTeamSize, blockedPairKeys);
+    const fit = bestFitExistingTeam(
+      student,
+      teamMembers,
+      targetTeamSize,
+      effectiveBlockedPairKeys,
+      peerSignals,
+    );
     if (!fit) continue;
     teamMembers[fit.teamIndex]?.push(student);
     removeStudent(unassigned, student.id);
   }
 
-  const teams = teamMembers.map((team) => summarizeTeam(team, blockedPairKeys));
+  const teams = teamMembers.map((team) =>
+    summarizeTeam(team, effectiveBlockedPairKeys, peerSignals),
+  );
 
   return {
     algorithm: "greedy-clustering",
@@ -1644,6 +1893,7 @@ function solveTeamAssignment(
   students: MatchStudent[],
   targetTeamSize: number,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ): TeamAssignmentState {
   if (students.length <= 1) return { teams: [], unmatched: [...students] };
 
@@ -1655,10 +1905,10 @@ function solveTeamAssignment(
   for (const pattern of patternsToTry) {
     const candidate =
       students.length <= EXACT_TEAM_SEARCH_LIMIT
-        ? solvePatternExact(students, pattern, blockedPairKeys)
-        : solvePatternGreedy(students, pattern, blockedPairKeys);
+        ? solvePatternExact(students, pattern, blockedPairKeys, signals)
+        : solvePatternGreedy(students, pattern, blockedPairKeys, signals);
     if (!candidate) continue;
-    if (!best || betterAssignment(candidate, best, blockedPairKeys)) best = candidate;
+    if (!best || betterAssignment(candidate, best, blockedPairKeys, signals)) best = candidate;
   }
 
   if (!best)
@@ -1666,9 +1916,10 @@ function solveTeamAssignment(
       students,
       [Math.min(targetTeamSize, students.length)],
       blockedPairKeys,
+      signals,
     );
   return {
-    teams: best.teams.length > 5 ? best.teams : polishTeams(best.teams, blockedPairKeys),
+    teams: best.teams.length > 5 ? best.teams : polishTeams(best.teams, blockedPairKeys, signals),
     unmatched: best.unmatched,
   };
 }
@@ -1715,13 +1966,14 @@ function solvePatternExact(
   students: MatchStudent[],
   pattern: number[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ): TeamAssignmentState | null {
   let best: TeamAssignmentState | null = null;
 
   function search(remaining: MatchStudent[], patternIndex: number, teams: MatchStudent[][]) {
     if (patternIndex >= pattern.length) {
       const candidate = { teams: teams.map((team) => [...team]), unmatched: [...remaining] };
-      if (!best || betterAssignment(candidate, best, blockedPairKeys)) best = candidate;
+      if (!best || betterAssignment(candidate, best, blockedPairKeys, signals)) best = candidate;
       return;
     }
 
@@ -1733,7 +1985,7 @@ function solvePatternExact(
 
     for (const combo of combinations(rest, size - 1)) {
       const team = [anchor, ...combo];
-      if (!teamAllowed(team, blockedPairKeys)) continue;
+      if (!teamAllowed(team, blockedPairKeys, signals)) continue;
       const nextRemaining = withoutStudents(rest, combo);
       search(nextRemaining, patternIndex + 1, [...teams, team]);
     }
@@ -1747,13 +1999,14 @@ function solvePatternGreedy(
   students: MatchStudent[],
   pattern: number[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ): TeamAssignmentState {
   const remaining = [...students];
   const teams: MatchStudent[][] = [];
 
   for (const size of pattern) {
     if (remaining.length < size) break;
-    const team = bestGreedyTeamOfSize(remaining, size, blockedPairKeys);
+    const team = bestGreedyTeamOfSize(remaining, size, blockedPairKeys, signals);
     if (!team) break;
     teams.push(team);
     for (const student of team) removeStudent(remaining, student.id);
@@ -1769,9 +2022,13 @@ function bestGreedyTeamOfSize(
   students: MatchStudent[],
   teamSize: number,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   let best: MatchStudent[] | null = null;
-  const seeds = bestSeedPairs(students, blockedPairKeys).slice(0, Math.min(8, students.length));
+  const seeds = bestSeedPairs(students, blockedPairKeys, signals).slice(
+    0,
+    Math.min(8, students.length),
+  );
 
   for (const seed of seeds) {
     const team = [seed.left, seed.right];
@@ -1779,15 +2036,16 @@ function bestGreedyTeamOfSize(
       (student) => !team.some((member) => member.id === student.id),
     );
     while (team.length < teamSize) {
-      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys);
+      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys, signals);
       if (!next) break;
       team.push(next.student);
       removeStudent(candidates, next.student.id);
     }
-    if (team.length !== teamSize || !teamAllowed(team, blockedPairKeys)) continue;
+    if (team.length !== teamSize || !teamAllowed(team, blockedPairKeys, signals)) continue;
     if (
       !best ||
-      teamBreakdown(team, blockedPairKeys).score > teamBreakdown(best, blockedPairKeys).score
+      teamBreakdown(team, blockedPairKeys, signals).score >
+        teamBreakdown(best, blockedPairKeys, signals).score
     ) {
       best = team;
     }
@@ -1797,18 +2055,22 @@ function bestGreedyTeamOfSize(
     const team = [students[0]].filter((student): student is MatchStudent => Boolean(student));
     const candidates = students.slice(1);
     while (team.length < teamSize) {
-      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys);
+      const next = bestFitStudentForTeam(candidates, team, blockedPairKeys, signals);
       if (!next) break;
       team.push(next.student);
       removeStudent(candidates, next.student.id);
     }
-    if (team.length === teamSize && teamAllowed(team, blockedPairKeys)) best = team;
+    if (team.length === teamSize && teamAllowed(team, blockedPairKeys, signals)) best = team;
   }
 
   return best;
 }
 
-function bestSeedPairs(students: MatchStudent[], blockedPairKeys: Set<string>) {
+function bestSeedPairs(
+  students: MatchStudent[],
+  blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
+) {
   const pairs: Array<{
     left: MatchStudent;
     right: MatchStudent;
@@ -1820,7 +2082,7 @@ function bestSeedPairs(students: MatchStudent[], blockedPairKeys: Set<string>) {
       const left = students[i];
       const right = students[j];
       if (!left || !right) continue;
-      const pair = buildPair(left, right, blockedPairKeys, true);
+      const pair = buildPair(left, right, blockedPairKeys, true, signals);
       if (pair) pairs.push({ left, right, pair });
     }
   }
@@ -1856,12 +2118,12 @@ function withoutStudents(students: MatchStudent[], removed: MatchStudent[]) {
   return students.filter((student) => !removedIds.has(student.id));
 }
 
-function teamAllowed(team: MatchStudent[], blockedPairKeys: Set<string>) {
+function teamAllowed(team: MatchStudent[], blockedPairKeys: Set<string>, signals?: PeerSignalMap) {
   for (let i = 0; i < team.length; i += 1) {
     for (let j = i + 1; j < team.length; j += 1) {
       const left = team[i];
       const right = team[j];
-      if (!left || !right || !pairAllowed(left, right, blockedPairKeys)) return false;
+      if (!left || !right || !pairAllowed(left, right, blockedPairKeys, signals)) return false;
     }
   }
   return true;
@@ -1870,8 +2132,9 @@ function teamAllowed(team: MatchStudent[], blockedPairKeys: Set<string>) {
 function assignmentMetrics(
   assignment: TeamAssignmentState,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ): AssignmentMetrics {
-  const qualities = assignment.teams.map((team) => teamBreakdown(team, blockedPairKeys));
+  const qualities = assignment.teams.map((team) => teamBreakdown(team, blockedPairKeys, signals));
   const assignedCount = assignment.teams.reduce((sum, team) => sum + team.length, 0);
   const totalQuality = qualities.reduce((sum, quality) => sum + quality.score, 0);
   const averageQuality = qualities.length ? totalQuality / qualities.length : 0;
@@ -1899,9 +2162,10 @@ function betterAssignment(
   candidate: TeamAssignmentState,
   current: TeamAssignmentState,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
-  const left = assignmentMetrics(candidate, blockedPairKeys);
-  const right = assignmentMetrics(current, blockedPairKeys);
+  const left = assignmentMetrics(candidate, blockedPairKeys, signals);
+  const right = assignmentMetrics(current, blockedPairKeys, signals);
   if (left.assignedCount !== right.assignedCount) return left.assignedCount > right.assignedCount;
   if (left.severeReviewCount !== right.severeReviewCount) {
     return left.severeReviewCount < right.severeReviewCount;
@@ -1913,7 +2177,11 @@ function betterAssignment(
   return left.variance < right.variance;
 }
 
-function polishTeams(teams: MatchStudent[][], blockedPairKeys: Set<string>) {
+function polishTeams(
+  teams: MatchStudent[][],
+  blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
+) {
   let current = teams.map((team) => [...team]);
   let improved = true;
   let passes = 0;
@@ -1937,8 +2205,8 @@ function polishTeams(teams: MatchStudent[][], blockedPairKeys: Set<string>) {
             swapped[leftIndex]![a] = rightStudent;
             swapped[rightIndex]![b] = leftStudent;
             if (
-              !teamAllowed(swapped[leftIndex] ?? [], blockedPairKeys) ||
-              !teamAllowed(swapped[rightIndex] ?? [], blockedPairKeys)
+              !teamAllowed(swapped[leftIndex] ?? [], blockedPairKeys, signals) ||
+              !teamAllowed(swapped[rightIndex] ?? [], blockedPairKeys, signals)
             ) {
               continue;
             }
@@ -1947,6 +2215,7 @@ function polishTeams(teams: MatchStudent[][], blockedPairKeys: Set<string>) {
                 { teams: swapped, unmatched: [] },
                 { teams: current, unmatched: [] },
                 blockedPairKeys,
+                signals,
               )
             ) {
               current = swapped;
@@ -1961,12 +2230,18 @@ function polishTeams(teams: MatchStudent[][], blockedPairKeys: Set<string>) {
   return current;
 }
 
-function pairAllowed(a: MatchStudent, b: MatchStudent, blockedPairKeys: Set<string>) {
-  return !blockedPairKeys.has(pairKey(a.id, b.id)) && !pairBlocked(a, b);
+function pairAllowed(
+  a: MatchStudent,
+  b: MatchStudent,
+  blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
+) {
+  if (blockedPairKeys.has(pairKey(a.id, b.id))) return false;
+  return signals ? !peerSignalBlocked(a, b, signals) : !pairBlocked(a, b);
 }
 
-function oneSidedRequest(a: MatchStudent, b: MatchStudent) {
-  return requestedBy(a, b) !== requestedBy(b, a);
+function oneSidedRequest(a: MatchStudent, b: MatchStudent, signals?: PeerSignalMap) {
+  return requestedBySignalAware(a, b, signals) !== requestedBySignalAware(b, a, signals);
 }
 
 function buildPair(
@@ -1974,11 +2249,12 @@ function buildPair(
   b: MatchStudent,
   blockedPairKeys: Set<string>,
   requestBonus = false,
+  signals?: PeerSignalMap,
 ): MatchingPlan["pairs"][number] | null {
-  if (!pairAllowed(a, b, blockedPairKeys)) return null;
+  if (!pairAllowed(a, b, blockedPairKeys, signals)) return null;
   const breakdown = matchBreakdown(a.answers, b.answers);
   const score =
-    requestBonus && oneSidedRequest(a, b)
+    requestBonus && oneSidedRequest(a, b, signals)
       ? clampScore(breakdown.final + ONE_SIDED_REQUEST_BONUS)
       : breakdown.final;
   return {
@@ -1998,7 +2274,11 @@ function betterPair(
   return pairKey(candidate.aId, candidate.bId) < pairKey(current.aId, current.bId);
 }
 
-function bestSeedPair(students: MatchStudent[], blockedPairKeys: Set<string>) {
+function bestSeedPair(
+  students: MatchStudent[],
+  blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
+) {
   let best: {
     left: MatchStudent;
     right: MatchStudent;
@@ -2010,7 +2290,7 @@ function bestSeedPair(students: MatchStudent[], blockedPairKeys: Set<string>) {
       const left = students[i];
       const right = students[j];
       if (!left || !right) continue;
-      const pair = buildPair(left, right, blockedPairKeys, true);
+      const pair = buildPair(left, right, blockedPairKeys, true, signals);
       if (!pair || !betterPair(pair, best?.pair ?? null)) continue;
       best = { left, right, pair };
     }
@@ -2023,12 +2303,13 @@ function averageFitForTeam(
   student: MatchStudent,
   team: MatchStudent[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   if (!team.length) return null;
   let total = 0;
 
   for (const teammate of team) {
-    const pair = buildPair(student, teammate, blockedPairKeys, true);
+    const pair = buildPair(student, teammate, blockedPairKeys, true, signals);
     if (!pair) return null;
     total += pair.score;
   }
@@ -2040,13 +2321,14 @@ function bestFitStudentForTeam(
   candidates: MatchStudent[],
   team: MatchStudent[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   let best: { student: MatchStudent; teamScore: number; averageScore: number } | null = null;
 
   for (const student of candidates) {
-    const averageScore = averageFitForTeam(student, team, blockedPairKeys);
+    const averageScore = averageFitForTeam(student, team, blockedPairKeys, signals);
     if (averageScore === null) continue;
-    const teamScore = teamBreakdown([...team, student], blockedPairKeys).score;
+    const teamScore = teamBreakdown([...team, student], blockedPairKeys, signals).score;
     if (
       !best ||
       teamScore > best.teamScore ||
@@ -2066,11 +2348,12 @@ function forcedRequestSubgroups(
   unassigned: MatchStudent[],
   targetTeamSize: number,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   const groups: MatchStudent[][] = [];
 
   while (true) {
-    const seed = bestMutualSeedPair(unassigned, blockedPairKeys);
+    const seed = bestMutualSeedPair(unassigned, blockedPairKeys, signals);
     if (!seed) break;
 
     const group = [seed.left, seed.right];
@@ -2078,7 +2361,7 @@ function forcedRequestSubgroups(
     removeStudent(unassigned, seed.right.id);
 
     while (group.length < targetTeamSize) {
-      const next = bestMutualFitStudentForGroup(unassigned, group, blockedPairKeys);
+      const next = bestMutualFitStudentForGroup(unassigned, group, blockedPairKeys, signals);
       if (!next) break;
       group.push(next.student);
       removeStudent(unassigned, next.student.id);
@@ -2090,7 +2373,11 @@ function forcedRequestSubgroups(
   return groups;
 }
 
-function bestMutualSeedPair(students: MatchStudent[], blockedPairKeys: Set<string>) {
+function bestMutualSeedPair(
+  students: MatchStudent[],
+  blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
+) {
   let best: {
     left: MatchStudent;
     right: MatchStudent;
@@ -2101,8 +2388,8 @@ function bestMutualSeedPair(students: MatchStudent[], blockedPairKeys: Set<strin
     for (let j = i + 1; j < students.length; j += 1) {
       const left = students[i];
       const right = students[j];
-      if (!left || !right || !mutualRequest(left, right)) continue;
-      const pair = buildPair(left, right, blockedPairKeys);
+      if (!left || !right || !mutualRequestSignalAware(left, right, signals)) continue;
+      const pair = buildPair(left, right, blockedPairKeys, false, signals);
       if (!pair || !betterPair(pair, best?.pair ?? null)) continue;
       best = { left, right, pair };
     }
@@ -2115,12 +2402,13 @@ function bestMutualFitStudentForGroup(
   candidates: MatchStudent[],
   group: MatchStudent[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   let best: { student: MatchStudent; averageScore: number } | null = null;
 
   for (const student of candidates) {
-    if (!group.some((member) => mutualRequest(student, member))) continue;
-    const averageScore = rawAverageFitForTeam(student, group, blockedPairKeys);
+    if (!group.some((member) => mutualRequestSignalAware(student, member, signals))) continue;
+    const averageScore = rawAverageFitForTeam(student, group, blockedPairKeys, signals);
     if (averageScore === null) continue;
     if (
       !best ||
@@ -2138,12 +2426,13 @@ function rawAverageFitForTeam(
   student: MatchStudent,
   team: MatchStudent[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   if (!team.length) return null;
   let total = 0;
 
   for (const teammate of team) {
-    const pair = buildPair(student, teammate, blockedPairKeys);
+    const pair = buildPair(student, teammate, blockedPairKeys, false, signals);
     if (!pair) return null;
     total += pair.score;
   }
@@ -2156,18 +2445,22 @@ function bestFitExistingTeam(
   teams: MatchStudent[][],
   targetTeamSize: number,
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ) {
   let best: { teamIndex: number; teamScore: number; averageScore: number } | null = null;
 
   for (let teamIndex = 0; teamIndex < teams.length; teamIndex += 1) {
     const team = teams[teamIndex];
     if (!team || team.length >= targetTeamSize + 1) continue;
-    if (team.length >= targetTeamSize && team.some((member) => mutualRequest(student, member))) {
+    if (
+      team.length >= targetTeamSize &&
+      team.some((member) => mutualRequestSignalAware(student, member, signals))
+    ) {
       continue;
     }
-    const averageScore = averageFitForTeam(student, team, blockedPairKeys);
+    const averageScore = averageFitForTeam(student, team, blockedPairKeys, signals);
     if (averageScore === null) continue;
-    const teamScore = teamBreakdown([...team, student], blockedPairKeys).score;
+    const teamScore = teamBreakdown([...team, student], blockedPairKeys, signals).score;
     if (
       !best ||
       teamScore > best.teamScore ||
@@ -2191,6 +2484,7 @@ function removeStudent(students: MatchStudent[], id: string) {
 function summarizeTeam(
   team: MatchStudent[],
   blockedPairKeys: Set<string>,
+  signals?: PeerSignalMap,
 ): TeamMatchingPlan["teams"][number] {
   const pairs: MatchingPlan["pairs"] = [];
 
@@ -2210,7 +2504,7 @@ function summarizeTeam(
   }
 
   const pairScoreTotal = pairs.reduce((sum, pair) => sum + pair.score, 0);
-  const quality = teamBreakdown(team, blockedPairKeys);
+  const quality = teamBreakdown(team, blockedPairKeys, signals);
 
   return {
     memberIds: team.map((student) => student.id),

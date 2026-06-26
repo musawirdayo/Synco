@@ -20,10 +20,11 @@ import {
   pairFrictionInsight,
   confidence,
   matchBreakdown,
-  pairBlocked,
+  buildPeerSignalMap,
+  pairBlockedBySignals,
   formTeams,
   friendRiskInsight,
-  isFlaggedFriend,
+  isFlaggedFriendBySignals,
   matchProofs,
   pairIsRisky,
   pairRiskScore,
@@ -287,6 +288,21 @@ function ClassPage() {
   const memberByStudent = new Map(members.map((member) => [member.student_id, member]));
   const nameOf = (sid: string) =>
     members.find((m) => m.student_id === sid)?.display_name ?? "Classmate";
+  const completedStudents: Array<
+    MatchStudent & { name: string; archetype: string; identifier: string | null }
+  > = completed.map((response) => {
+    const member = memberByStudent.get(response.student_id);
+    const name = member?.display_name ?? nameOf(response.student_id);
+    return {
+      id: response.student_id,
+      answers: response.answers,
+      name,
+      archetype: archetype(response.answers),
+      identifier: member?.identifier ?? null,
+    };
+  });
+  const completedStudentById = new Map(completedStudents.map((student) => [student.id, student]));
+  const peerSignals = buildPeerSignalMap(completedStudents);
   const missingJoined = members.filter((m) => !respByStudent.get(m.student_id)?.completed);
   const unclaimedRoster = cls.roster_lock_enabled
     ? rosterEntries.filter((entry) => !entry.claimed_by)
@@ -326,35 +342,27 @@ function ClassPage() {
           .filter(Boolean)
           .join(" · ")
       : "No obvious missing students.";
+  const peerReferenceWarning = peerSignals.ambiguousReferences.length
+    ? `${peerSignals.ambiguousReferences.length} friend/request/avoid entr${
+        peerSignals.ambiguousReferences.length === 1 ? "y matches" : "ies match"
+      } more than one classmate. Synco will ignore ambiguous names; ask students to use roll numbers or identifiers when names repeat.`
+    : "";
 
   function rankedPeersFor(self: Resp): RankedPeer[] {
-    const selfMember = memberByStudent.get(self.student_id);
-    const selfCandidate = {
-      id: self.student_id,
-      answers: self.answers,
-      name: selfMember?.display_name ?? nameOf(self.student_id),
-      identifier: selfMember?.identifier ?? null,
-    };
+    const selfCandidate = completedStudentById.get(self.student_id);
+    if (!selfCandidate) return [];
     return completed
       .filter((o) => o.student_id !== self.student_id)
       .filter((o) => {
-        const otherMember = memberByStudent.get(o.student_id);
-        return !pairBlocked(selfCandidate, {
-          id: o.student_id,
-          answers: o.answers,
-          name: otherMember?.display_name ?? nameOf(o.student_id),
-          identifier: otherMember?.identifier ?? null,
-        });
+        const otherCandidate = completedStudentById.get(o.student_id);
+        return otherCandidate
+          ? !pairBlockedBySignals(selfCandidate, otherCandidate, peerSignals)
+          : false;
       })
       .map((o) => {
-        const otherMember = memberByStudent.get(o.student_id);
-        const actualName = otherMember?.display_name ?? nameOf(o.student_id);
-        const otherCandidate = {
-          id: o.student_id,
-          answers: o.answers,
-          name: actualName,
-          identifier: otherMember?.identifier ?? null,
-        };
+        const otherCandidate = completedStudentById.get(o.student_id);
+        if (!otherCandidate) return null;
+        const actualName = otherCandidate.name;
         const breakdown = matchBreakdown(self.answers, o.answers);
         const riskScore = pairRiskScore(self.answers, o.answers);
         return {
@@ -366,16 +374,17 @@ function ClassPage() {
           breakdown,
           insight: pairInsight(self.answers, o.answers),
           friction: pairFrictionInsight(self.answers, o.answers),
-          friendFlagged: isFlaggedFriend(selfCandidate, otherCandidate),
-          friendRisk: friendRiskInsight(selfCandidate, otherCandidate),
+          friendFlagged: isFlaggedFriendBySignals(selfCandidate, otherCandidate, peerSignals),
+          friendRisk: friendRiskInsight(selfCandidate, otherCandidate, peerSignals),
           proofs: matchProofs(self.answers, o.answers),
           riskProofs: riskProofs(self.answers, o.answers),
           riskScore,
           isRisky: pairIsRisky(self.answers, o.answers),
           answers: o.answers,
-          identifier: otherMember?.identifier ?? null,
+          identifier: otherCandidate.identifier,
         };
       })
+      .filter((peer): peer is NonNullable<typeof peer> => Boolean(peer))
       .sort((a, b) => b.score - a.score)
       .map((peer, index) => ({
         ...peer,
@@ -389,23 +398,10 @@ function ClassPage() {
     setPageNotice(null);
     try {
       const generatedAt = new Date().toISOString();
-      const teamStudents: Array<
-        MatchStudent & { name: string; archetype: string; identifier: string | null }
-      > = completed.map((response) => {
-        const member = memberByStudent.get(response.student_id);
-        const name = member?.display_name ?? nameOf(response.student_id);
-        return {
-          id: response.student_id,
-          answers: response.answers,
-          name,
-          archetype: archetype(response.answers),
-          identifier: member?.identifier ?? null,
-        };
-      });
-      const teamPlan = formTeams(teamStudents, cls.team_size);
+      const teamPlan = formTeams(completedStudents, cls.team_size, peerSignals.blockedPairKeys);
       const teamAssignments = buildTeamAssignmentSnapshot({
         plan: teamPlan,
-        students: teamStudents,
+        students: completedStudents,
         teamSize: cls.team_size,
         version: nextVersion,
         generatedAt,
@@ -585,6 +581,9 @@ function ClassPage() {
         .eq("id", id);
       if (publishError) throw publishError;
       setConfirming(false);
+      if (peerReferenceWarning) {
+        setPageNotice({ tone: "info", text: peerReferenceWarning });
+      }
       await load();
     } catch (err) {
       console.error("Failed to publish results:", err);
@@ -897,6 +896,7 @@ function ClassPage() {
           <h2>Publish outcome</h2>
           <p>${escapeHtml(publishOutcome)}</p>
           <p class="muted">${escapeHtml(missingSummary)}</p>
+          ${peerReferenceWarning ? `<p class="muted">${escapeHtml(peerReferenceWarning)}</p>` : ""}
           <h2>Student top compatibility matches</h2>
           <p class="muted">Showing top 3 classmates ranked by compatibility based on availability, academic fit, skills, study style, and goals.</p>
           <table>
@@ -1024,6 +1024,13 @@ function ClassPage() {
                   : `Next version ${nextVersion}`}
               </span>
             </div>
+
+            {peerReferenceWarning && (
+              <div className="mb-4 flex gap-2 rounded-lg border border-accent/35 bg-[color:var(--color-accent-light)] px-3 py-2 text-sm text-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>{peerReferenceWarning}</span>
+              </div>
+            )}
 
             <div className="grid gap-3 md:grid-cols-4">
               <DecisionTile
@@ -1516,6 +1523,12 @@ function ClassPage() {
               {nextVersion} immediately. This refreshes match rationale and readiness cards for
               every completed student.
             </p>
+            {peerReferenceWarning && (
+              <div className="mb-6 flex gap-2 rounded-lg border border-accent/35 bg-[color:var(--color-accent-light)] px-3 py-2 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>{peerReferenceWarning}</span>
+              </div>
+            )}
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirming(false)}

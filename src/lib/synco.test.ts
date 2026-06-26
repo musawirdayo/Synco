@@ -11,13 +11,17 @@ import {
   pairFrictionInsight,
   friendRiskInsight,
   matchProofs,
+  buildPeerSignalMap,
   maximumWeightMatching,
   formTeams,
   isFlaggedFriend,
+  isFlaggedFriendBySignals,
   pairIsRisky,
   pairRiskScore,
   mutualRequest,
+  mutualRequestBySignals,
   pairBlocked,
+  pairBlockedBySignals,
   pairKey,
   riskProofs,
   teamBreakdown,
@@ -801,6 +805,114 @@ describe("pairBlocked", () => {
     };
     const b: MatchStudent = { id: "b", answers: studentB(), name: "Bob" };
     expect(pairBlocked(a, b)).toBe(true);
+  });
+});
+
+// ─── class-aware peer reference tests ───
+
+describe("buildPeerSignalMap", () => {
+  it("matches identifiers without caring about capitalization", () => {
+    const a: MatchStudent = {
+      id: "alice",
+      answers: { ...studentA(), doNotPairWith: "stu001" },
+      name: "Alice",
+    };
+    const b: MatchStudent = {
+      id: "bob",
+      answers: studentB(),
+      name: "Bob",
+      identifier: "STU001",
+    };
+
+    const signals = buildPeerSignalMap([a, b]);
+
+    expect(pairBlockedBySignals(a, b, signals)).toBe(true);
+  });
+
+  it("does not guess when a free-text name matches duplicate classmates", () => {
+    const requester: MatchStudent = {
+      id: "alice",
+      answers: { ...studentA(), doNotPairWith: "Sam" },
+      name: "Alice",
+    };
+    const firstSam: MatchStudent = {
+      id: "sam-1",
+      answers: studentB(),
+      name: "Sam",
+      identifier: "S01",
+    };
+    const secondSam: MatchStudent = {
+      id: "sam-2",
+      answers: studentC(),
+      name: "Sam",
+      identifier: "S02",
+    };
+
+    const signals = buildPeerSignalMap([requester, firstSam, secondSam]);
+
+    expect(signals.ambiguousReferences).toEqual([
+      {
+        studentId: "alice",
+        field: "doNotPairWith",
+        entry: "Sam",
+        candidateIds: ["sam-1", "sam-2"],
+      },
+    ]);
+    expect(pairBlockedBySignals(requester, firstSam, signals)).toBe(false);
+    expect(pairBlockedBySignals(requester, secondSam, signals)).toBe(false);
+  });
+
+  it("uses selected student ids to disambiguate duplicate names", () => {
+    const requester: MatchStudent = {
+      id: "alice",
+      answers: { ...studentA(), doNotPairWithIds: ["sam-2"] },
+      name: "Alice",
+    };
+    const firstSam: MatchStudent = {
+      id: "sam-1",
+      answers: studentB(),
+      name: "Sam",
+      identifier: "S01",
+    };
+    const secondSam: MatchStudent = {
+      id: "sam-2",
+      answers: studentC(),
+      name: "Sam",
+      identifier: "S02",
+    };
+
+    const signals = buildPeerSignalMap([requester, firstSam, secondSam]);
+
+    expect(signals.ambiguousReferences).toHaveLength(0);
+    expect(pairBlockedBySignals(requester, firstSam, signals)).toBe(false);
+    expect(pairBlockedBySignals(requester, secondSam, signals)).toBe(true);
+  });
+
+  it("resolves mutual requests and friend flags by selected ids", () => {
+    const a: MatchStudent = {
+      id: "alice",
+      answers: { ...studentA(), wantToWorkWithIds: ["sam-2"], friendsInClassIds: ["sam-1"] },
+      name: "Alice",
+    };
+    const firstSam: MatchStudent = {
+      id: "sam-1",
+      answers: studentB(),
+      name: "Sam",
+      identifier: "S01",
+    };
+    const secondSam: MatchStudent = {
+      id: "sam-2",
+      answers: { ...studentC(), wantToWorkWithIds: ["alice"] },
+      name: "Sam",
+      identifier: "S02",
+    };
+
+    const signals = buildPeerSignalMap([a, firstSam, secondSam]);
+
+    expect(mutualRequestBySignals(a, secondSam, signals)).toBe(true);
+    expect(mutualRequestBySignals(a, firstSam, signals)).toBe(false);
+    expect(isFlaggedFriendBySignals(a, firstSam, signals)).toBe(true);
+    expect(isFlaggedFriendBySignals(a, secondSam, signals)).toBe(false);
   });
 });
 

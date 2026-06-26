@@ -582,3 +582,30 @@ Before pushing to GitHub:
 2. Run the requested verification commands.
 3. Confirm backend migrations are either applied or intentionally deferred.
 4. Commit code, migrations, and this handoff log together.
+
+## 2026-06-26 Peer Reference Hardening
+
+Implemented and ready to push:
+
+- Added a class-aware peer reference resolver in `src/lib/synco.ts`.
+- Free-text friend/request/avoid entries now resolve against the full submitted class roster when publishing/team-forming:
+  - exact student IDs and identifiers/roll numbers are safest;
+  - capitalization, spacing, punctuation, and comma/semicolon/newline separators are handled;
+  - unique names still work;
+  - duplicate-name entries are treated as ambiguous and ignored instead of guessing the wrong student.
+- Added support for future exact ID-backed survey answers:
+  - `doNotPairWithIds`
+  - `wantToWorkWithIds`
+  - `friendsInClassIds`
+- `formTeams`, team quality scoring, teacher risk pairs, publish-time ranked peer lists, friend flags, and friend risk messages now use the same class-aware signal map.
+- `src/routes/class.$id.tsx` now warns the lead in the decision dashboard, printable report, publish confirmation, and post-publish notice if any friend/request/avoid entry is ambiguous.
+- Survey helper text now tells students to use roll numbers/identifiers when names repeat.
+- Added tests for identifier case-insensitivity, duplicate-name ambiguity, selected-ID disambiguation, mutual request IDs, and friend flag IDs.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (93 passing)
+- `npm run build`
+- `git diff --check`

@@ -1,10 +1,12 @@
 import {
-  pairBlocked,
+  buildPeerSignalMap,
+  pairBlockedBySignals,
   pairFrictionInsight,
   matchBreakdown,
   pairInsight,
   privacyMode,
   type Answers,
+  type MatchStudent,
 } from "@/lib/synco";
 
 export type Member = { student_id: string; display_name: string; identifier: string | null };
@@ -19,30 +21,28 @@ export function buildRiskPairs(completed: Resp[], members: Member[]) {
   const pairs: Array<{ a: string; b: string; score: number; watch: string }> = [];
   const nameOf = (sid: string) =>
     members.find((m) => m.student_id === sid)?.display_name ?? "Classmate";
+  const memberByStudent = new Map(members.map((member) => [member.student_id, member]));
+  const students: MatchStudent[] = completed.map((response) => {
+    const member = memberByStudent.get(response.student_id);
+    return {
+      id: response.student_id,
+      answers: response.answers,
+      name: member?.display_name ?? nameOf(response.student_id),
+      identifier: member?.identifier ?? null,
+    };
+  });
+  const peerSignals = buildPeerSignalMap(students);
+  const studentById = new Map(students.map((student) => [student.id, student]));
 
   for (let i = 0; i < completed.length; i += 1) {
     for (let j = i + 1; j < completed.length; j += 1) {
       const left = completed[i];
       const right = completed[j];
       if (!left || !right) continue;
-      const leftMember = members.find((member) => member.student_id === left.student_id);
-      const rightMember = members.find((member) => member.student_id === right.student_id);
-      if (
-        pairBlocked(
-          {
-            id: left.student_id,
-            answers: left.answers,
-            name: leftMember?.display_name ?? nameOf(left.student_id),
-            identifier: leftMember?.identifier ?? null,
-          },
-          {
-            id: right.student_id,
-            answers: right.answers,
-            name: rightMember?.display_name ?? nameOf(right.student_id),
-            identifier: rightMember?.identifier ?? null,
-          },
-        )
-      ) {
+      const leftStudent = studentById.get(left.student_id);
+      const rightStudent = studentById.get(right.student_id);
+      if (!leftStudent || !rightStudent) continue;
+      if (pairBlockedBySignals(leftStudent, rightStudent, peerSignals)) {
         continue;
       }
       const score = matchBreakdown(left.answers, right.answers).final;
