@@ -478,6 +478,25 @@ Verified:
 - `git diff --check`
 - Local dev server still responds at `http://127.0.0.1:5173/results`.
 
+## 2026-06-26 Landing Algorithm Story
+
+Implemented and ready to push:
+
+- `src/routes/index.tsx` now markets Synco around the upgraded matching engine instead of only basic team creation.
+- Hero copy now says Synco creates smarter project teams with reasons included.
+- Matching section now highlights meeting reality, complementary strengths, thinking/work style, hard rules and requests, team safety checks, and proof-based results.
+- Added landing cards for team quality, student match/watch-out guidance, and lead review flags.
+- FAQ now clarifies that Synco does not simply group similar students together.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+- `git diff --check`
+- Local dev server responds at `http://127.0.0.1:5173/`.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

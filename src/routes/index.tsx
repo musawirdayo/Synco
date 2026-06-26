@@ -52,20 +52,46 @@ const productivityBenefits = [
 
 const matchingFactors = [
   {
-    title: "Free time",
-    text: "People who can meet at similar times are easier to place together.",
+    title: "Meeting reality",
+    text: "Shared free time and schedule habits matter because teams fail fast when they cannot actually meet.",
   },
   {
-    title: "Class goals",
-    text: "Teams work better when people want a similar level of effort.",
+    title: "Complementary strengths",
+    text: "Synco does not just stack the same strong students together. It looks for people who cover each other's gaps.",
   },
   {
-    title: "Work habits",
-    text: "Synco checks how people plan, talk, and handle deadlines.",
+    title: "Thinking and work style",
+    text: "Planning style, communication pace, deadline habits, and effort level are checked before a pair is treated as strong.",
   },
   {
-    title: "Do-not-pair notes",
-    text: "Names people should avoid are kept out of the same team when possible.",
+    title: "Hard rules and requests",
+    text: "Do-not-pair notes are kept apart, mutual friend requests are honored up to team size, and one-sided requests stay as soft hints.",
+  },
+  {
+    title: "Team safety checks",
+    text: "Low schedule fit, weak role balance, duplicate strengths, and isolated teammates are flagged before teams are treated as safe.",
+  },
+  {
+    title: "Proof-based results",
+    text: "Students do not just get a score. They see the proof: meeting fit, skill coverage, work rhythm, and what to agree on first.",
+  },
+];
+
+const algorithmOutputs = [
+  {
+    label: "For each team",
+    title: "A team quality check",
+    text: "Synco scores the whole team, not only one pair at a time, so weak links and role gaps are easier to spot.",
+  },
+  {
+    label: "For each student",
+    title: "Best matches and watch-outs",
+    text: "Each student sees who may be easier to work with, who needs caution, and the reason behind both lists.",
+  },
+  {
+    label: "For the lead",
+    title: "Review flags before work starts",
+    text: "Teams that are legal but fragile are marked for review so the class can plan around risk early.",
   },
 ];
 
@@ -132,6 +158,12 @@ const faqs = [
     question: "What does Synco ask students?",
     answer:
       "The form asks about free time, work habits, class goals, skills, and names people would like or would not like to work with. The goal is to make teams that are easier to work in, not to judge anyone.",
+  },
+  {
+    id: "algorithm",
+    question: "Does Synco just match similar students together?",
+    answer:
+      "No. Similar schedules and goals help, but Synco also looks for complementary strengths, role balance, shared weak spots, and team safety. A strong team should cover more of the project, not just repeat the same strengths.",
   },
   {
     id: "privacy",
@@ -274,7 +306,7 @@ function Landing() {
                 delay={0.08}
                 className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
-                Boost student productivity with fair class teams.
+                Smarter project teams, with the reasons included.
               </Reveal>
               <Reveal
                 as="p"
@@ -282,9 +314,8 @@ function Landing() {
                 delay={0.16}
                 className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
-                Create a class, share a code, let everyone answer a few questions, and get teams
-                based on real factors. Synco also shows who you should consider working with and who
-                may be harder to team up with.
+                Synco uses real class data to form teams, explain why they make sense, and show each
+                student who they should consider working with or handle carefully.
               </Reveal>
 
               <Reveal
@@ -392,18 +423,21 @@ function Landing() {
           >
             <Reveal className="max-w-md">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
-                How teams are made
+                Upgraded matching engine
               </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Teams from real factors. Personal match guidance too.
+                Built to find useful teams, not just similar people.
               </h2>
+              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
+                The matcher looks for balance: people who can meet, work at a similar seriousness
+                level, and bring different strengths to the same project.
+              </p>
             </Reveal>
             <Reveal delay={0.08}>
               <p className="max-w-2xl text-base leading-7 text-muted">
-                Synco uses real factors like free time, work habits, class goals, skills, friend
-                requests, and do-not-pair notes. You can see why a team was suggested, and each
-                person also gets guidance on classmates to consider working with and pairings that
-                may be harder.
+                Synco checks pair fit and full-team balance together. It rewards complementary
+                strengths, respects hard avoid rules, treats mutual requests carefully, and flags
+                teams that need a plan before students start.
               </p>
               <StaggerContainer className="mt-6 grid gap-3 sm:grid-cols-2" delay={0.08}>
                 {matchingFactors.map((factor) => (
@@ -414,6 +448,22 @@ function Landing() {
                   >
                     <h3 className="font-sans text-sm font-semibold">{factor.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted">{factor.text}</p>
+                  </Reveal>
+                ))}
+              </StaggerContainer>
+
+              <StaggerContainer className="mt-6 grid gap-3 lg:grid-cols-3" delay={0.12}>
+                {algorithmOutputs.map((item) => (
+                  <Reveal
+                    key={item.title}
+                    staggerItem
+                    className="rounded-[8px] border border-border bg-secondary p-4"
+                  >
+                    <p className="text-xs font-medium text-[color:var(--color-primary)]">
+                      {item.label}
+                    </p>
+                    <h3 className="mt-2 font-sans text-sm font-semibold">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">{item.text}</p>
                   </Reveal>
                 ))}
               </StaggerContainer>
