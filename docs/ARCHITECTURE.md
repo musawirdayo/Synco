@@ -163,7 +163,7 @@ Writes `profiles.role`.
 - `class.new.tsx`
 - `class.$id.tsx`
 
-Lead pages manage classes, invite codes, publishing, feedback summaries, deletion, and demo class setup.
+Lead pages manage classes, invite codes, publishing, deletion, and demo class setup.
 
 ### Student
 
@@ -230,7 +230,7 @@ results route
   -> own match_results row
   -> class team_assignments
   -> render profile, team, matches, avoid list, comparisons
-  -> submit_match_feedback RPC
+  -> platform-scoped submit_match_feedback RPC
 ```
 
 ## Error Handling

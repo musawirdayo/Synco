@@ -177,7 +177,7 @@ Check:
 
 ### Feedback does not save
 
-Check that migration `20260624004000_add_submit_match_feedback_rpc.sql` is applied and that the frontend calls `submit_match_feedback`.
+Check that migrations `20260624004000_add_submit_match_feedback_rpc.sql` and `20260626002000_move_feedback_to_platform_scope.sql` are applied and that the frontend calls `submit_match_feedback`.
 
 ### Admin panel denied
 

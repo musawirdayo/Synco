@@ -96,6 +96,20 @@ Important columns:
 
 One row exists per completed student after publish.
 
+### `platform_match_feedback`
+
+Platform-scoped product feedback from students after they review results.
+
+Important columns:
+
+- `class_id`
+- `student_id`
+- `choice`: `Useful`, `Unsure`, or `Not useful`.
+- `created_at`
+- `updated_at`
+
+This is separate from `match_results` so class leads do not receive student product feedback. Platform admins can use it for product quality monitoring.
+
 ### `platform_admins`
 
 Allowlist for platform admin users.
@@ -197,11 +211,11 @@ Example:
 
 Frontend preview uses the matching TypeScript helper in `src/lib/class-flow.ts`.
 
-### Publishing And Feedback
+### Publishing And Platform Feedback
 
 #### `submit_match_feedback(class_id uuid, choice text)`
 
-Security-definer function that lets a student update only the feedback field inside their own `match_results.result_data`.
+Security-definer function that lets a student save platform feedback after verifying they own a result row.
 
 Allowed choices:
 
@@ -209,7 +223,7 @@ Allowed choices:
 - `Unsure`
 - `Not useful`
 
-This exists because direct table updates were blocked by RLS.
+This writes to `platform_match_feedback`, not to lead-readable `match_results.result_data`.
 
 ### Demo Class
 
@@ -277,7 +291,13 @@ The frontend never uses a service-role key.
 
 - Students read their own result only when the class is published.
 - Leads read/write results in their classes.
-- Student feedback is updated through `submit_match_feedback`.
+
+### Platform Feedback
+
+- Students can read their own platform feedback row.
+- Platform admins can read platform feedback.
+- Class leads do not receive platform feedback through the app.
+- Student platform feedback is updated through `submit_match_feedback`.
 
 ### Admin Tables
 
@@ -303,6 +323,7 @@ Current notable migrations:
 - Policy reconciliation.
 - Demo RPC restriction.
 - Feedback RPC.
+- Platform feedback table.
 - Per-lead demo classes.
 - Platform admin control panel.
 - Roll-number format normalization.

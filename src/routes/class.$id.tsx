@@ -169,7 +169,6 @@ function ClassPage() {
     null,
   );
   const [loadError, setLoadError] = useState("");
-  const [feedbackByStudent, setFeedbackByStudent] = useState<Record<string, string>>({});
   const { confirm, confirmationDialog } = useConfirmDialog();
 
   useEffect(() => {
@@ -214,20 +213,12 @@ function ClassPage() {
 
       const { data: resultRows, error: resultsError } = await supabase
         .from("match_results")
-        .select("student_id,result_data,generated_at")
+        .select("result_data,generated_at")
         .eq("class_id", id);
       if (resultsError) throw resultsError;
 
       const first = resultRows?.[0];
       const resultData = first?.result_data as PublishedResultData | undefined;
-      const feedbackRows = (resultRows ?? []).reduce<Record<string, string>>((acc, row) => {
-        const rowData = row.result_data as { feedback_after_week?: unknown } | null;
-        if (typeof rowData?.feedback_after_week === "string") {
-          acc[row.student_id] = rowData.feedback_after_week;
-        }
-        return acc;
-      }, {});
-      setFeedbackByStudent(feedbackRows);
       setResultMeta({
         version: resultData?.results_version ?? 0,
         generatedAt: resultData?.generated_at ?? first?.generated_at ?? null,
@@ -313,16 +304,6 @@ function ClassPage() {
     ? completed.filter((r) => r.submitted_at && new Date(r.submitted_at) > resultGeneratedAt).length
     : 0;
   const resultIncluded = resultMeta.included || submitted;
-  const feedbackValues = Object.values(feedbackByStudent);
-  const feedbackSummary = feedbackValues.length
-    ? ["Useful", "Unsure", "Not useful"]
-        .map((choice) => {
-          const count = feedbackValues.filter((value) => value === choice).length;
-          return count ? `${choice}: ${count}` : "";
-        })
-        .filter(Boolean)
-        .join(" · ")
-    : "No student feedback yet";
   const nextVersion = Math.max(1, resultMeta.version + 1);
   const canGenerate = submitted >= 2 && !hasIdentityConflicts;
   const publishVerb = cls.is_published ? "Republish" : "Publish";
@@ -1032,7 +1013,7 @@ function ClassPage() {
               </div>
             )}
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-3">
               <DecisionTile
                 label="Confidence"
                 value={confidenceLabel}
@@ -1051,11 +1032,6 @@ function ClassPage() {
                 label="Matching System"
                 value={cls.team_size === 2 ? "Optimal Pairs" : "Team Optimizer"}
                 detail={`Uses the team engine for target size ${cls.team_size}`}
-              />
-              <DecisionTile
-                label="Feedback"
-                value={String(feedbackValues.length)}
-                detail={feedbackSummary}
               />
             </div>
 
@@ -1326,12 +1302,6 @@ function ClassPage() {
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-[color:var(--color-accent-light)] text-xs font-medium">
                                 {arch}
                               </span>
-                              <p className="mt-2 text-xs text-muted">
-                                Feedback:{" "}
-                                <span className="font-medium text-foreground">
-                                  {feedbackByStudent[self.student_id] ?? "Not submitted yet"}
-                                </span>
-                              </p>
                             </div>
                           </div>
                           <div className="text-xs uppercase tracking-wider text-muted mb-2">

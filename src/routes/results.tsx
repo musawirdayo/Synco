@@ -1318,8 +1318,8 @@ function FeedbackPanel({
     <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <SectionHeader
         eyebrow="After the first week"
-        title="Tell your lead if this worked"
-        description="This feedback updates your result record and helps the lead decide whether the class needs a rematch."
+        title="Tell Synco if this worked"
+        description="This helps improve the matching system. Your class lead does not see this feedback."
       />
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         {["Useful", "Unsure", "Not useful"].map((choice) => (
@@ -1461,10 +1461,23 @@ function Results() {
         });
         return;
       }
+      const { data: feedbackRow, error: feedbackLoadError } = await supabase
+        .from("platform_match_feedback")
+        .select("choice")
+        .eq("class_id", cid)
+        .eq("student_id", user.id)
+        .maybeSingle();
+      if (feedbackLoadError) {
+        console.warn("Could not load platform feedback:", feedbackLoadError);
+      }
+      const resultData = res.result_data as ResultData;
       setState({
         status: "ready",
         classId: cid,
-        data: res.result_data as ResultData,
+        data:
+          typeof feedbackRow?.choice === "string"
+            ? { ...resultData, feedback_after_week: feedbackRow.choice }
+            : resultData,
         className: cls.name,
         published: true,
         name: prof?.full_name ?? "",
@@ -1609,7 +1622,10 @@ function Results() {
         choice,
       });
       if (error) throw error;
-      const nextData = (data ?? { ...state.data, feedback_after_week: choice }) as ResultData;
+      const response = data as { feedback_after_week?: unknown } | null;
+      const savedChoice =
+        typeof response?.feedback_after_week === "string" ? response.feedback_after_week : choice;
+      const nextData = { ...state.data, feedback_after_week: savedChoice };
       setState((current) =>
         current.status === "ready" ? { ...current, data: nextData } : current,
       );

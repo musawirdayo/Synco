@@ -708,3 +708,31 @@ Verified:
 - `npm test` (99 passing)
 - `npm run build`
 - `git diff --check`
+
+## 2026-06-26 Platform-Scoped Feedback
+
+Changed match feedback from lead-facing class feedback to platform product feedback:
+
+- Added `supabase/migrations/20260626002000_move_feedback_to_platform_scope.sql`.
+- New table: `public.platform_match_feedback`.
+- Migration backfills existing `match_results.result_data.feedback_after_week` values into the new table, then strips that field from `match_results` so class leads do not receive it through their existing result read policy.
+- Replaced `submit_match_feedback` so it verifies the student owns a match result and writes to `platform_match_feedback`.
+- Updated admin overview/class list/detail RPCs to count/read platform feedback from the new table.
+- Updated `src/routes/results.tsx` copy to say feedback goes to Synco/platform, not the lead.
+- Updated `src/routes/results.tsx` to load saved feedback from `platform_match_feedback`.
+- Removed feedback summary/tile/per-student feedback text from `src/routes/class.$id.tsx`.
+- Updated Supabase types and docs.
+
+Verified:
+
+- `npx prettier --write AGENT_HANDOFF.md README.md docs/ARCHITECTURE.md docs/OPERATIONS.md docs/PRODUCT_GUIDE.md docs/SECURITY_AND_PRIVACY.md docs/SUPABASE_AND_DATA_MODEL.md src/integrations/supabase/types.ts 'src/routes/class.$id.tsx' src/routes/results.tsx`
+- `git diff --check`
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (99 passing)
+- `npm run build`
+
+Backend migration status:
+
+- `npm exec --yes supabase -- migration list --linked` could not authenticate because `SUPABASE_ACCESS_TOKEN` is not set in this shell.
+- The migration file is committed, but the remote Supabase project still needs `20260626002000_move_feedback_to_platform_scope.sql` applied.

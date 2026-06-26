@@ -66,7 +66,7 @@ Students can:
 - Read their own membership.
 - Write their own survey.
 - Read their own results after publish.
-- Update their own feedback through `submit_match_feedback`.
+- Update their own platform feedback through `submit_match_feedback`.
 - See classmates only as allowed by publish/privacy behavior.
 
 Students should not directly update match results.

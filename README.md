@@ -85,7 +85,7 @@ Lead flow:
 4. Share the invite code or join link.
 5. Monitor submissions.
 6. Publish or republish results.
-7. Review assigned teams, student match profiles, feedback, and risk flags.
+7. Review assigned teams, student match profiles, and risk flags.
 
 Student flow:
 
@@ -132,7 +132,7 @@ The core platform is implemented and connected:
 - Survey and saved responses.
 - Publishing with team assignment snapshots.
 - Student result profiles.
-- Feedback RPC and lead-side feedback summary.
+- Platform-scoped feedback RPC and admin feedback totals.
 - Roster privacy.
 - Platform admin panel.
 

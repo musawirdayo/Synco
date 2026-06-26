@@ -34,7 +34,6 @@ Lead capabilities:
 - Monitor joined students and completed surveys.
 - Publish and republish results.
 - See assigned teams.
-- See feedback summary from students.
 - Delete student surveys.
 - Delete classes from dashboard.
 - Set up a demo class.
@@ -54,7 +53,7 @@ Student capabilities:
 - See assigned team after publish.
 - See their top matches and watch-outs.
 - Search/compare peers from the result page where data is available.
-- Send post-match feedback.
+- Send post-match feedback to Synco.
 
 ### Platform Admin
 
@@ -97,7 +96,7 @@ Admin access is controlled by database allowlist and/or Auth app metadata. See [
 9. Lead opens `/class/$id`.
 10. Lead publishes results.
 11. Synco writes one `match_results` row per completed student and stores the class team snapshot on `classes.team_assignments`.
-12. Lead reviews assigned teams, warnings, feedback, and individual rows.
+12. Lead reviews assigned teams, warnings, and individual rows.
 
 ## Student Join Flow
 
@@ -162,7 +161,7 @@ They see:
 - Compatibility proofs.
 - Risk proofs.
 - Comparison/search area.
-- Feedback buttons.
+- Feedback buttons for platform quality signals.
 
 The top-5 and avoid lists coexist with team assignments. Team assignments are the class output; the lists are the individual guidance layer.
 
@@ -223,7 +222,7 @@ Implemented:
 - Publish/republish.
 - Team assignments.
 - Individual results.
-- Feedback RPC.
+- Platform-scoped feedback RPC.
 - Roster privacy.
 - Demo class setup scoped to the signed-in lead.
 - Platform admin panel.

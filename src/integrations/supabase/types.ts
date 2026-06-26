@@ -180,6 +180,38 @@ export type Database = {
           },
         ];
       };
+      platform_match_feedback: {
+        Row: {
+          choice: string;
+          class_id: string;
+          created_at: string;
+          student_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          choice: string;
+          class_id: string;
+          created_at?: string;
+          student_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          choice?: string;
+          class_id?: string;
+          created_at?: string;
+          student_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_match_feedback_class_id_fkey";
+            columns: ["class_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       platform_admins: {
         Row: {
           created_at: string;
