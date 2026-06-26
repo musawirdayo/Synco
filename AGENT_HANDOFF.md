@@ -497,6 +497,23 @@ Verified:
 - `git diff --check`
 - Local dev server responds at `http://127.0.0.1:5173/`.
 
+## 2026-06-26 Landing Reveal Hydration Fix
+
+Implemented and ready to push:
+
+- `src/components/animations/reveal.tsx` no longer depends on Framer's `whileInView` shortcut for landing reveals.
+- Added an explicit `IntersectionObserver` hook with a first-frame visibility check so reveal/stagger animations initialize on hard page load, not only after client-side navigation away and back.
+- Keeps reduced-motion support and existing Reveal/StaggerContainer API unchanged.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+- `git diff --check`
+- Local dev server responds at `http://127.0.0.1:5173/`.
+
 ## Supabase Migration Situation
 
 The restored Supabase backend is reachable and migration history has been reconciled as of this log update.

@@ -1,4 +1,4 @@
-import type { ElementType, ReactNode } from "react";
+import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
 import {
   motion,
   useReducedMotion,
@@ -9,7 +9,8 @@ import {
 } from "framer-motion";
 
 const revealEase = [0.22, 1, 0.36, 1] as const;
-const revealViewport = { once: true, amount: 0.22, margin: "0px 0px -120px" };
+const revealRootMargin = "0px 0px -120px 0px";
+const revealThreshold = 0.18;
 
 const motionElements = {
   article: motion.article,
@@ -49,6 +50,51 @@ type StaggerContainerProps = SharedMotionProps & {
   stagger?: number;
 };
 
+function useRevealObserver(disabled = false) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [visible, setVisible] = useState(disabled);
+
+  useEffect(() => {
+    if (disabled) {
+      setVisible(true);
+      return;
+    }
+
+    const node = ref.current;
+    if (!node) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const rect = node.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top < viewportHeight && rect.bottom > 0) {
+        setVisible(true);
+      }
+    });
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      {
+        root: null,
+        rootMargin: revealRootMargin,
+        threshold: revealThreshold,
+      },
+    );
+
+    observer.observe(node);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [disabled]);
+
+  return [ref, visible] as const;
+}
+
 export function Reveal({
   as = "div",
   blur = true,
@@ -63,6 +109,7 @@ export function Reveal({
 }: RevealProps) {
   const reduceMotion = useReducedMotion();
   const MotionComponent = motionElements[as] as ElementType;
+  const [ref, visible] = useRevealObserver(Boolean(reduceMotion) || staggerItem);
 
   const variants: Variants = reduceMotion
     ? {
@@ -89,9 +136,9 @@ export function Reveal({
 
   return (
     <MotionComponent
+      ref={staggerItem ? undefined : ref}
       initial={staggerItem ? undefined : "hidden"}
-      whileInView={staggerItem ? undefined : "show"}
-      viewport={staggerItem ? undefined : revealViewport}
+      animate={staggerItem ? undefined : visible ? "show" : "hidden"}
       variants={variants}
       style={{
         willChange: reduceMotion ? undefined : "opacity, transform, filter, clip-path",
@@ -113,6 +160,7 @@ export function StaggerContainer({
 }: StaggerContainerProps) {
   const reduceMotion = useReducedMotion();
   const MotionComponent = motionElements[as] as ElementType;
+  const [ref, visible] = useRevealObserver(Boolean(reduceMotion));
 
   const variants: Variants = reduceMotion
     ? { hidden: {}, show: {} }
@@ -128,9 +176,9 @@ export function StaggerContainer({
 
   return (
     <MotionComponent
+      ref={ref}
       initial="hidden"
-      whileInView="show"
-      viewport={revealViewport}
+      animate={visible ? "show" : "hidden"}
       variants={variants}
       {...props}
     >
