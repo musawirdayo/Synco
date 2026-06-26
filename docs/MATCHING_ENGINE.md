@@ -88,7 +88,6 @@ Important pair-level exports:
 - `pairScore(a, b)`
 - `pairInsight(a, b)`
 - `pairFrictionInsight(a, b)`
-- `pairSafetyScore(a, b)`
 - `pairRiskScore(a, b)`
 - `pairIsRisky(a, b)`
 - `matchProofs(a, b)`

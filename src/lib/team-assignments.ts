@@ -6,14 +6,14 @@ import type {
   TeamQualityBreakdown,
 } from "@/lib/synco";
 
-export type TeamAssignmentMember = {
+type TeamAssignmentMember = {
   student_id: string;
   name: string;
   archetype: string;
   identifier: string | null;
 };
 
-export type TeamAssignment = {
+type TeamAssignment = {
   id: string;
   member_ids: string[];
   members: TeamAssignmentMember[];

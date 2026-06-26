@@ -673,3 +673,38 @@ Verified:
 - `npx prettier --write README.md docs/*.md AGENT_HANDOFF.md`
 - `git diff --check`
 - Basic secret scan for pasted Supabase/user credentials in the new docs.
+
+## 2026-06-26 Dead Code Cleanup
+
+Removed confirmed-unused code after a static/manual audit:
+
+- Deleted unused shadcn-style UI primitives that were not imported anywhere:
+  - `src/components/ui/accordion.tsx`
+  - `src/components/ui/button.tsx`
+  - `src/components/ui/dialog.tsx`
+  - `src/components/ui/input.tsx`
+  - `src/components/ui/label.tsx`
+  - `src/components/ui/separator.tsx`
+  - `src/components/ui/sheet.tsx`
+  - `src/components/ui/toggle.tsx`
+  - `src/components/ui/tooltip.tsx`
+- Removed now-unused direct dependencies for those deleted components.
+- Removed an unused `bestSeedPair` helper from `src/lib/synco.ts`.
+- Removed the unused exported `pairSafetyScore` wrapper while keeping the internal pair-safety helper used by team quality scoring.
+- Reduced unused public exports in `alert-dialog`, `class-helpers`, `synco`, and `team-assignments`.
+- Updated matching docs to stop listing the removed `pairSafetyScore` export.
+
+Important false positive:
+
+- `npx knip` still reports `src/server.ts` and `src/lib/error-capture.ts` as unused. Keep both. `src/server.ts` is configured by name in `vite.config.ts` as the TanStack server entry (`server: { entry: "server" }`), and it imports `error-capture.ts`.
+
+Verified:
+
+- `npx --yes knip --reporter compact`
+  - Only remaining findings are expected false positives for `src/server.ts` and `src/lib/error-capture.ts`.
+- `npx tsc --noEmit`
+- `npx tsc --noEmit --noUnusedLocals --noUnusedParameters`
+- `npm run lint`
+- `npm test` (99 passing)
+- `npm run build`
+- `git diff --check`

@@ -144,7 +144,7 @@ export function buildReadinessCard(
   };
 }
 
-export function roleSuggestion(archetype: string, name = "You") {
+function roleSuggestion(archetype: string, name = "You") {
   const role =
     archetype === "Reliable Finisher"
       ? "deadline owner"
@@ -173,7 +173,7 @@ export function downloadCsv(filename: string, rows: Array<Array<string | number>
   URL.revokeObjectURL(url);
 }
 
-export function csvCell(value: string | number) {
+function csvCell(value: string | number) {
   const text = String(value ?? "");
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

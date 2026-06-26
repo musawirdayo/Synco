@@ -35,7 +35,7 @@ export type MatchingPlan = {
   totalScore: number;
 };
 
-export type TeamMatchingPlan = {
+type TeamMatchingPlan = {
   algorithm: "greedy-clustering";
   teamSize: number;
   teams: Array<{
@@ -74,7 +74,7 @@ export type TeamQualityBreakdown = {
 
 type PeerReferenceField = "doNotPairWith" | "wantToWorkWith" | "friendsInClass";
 
-export type PeerReferenceAmbiguity = {
+type PeerReferenceAmbiguity = {
   studentId: string;
   field: PeerReferenceField;
   entry: string;
@@ -1250,10 +1250,6 @@ function friendCostForFactor(factor: FrictionFactor | undefined) {
   return "Friendship doesn't fix the mismatch - this pairing will cost you time you don't have.";
 }
 
-export function pairSafetyScore(a: Answers, b: Answers) {
-  return pairSafetyFromBreakdown(matchBreakdown(a, b));
-}
-
 function pairSafetyFromBreakdown(breakdown: MatchBreakdown) {
   return clampScore(
     Math.min(
@@ -2272,31 +2268,6 @@ function betterPair(
   if (!current) return true;
   if (candidate.score !== current.score) return candidate.score > current.score;
   return pairKey(candidate.aId, candidate.bId) < pairKey(current.aId, current.bId);
-}
-
-function bestSeedPair(
-  students: MatchStudent[],
-  blockedPairKeys: Set<string>,
-  signals?: PeerSignalMap,
-) {
-  let best: {
-    left: MatchStudent;
-    right: MatchStudent;
-    pair: MatchingPlan["pairs"][number];
-  } | null = null;
-
-  for (let i = 0; i < students.length; i += 1) {
-    for (let j = i + 1; j < students.length; j += 1) {
-      const left = students[i];
-      const right = students[j];
-      if (!left || !right) continue;
-      const pair = buildPair(left, right, blockedPairKeys, true, signals);
-      if (!pair || !betterPair(pair, best?.pair ?? null)) continue;
-      best = { left, right, pair };
-    }
-  }
-
-  return best;
 }
 
 function averageFitForTeam(
