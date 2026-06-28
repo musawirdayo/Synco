@@ -868,6 +868,9 @@ function LandingFooter() {
           <Link to="/join" className="transition-colors hover:text-foreground">
             Join
           </Link>
+          <Link to="/contact" className="transition-colors hover:text-foreground">
+            Contact
+          </Link>
           <Link to="/privacy" className="transition-colors hover:text-foreground">
             Privacy
           </Link>

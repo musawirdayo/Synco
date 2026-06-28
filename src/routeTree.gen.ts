@@ -15,6 +15,7 @@ import { Route as ResultsRouteImport } from './routes/results'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SurveyGuideRouteImport } from './routes/survey_.guide'
@@ -58,6 +59,11 @@ const JoinRoute = JoinRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -134,6 +140,7 @@ const CIdRosterRoute = CIdRosterRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/join': typeof JoinRoute
   '/privacy': typeof PrivacyRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/contact'
     | '/dashboard'
     | '/join'
     | '/privacy'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/contact'
     | '/dashboard'
     | '/join'
     | '/privacy'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/contact'
     | '/dashboard'
     | '/join'
     | '/privacy'
@@ -270,6 +282,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   JoinRoute: typeof JoinRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -438,6 +458,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   JoinRoute: JoinRoute,
   PrivacyRoute: PrivacyRoute,

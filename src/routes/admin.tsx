@@ -5,8 +5,11 @@ import {
   AlertTriangle,
   ArrowLeft,
   Database,
+  ExternalLink,
+  FileText,
   KeyRound,
   RefreshCw,
+  Save,
   Search,
   Shield,
   Trash2,
@@ -28,6 +31,13 @@ type AdminRpc = SupabaseDatabase["public"]["Functions"];
 type AdminUserRow = AdminRpc["admin_search_users"]["Returns"][number];
 type AdminClassRow = AdminRpc["admin_list_classes"]["Returns"][number];
 type AdminAuditRow = AdminRpc["admin_list_audit_log"]["Returns"][number];
+type AdminContentRow = AdminRpc["admin_list_platform_content"]["Returns"][number];
+
+type ContentDraft = {
+  title: string;
+  summary: string;
+  body: string;
+};
 
 type OverviewCounts = {
   users?: number;
@@ -118,6 +128,14 @@ function AdminPanel() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [classes, setClasses] = useState<AdminClassRow[]>([]);
   const [audit, setAudit] = useState<AdminAuditRow[]>([]);
+  const [contentRows, setContentRows] = useState<AdminContentRow[]>([]);
+  const [selectedContentKey, setSelectedContentKey] = useState("privacy_policy");
+  const [contentDraft, setContentDraft] = useState<ContentDraft>({
+    title: "",
+    summary: "",
+    body: "",
+  });
+  const [contentStatus, setContentStatus] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [classSearch, setClassSearch] = useState("");
   const [detail, setDetail] = useState<DetailState | null>(null);
@@ -142,22 +160,25 @@ function AdminPanel() {
       }
 
       setAccess("ready");
-      const [overviewRes, usersRes, classesRes, auditRes] = await Promise.all([
+      const [overviewRes, usersRes, classesRes, auditRes, contentRes] = await Promise.all([
         supabase.rpc("admin_get_overview"),
         supabase.rpc("admin_search_users", { _query: userSearch, _limit: 100 }),
         supabase.rpc("admin_list_classes", { _query: classSearch, _limit: 100 }),
         supabase.rpc("admin_list_audit_log", { _limit: 80 }),
+        supabase.rpc("admin_list_platform_content"),
       ]);
 
       if (overviewRes.error) throw overviewRes.error;
       if (usersRes.error) throw usersRes.error;
       if (classesRes.error) throw classesRes.error;
       if (auditRes.error) throw auditRes.error;
+      if (contentRes.error) throw contentRes.error;
 
       setOverview(overviewRes.data as AdminOverview);
       setUsers(usersRes.data ?? []);
       setClasses(classesRes.data ?? []);
       setAudit(auditRes.data ?? []);
+      setContentRows(contentRes.data ?? []);
     } catch (err) {
       console.error("Admin load failed:", err);
       const message = err instanceof Error ? err.message : String(err);
@@ -182,6 +203,23 @@ function AdminPanel() {
     return Math.round(((counts.completed_surveys ?? 0) / total) * 100);
   }, [counts.completed_surveys, counts.survey_responses]);
 
+  const selectedContent = useMemo(() => {
+    return (
+      contentRows.find((row) => row.content_key === selectedContentKey) ?? contentRows[0] ?? null
+    );
+  }, [contentRows, selectedContentKey]);
+
+  useEffect(() => {
+    if (!selectedContent) return;
+    setSelectedContentKey(selectedContent.content_key);
+    setContentDraft({
+      title: selectedContent.title,
+      summary: selectedContent.summary ?? "",
+      body: selectedContent.body,
+    });
+    setContentStatus("");
+  }, [selectedContent]);
+
   async function runAction(label: string, action: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -191,6 +229,29 @@ function AdminPanel() {
     } catch (err) {
       console.error(`${label} failed:`, err);
       setError(`${label} failed. Check permissions and try again.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePlatformContent() {
+    if (!selectedContent) return;
+    setBusy(true);
+    setError("");
+    setContentStatus("");
+    try {
+      const { error: saveError } = await supabase.rpc("admin_upsert_platform_content", {
+        _content_key: selectedContent.content_key,
+        _title: contentDraft.title,
+        _summary: contentDraft.summary,
+        _body: contentDraft.body,
+      });
+      if (saveError) throw saveError;
+      setContentStatus("Saved. Public page content is updated.");
+      await loadAll();
+    } catch (err) {
+      console.error("Content save failed:", err);
+      setError("Content could not be saved. Check admin permissions and required fields.");
     } finally {
       setBusy(false);
     }
@@ -320,6 +381,162 @@ where email = 'your-email@example.com';`}
           value={counts.platform_admins ?? 0}
           detail="Allowlisted platform admins"
         />
+      </section>
+
+      <section className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+        <Panel
+          icon={<FileText className="h-4 w-4" />}
+          title="Dev Content Control"
+          detail="Edit public platform pages without a code deploy."
+        >
+          <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
+            <div className="space-y-2">
+              {contentRows.map((row) => (
+                <button
+                  key={row.content_key}
+                  type="button"
+                  onClick={() => setSelectedContentKey(row.content_key)}
+                  className={
+                    "w-full rounded-xl border p-3 text-left transition-colors " +
+                    (selectedContent?.content_key === row.content_key
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-muted")
+                  }
+                >
+                  <p className="text-sm font-semibold">{contentLabel(row.content_key)}</p>
+                  <p className="mt-1 text-xs text-muted">Updated {relativeTime(row.updated_at)}</p>
+                </button>
+              ))}
+              {!contentRows.length && (
+                <p className="rounded-xl border border-border bg-background p-3 text-sm text-muted">
+                  Content controls appear after the platform-content migration is applied.
+                </p>
+              )}
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void savePlatformContent();
+              }}
+              className="space-y-4"
+            >
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Page title
+                  </label>
+                  <input
+                    value={contentDraft.title}
+                    onChange={(event) =>
+                      setContentDraft((draft) => ({ ...draft, title: event.target.value }))
+                    }
+                    className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    placeholder="Page title"
+                  />
+                </div>
+                {selectedContent ? (
+                  <a
+                    href={contentPagePath(selectedContent.content_key)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted sm:mt-6"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Preview
+                  </a>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Summary card
+                </label>
+                <textarea
+                  value={contentDraft.summary}
+                  onChange={(event) =>
+                    setContentDraft((draft) => ({ ...draft, summary: event.target.value }))
+                  }
+                  rows={3}
+                  className="mt-2 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm leading-6 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  placeholder="Short public summary shown under the page title"
+                />
+              </div>
+
+              <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Page body
+                  </label>
+                  <p className="text-xs text-muted">
+                    Use <span className="font-mono">## Heading</span> and{" "}
+                    <span className="font-mono">- bullet</span> lines.
+                  </p>
+                </div>
+                <textarea
+                  value={contentDraft.body}
+                  onChange={(event) =>
+                    setContentDraft((draft) => ({ ...draft, body: event.target.value }))
+                  }
+                  rows={18}
+                  className="mt-2 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs leading-6 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  placeholder="Write public page content here"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted">
+                  Changes go live immediately and are recorded in the audit log.
+                </p>
+                <button
+                  type="submit"
+                  disabled={busy || !selectedContent}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[color:var(--color-primary-hover)] disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" />
+                  Save content
+                </button>
+              </div>
+
+              {contentStatus && (
+                <p className="rounded-lg border border-accent/20 bg-accent/10 p-3 text-sm text-accent">
+                  {contentStatus}
+                </p>
+              )}
+            </form>
+          </div>
+        </Panel>
+
+        <Panel
+          icon={<Database className="h-4 w-4" />}
+          title="Platform Dev Tools"
+          detail="Fast checks and public pages you can manage from here."
+        >
+          <div className="grid gap-2">
+            {devToolLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noreferrer" : undefined}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-3 text-sm font-medium hover:bg-muted"
+              >
+                <span>{link.label}</span>
+                <ExternalLink className="h-3.5 w-3.5 text-muted" />
+              </a>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-xl border border-border bg-background p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Safe admin rule
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Use this panel for public copy and operational checks. Feature behavior, scoring, and
+              database structure still need code and migrations.
+            </p>
+          </div>
+        </Panel>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
@@ -825,6 +1042,29 @@ function RecentList({ title, items }: { title: string; items: Array<Record<strin
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : "";
+}
+
+const devToolLinks: Array<{ label: string; href: string; external?: boolean }> = [
+  { label: "Public landing page", href: "/" },
+  { label: "Create class signup", href: "/auth/signup" },
+  { label: "Student join page", href: "/join" },
+  { label: "Contact page", href: "/contact" },
+  { label: "Privacy policy", href: "/privacy" },
+  { label: "Terms of service", href: "/terms" },
+];
+
+function contentLabel(key: string) {
+  if (key === "privacy_policy") return "Privacy Policy";
+  if (key === "terms_of_service") return "Terms of Service";
+  if (key === "contact_page") return "Contact Page";
+  return key;
+}
+
+function contentPagePath(key: string) {
+  if (key === "privacy_policy") return "/privacy";
+  if (key === "terms_of_service") return "/terms";
+  if (key === "contact_page") return "/contact";
+  return "/";
 }
 
 function relativeTime(value: string) {

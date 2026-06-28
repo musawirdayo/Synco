@@ -212,6 +212,33 @@ export type Database = {
           },
         ];
       };
+      platform_content: {
+        Row: {
+          body: string;
+          content_key: string;
+          summary: string | null;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          body: string;
+          content_key: string;
+          summary?: string | null;
+          title: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          body?: string;
+          content_key?: string;
+          summary?: string | null;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       platform_admins: {
         Row: {
           created_at: string;
@@ -373,6 +400,18 @@ export type Database = {
           target_type: string;
         }[];
       };
+      admin_list_platform_content: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          body: string;
+          content_key: string;
+          summary: string | null;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+          updated_by_email: string | null;
+        }[];
+      };
       admin_list_classes: {
         Args: { _limit?: number; _query?: string };
         Returns: {
@@ -418,6 +457,10 @@ export type Database = {
       admin_set_user_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"]; _user_id: string };
         Returns: undefined;
+      };
+      admin_upsert_platform_content: {
+        Args: { _body: string; _content_key: string; _summary: string; _title: string };
+        Returns: Database["public"]["Tables"]["platform_content"]["Row"];
       };
       is_platform_admin: {
         Args: { _user_id: string };

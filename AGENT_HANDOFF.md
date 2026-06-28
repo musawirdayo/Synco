@@ -736,6 +736,32 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-28 Admin Dev Content Control
+
+Added an admin-editable public content system:
+
+- Added `supabase/migrations/20260628002000_add_platform_content_control.sql`.
+- New table: `public.platform_content`.
+- Public-read pages can be edited only through admin-only RPCs:
+  - `admin_list_platform_content()`
+  - `admin_upsert_platform_content(text, text, text, text)`
+- Added a reusable `PlatformContentPage` renderer for safe Markdown-like public copy.
+- Replaced hardcoded `/privacy` and `/terms` route bodies with database-backed pages and built-in fallbacks.
+- Added new `/contact` route and footer link.
+- Added "Dev Content Control" and "Platform Dev Tools" sections inside `/admin`.
+
+Verified:
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm test` (99 passing)
+- `npm run build`
+- `git diff --check`
+
+Backend migration status:
+
+- Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
+
 ## 2026-06-28 Platform Polish And Survey Cleanup
 
 Cleanup/polish pass:
