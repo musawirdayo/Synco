@@ -734,8 +734,7 @@ Verified:
 
 Backend migration status:
 
-- `npm exec --yes supabase -- migration list --linked` could not authenticate because `SUPABASE_ACCESS_TOKEN` is not set in this shell.
-- The migration file is committed, but the remote Supabase project still needs `20260626002000_move_feedback_to_platform_scope.sql` applied.
+- Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
 ## 2026-06-28 Platform Polish And Survey Cleanup
 
@@ -762,4 +761,4 @@ Verified:
 
 Backend migration status:
 
-- This shell still has no `SUPABASE_ACCESS_TOKEN` or `SUPABASE_DB_PASSWORD`, so the remote Supabase database still needs `supabase db push --linked` run with credentials to apply `20260628001000_make_demo_class_tryable.sql`.
+- Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
