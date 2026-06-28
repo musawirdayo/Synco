@@ -11,18 +11,18 @@ const primaryButtonClass =
 const textLinkClass =
   "inline-flex h-11 items-center justify-center text-sm font-medium text-[color:var(--color-primary)] transition-colors hover:text-[color:var(--color-primary-hover)]";
 
-const workflowSteps = ["Create or join", "Answer honestly", "Get your profile", "Use better teams"];
+const workflowSteps = ["Create class", "Share link", "Collect surveys", "Publish teams"];
 
 const audienceBenefits = [
-  {
-    label: "Students",
-    title: "Know who fits your work style",
-    text: "See your strongest classmates to work with, who may be harder, and the proof behind both lists.",
-  },
   {
     label: "Class reps",
     title: "Stop sorting groups by hand",
     text: "Create one class link, collect answers, and publish ready-made teams with reasons.",
+  },
+  {
+    label: "Students",
+    title: "A result they actually want",
+    text: "Students get their team, best-fit classmates, risky pairings, and proof in simple language.",
   },
   {
     label: "Project leads",
@@ -33,20 +33,20 @@ const audienceBenefits = [
 
 const howSyncoWorks = [
   {
-    title: "Create or join a class",
-    text: "A class rep creates the link. Students join with the code and keep their results tied to their account.",
+    title: "Create the class",
+    text: "Set the class name, team size, and join rules before you share anything.",
   },
   {
-    title: "Answer the short survey",
-    text: "Everyone shares work habits, free time, goals, strengths, friend requests, and do-not-pair notes.",
+    title: "Share one link",
+    text: "Students use the invite link to join, answer the survey, and keep results tied to their account.",
   },
   {
-    title: "Synco checks real fit",
-    text: "The matcher looks for useful teams, not just friends or people with the same strengths.",
+    title: "Collect honest answers",
+    text: "Synco checks work habits, free time, goals, strengths, friend requests, and do-not-pair notes.",
   },
   {
-    title: "Everyone gets a useful result",
-    text: "Students see their team, best matches, watch-outs, and simple reasons they can actually use.",
+    title: "Publish useful results",
+    text: "The class gets teams with reasons, while each student gets a personal match profile.",
   },
 ];
 
@@ -142,7 +142,7 @@ const classBenefits = [
 
 const previewTeams = [
   {
-    name: "Your team",
+    name: "Team 1",
     members: "Maya, Noor, Ezra, Jules",
     rationale: "Strong schedule overlap with mixed planning styles and different useful strengths.",
   },
@@ -159,8 +159,8 @@ const previewPeople = [
 ];
 
 const previewStats = [
-  ["Profile", "Ready"],
-  ["Best fits", "5"],
+  ["Invite code", "H7K2"],
+  ["Answers", "24 / 28"],
   ["Team size", "4"],
 ];
 
@@ -318,7 +318,7 @@ function Landing() {
                 immediate
                 className="text-sm font-medium text-[color:var(--color-primary)]"
               >
-                For students, class reps, and project teams
+                For class reps organizing project teams
               </Reveal>
               <Reveal
                 as="h1"
@@ -326,7 +326,7 @@ function Landing() {
                 immediate
                 className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
-                Find better teammates before the project starts.
+                Create better project teams from one class link.
               </Reveal>
               <Reveal
                 as="p"
@@ -335,8 +335,8 @@ function Landing() {
                 immediate
                 className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
-                Synco turns a short class survey into fair teams, personal match reports, best-fit
-                classmates, and clear warnings about pairings that may waste your time.
+                Synco helps you collect student work habits, form fair teams, and give every
+                classmate a useful result they understand.
               </Reveal>
 
               <Reveal
@@ -348,9 +348,9 @@ function Landing() {
                 <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
                   Create a class
                 </Link>
-                <Link to="/join" className={`${textLinkClass} sm:w-fit`}>
-                  Join with a code
-                </Link>
+                <a href="#student-payoff" className={`${textLinkClass} sm:w-fit`}>
+                  See what students get
+                </a>
               </Reveal>
 
               <Reveal blur={false} delay={0.32} immediate className="mt-7">
@@ -364,7 +364,10 @@ function Landing() {
           </div>
         </section>
 
-        <section className={`border-b border-border/70 bg-secondary py-8 sm:py-10 lg:py-12`}>
+        <section
+          id="student-payoff"
+          className={`border-b border-border/70 bg-secondary py-8 sm:py-10 lg:py-12`}
+        >
           <div className={pageContainer}>
             <StaggerContainer className="grid gap-4 md:grid-cols-3" immediate>
               {audienceBenefits.map((benefit) => (
@@ -397,8 +400,7 @@ function Landing() {
                 How Synco works
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                A short flow from class link to personal results and teams the class can actually
-                use.
+                A short flow from one invite link to teams your class can actually use.
               </p>
             </Reveal>
 
@@ -430,11 +432,11 @@ function Landing() {
             <Reveal className="max-w-2xl">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">Why it helps</p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Better matches mean better project work.
+                Students answer because the result helps them too.
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                Synco helps students avoid blind teammate choices. The result is easier planning,
-                clearer roles, fewer surprise clashes, and more time spent on the actual project.
+                A class rep needs responses. Synco gives students a reason to complete the survey:
+                their own team, best-fit classmates, risky pairings, and plain proof they can use.
               </p>
             </Reveal>
 
@@ -526,8 +528,8 @@ function Landing() {
                 Less sorting before group work starts.
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                Synco handles the repeated sorting work so students, CRs, and leads can move into
-                the project with fewer arguments and less guessing.
+                Synco handles the repeated sorting work so class reps can move everyone into the
+                project with fewer arguments and less guessing.
               </p>
             </Reveal>
 
@@ -573,7 +575,7 @@ function Landing() {
                   Start with one class
                 </p>
                 <h2 className="mt-2 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                  Ready to try Synco with one class?
+                  Ready to create your first class link?
                 </h2>
               </div>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -688,15 +690,15 @@ function MockMatchCard() {
   return (
     <div
       className="rounded-[8px] border border-border bg-card shadow-[0_12px_36px_oklch(0.18_0_0_/_0.05)]"
-      aria-label="Preview of student match results and generated classroom teams"
+      aria-label="Preview of class team results"
     >
       <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
         <div>
-          <p className="text-sm font-semibold">Your Synco result</p>
-          <p className="text-xs text-muted">Personal matches + team preview</p>
+          <p className="text-sm font-semibold">Class results preview</p>
+          <p className="text-xs text-muted">Teams + student match profiles</p>
         </div>
         <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-[color:var(--color-primary)]">
-          Ready after publish
+          Ready to publish
         </span>
       </div>
 
