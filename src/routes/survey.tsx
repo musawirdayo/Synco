@@ -10,7 +10,7 @@ import {
   getPendingJoinCode,
   setActiveClassId,
 } from "@/lib/class-flow";
-import { OPTIONAL_TEXT_SURVEY_FIELDS, QUESTIONS } from "@/lib/questions";
+import { OPTIONAL_TEXT_SURVEY_FIELDS, QUESTIONS, type SurveyQuestion } from "@/lib/questions";
 import { checkedSupabase } from "@/lib/supabase-safe";
 import type { Answers, AnswerValue } from "@/lib/synco";
 
@@ -22,12 +22,52 @@ export const Route = createFileRoute("/survey")({
 });
 
 const DETAIL_STEPS = [
-  { id: "availability", label: "Availability" },
-  { id: "workstyle", label: "Work style" },
+  { id: "availability", label: "Times" },
+  { id: "workstyle", label: "Work habits" },
   { id: "academic", label: "Skills" },
-  { id: "logistics", label: "Project fit" },
-  { id: "preferences", label: "Boundaries" },
+  { id: "logistics", label: "Goals" },
+  { id: "preferences", label: "People" },
 ] as const;
+
+const QUESTION_PARTS = [
+  {
+    id: "start",
+    label: "Start",
+    title: "How you start work",
+    description: "Quick answers about planning, focus, and how you understand tasks.",
+    questionIds: ["q1", "q4", "q5", "q8"],
+  },
+  {
+    id: "pace",
+    label: "Pace",
+    title: "Your work pace",
+    description: "This helps Synco match people who can move at a workable speed together.",
+    questionIds: ["q3", "q9", "q10", "q20"],
+  },
+  {
+    id: "team",
+    label: "Team",
+    title: "How you work with people",
+    description: "These answers help the team avoid confusion once the project starts.",
+    questionIds: ["q2", "q6", "q7", "q11", "q12"],
+  },
+  {
+    id: "pressure",
+    label: "Pressure",
+    title: "Standards and disagreement",
+    description: "A good team needs similar expectations, not just similar marks.",
+    questionIds: ["q13", "q18", "q19", "q21", "q22"],
+  },
+  {
+    id: "access",
+    label: "Access",
+    title: "Meeting and access",
+    description: "This keeps matches realistic for your schedule and setup.",
+    questionIds: ["q14", "q15", "q16", "q17"],
+  },
+] as const;
+
+const QUESTIONS_BY_ID = new Map(QUESTIONS.map((question) => [question.id, question]));
 
 const AVAILABILITY = [
   "Mon morning",
@@ -155,6 +195,13 @@ const PRIVACY = [
 ];
 
 type DetailStepId = (typeof DETAIL_STEPS)[number]["id"];
+type QuestionPart = (typeof QUESTION_PARTS)[number];
+
+function questionsForPart(part: QuestionPart) {
+  return part.questionIds
+    .map((id) => QUESTIONS_BY_ID.get(id))
+    .filter((question): question is SurveyQuestion => Boolean(question));
+}
 
 function Survey() {
   const { user, loading } = useAuth();
@@ -200,12 +247,12 @@ function Survey() {
     })();
   }, [user, navigate]);
 
-  const totalSteps = QUESTIONS.length + DETAIL_STEPS.length;
-  const isQuestionStep = idx < QUESTIONS.length;
-  const q = isQuestionStep ? QUESTIONS[idx] : null;
-  const detailStep = isQuestionStep ? null : DETAIL_STEPS[idx - QUESTIONS.length];
-  const value = q ? answerNumber(answers, q.id, 3) : 3;
+  const totalSteps = QUESTION_PARTS.length + DETAIL_STEPS.length;
+  const questionPart = idx < QUESTION_PARTS.length ? QUESTION_PARTS[idx] : null;
+  const detailStep = questionPart ? null : DETAIL_STEPS[idx - QUESTION_PARTS.length];
+  const currentQuestions = questionPart ? questionsForPart(questionPart) : [];
   const progress = ((idx + 1) / totalSteps) * 100;
+  const activeStepLabel = questionPart?.label ?? detailStep?.label ?? "Survey";
 
   function updateAnswer(id: string, value: AnswerValue) {
     setAnswers((current) => ({ ...current, [id]: value }));
@@ -245,7 +292,12 @@ function Survey() {
     setBusy(true);
     setError("");
     try {
-      const next = q ? { ...answers, [q.id]: value } : answers;
+      const next = { ...answers };
+      currentQuestions.forEach((question) => {
+        if (typeof next[question.id] !== "number") {
+          next[question.id] = 3;
+        }
+      });
       setAnswers(next);
       if (idx === totalSteps - 1) {
         await save(next, true);
@@ -282,7 +334,7 @@ function Survey() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-wider text-muted">
-              {detailStep?.label ?? `Question ${idx + 1}`} of {totalSteps}
+              {activeStepLabel} · Step {idx + 1} of {totalSteps}
             </span>
             {idx > 0 && (
               <button
@@ -300,28 +352,37 @@ function Survey() {
               transition={{ duration: 0.4, ease: "easeOut" }}
             />
           </div>
+          <div className="mt-3 flex gap-1" aria-hidden="true">
+            {Array.from({ length: totalSteps }, (_, stepIndex) => (
+              <div
+                key={stepIndex}
+                className={
+                  "h-1 flex-1 rounded-full transition-colors " +
+                  (stepIndex <= idx ? "bg-accent" : "bg-border")
+                }
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      <main className="flex-1 px-4 sm:px-6 md:px-12 py-6 sm:py-8 overflow-hidden">
+      <main className="flex-1 px-4 sm:px-6 md:px-12 py-6 sm:py-8">
         <div className="max-w-2xl mx-auto relative">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
-              key={q?.id ?? detailStep?.id}
+              key={questionPart?.id ?? detailStep?.id}
               custom={direction}
               initial={{ opacity: 0, x: direction * 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: direction * -40 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              {q ? (
-                <QuestionStep
-                  framing={q.framing}
-                  question={q.question}
-                  low={q.low}
-                  high={q.high}
-                  value={value}
-                  onChange={(next) => updateAnswer(q.id, next)}
+              {questionPart ? (
+                <QuestionPartStep
+                  part={questionPart}
+                  questions={currentQuestions}
+                  answers={answers}
+                  onChange={updateAnswer}
                 />
               ) : (
                 <DetailStep
@@ -363,29 +424,66 @@ function Survey() {
   );
 }
 
-function QuestionStep({
-  framing,
+function QuestionPartStep({
+  part,
+  questions,
+  answers,
+  onChange,
+}: {
+  part: QuestionPart;
+  questions: SurveyQuestion[];
+  answers: Answers;
+  onChange: (id: string, value: AnswerValue) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
+      <p className="text-xs font-medium uppercase tracking-wider text-accent">Part {part.label}</p>
+      <h2 className="mt-2 font-display text-2xl leading-tight sm:text-3xl">{part.title}</h2>
+      <p className="mt-3 text-sm leading-6 text-muted">{part.description}</p>
+
+      <div className="mt-6 space-y-4">
+        {questions.map((question, index) => (
+          <QuestionCard
+            key={question.id}
+            question={question}
+            number={index + 1}
+            value={answerNumber(answers, question.id, 3)}
+            onChange={(value) => onChange(question.id, value)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function QuestionCard({
   question,
-  low,
-  high,
+  number,
   value,
   onChange,
 }: {
-  framing: string;
-  question: string;
-  low: string;
-  high: string;
+  question: SurveyQuestion;
+  number: number;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
-    <>
-      <p className="text-sm text-muted mb-3">{framing}</p>
-      <h2 className="font-display text-xl sm:text-2xl md:text-3xl mb-10 leading-snug">
-        {question}
-      </h2>
+    <article className="rounded-xl border border-border/70 bg-background/45 p-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-accent/25 bg-accent/[0.08] font-mono text-xs font-semibold text-accent">
+          {number}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">
+            {question.framing}
+          </p>
+          <h3 className="mt-1 text-base font-semibold leading-6 text-foreground">
+            {question.question}
+          </h3>
+        </div>
+      </div>
 
-      <div className="space-y-6">
+      <div className="mt-5 space-y-3">
         <input
           type="range"
           min={1}
@@ -394,7 +492,7 @@ function QuestionStep({
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           className="pg-slider w-full"
-          aria-label={question}
+          aria-label={question.question}
           aria-valuemin={1}
           aria-valuemax={5}
           aria-valuenow={value}
@@ -403,24 +501,24 @@ function QuestionStep({
           {[1, 2, 3, 4, 5].map((n) => (
             <span
               key={n}
-              className={"w-6 text-center " + (n === value ? "text-accent font-medium" : "")}
+              className={"w-6 text-center " + (n === value ? "text-accent font-semibold" : "")}
             >
               {n}
             </span>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-6 pt-2 text-sm">
-          <div className="text-muted leading-relaxed">
-            <span className="font-mono text-xs mr-1 text-foreground">1</span>
-            {low}
+        <div className="grid grid-cols-2 gap-4 text-xs leading-5 text-muted sm:text-sm">
+          <div>
+            <span className="mr-1 font-mono text-[11px] text-foreground">1</span>
+            {question.low}
           </div>
-          <div className="text-muted leading-relaxed text-right">
-            <span className="font-mono text-xs mr-1 text-foreground">5</span>
-            {high}
+          <div className="text-right">
+            <span className="mr-1 font-mono text-[11px] text-foreground">5</span>
+            {question.high}
           </div>
         </div>
       </div>
-    </>
+    </article>
   );
 }
 

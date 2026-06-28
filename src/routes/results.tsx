@@ -1818,7 +1818,7 @@ function ResultsSkeleton() {
           </div>
         </div>
 
-        {/* Expanded detail placeholder */}
+        {/* Expanded detail skeleton */}
         <div className="rounded-2xl border border-border p-6 space-y-6 bg-card/25">
           <div className="flex justify-between items-start border-b border-border pb-6">
             <div className="space-y-3">

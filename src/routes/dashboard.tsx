@@ -104,7 +104,7 @@ function Dashboard() {
     const confirmed = await confirm({
       title: "Set up a demo class?",
       description:
-        "This creates a private demo class for your account with test student responses so you can explore publishing and results.",
+        "This creates 5 completed demo classmates and 1 open seat so you can try the student survey from the invite link.",
       confirmLabel: "Set up demo",
     });
     if (!confirmed) {
@@ -113,11 +113,15 @@ function Dashboard() {
 
     setPageNotice("");
     try {
-      const { error } = await supabase.rpc("setup_demo_class", {
+      const { data, error } = await supabase.rpc("setup_demo_class", {
         _lead_id: user.id,
       });
       if (error) throw error;
-      window.location.reload();
+      if (typeof data === "string") {
+        navigate({ to: "/class/$id", params: { id: data } });
+      } else {
+        window.location.reload();
+      }
     } catch (err) {
       console.error("Failed to create demo class:", err);
       setPageNotice(demoClassErrorMessage(err));
@@ -197,7 +201,7 @@ function Dashboard() {
               onClick={setupDemoClass}
               className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Plus className="h-4 w-4 text-accent" /> Set up demo class
+              <Plus className="h-4 w-4 text-accent" /> Try demo class
             </button>
             <Link
               to="/class/new"
@@ -227,7 +231,7 @@ function Dashboard() {
                 onClick={setupDemoClass}
                 className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg border border-border bg-card font-medium hover:bg-muted transition-all"
               >
-                Set up demo class
+                Try demo class
               </button>
               <Link
                 to="/class/new"

@@ -78,7 +78,8 @@ function Guide() {
           </div>
 
           <p className="text-sm text-muted mb-6">
-            {QUESTIONS.length} quick behavior questions + project details · Saved automatically
+            {QUESTIONS.length} quick behavior questions in 5 parts + project details · Saved
+            automatically
           </p>
           <button
             onClick={() => navigate({ to: "/survey" })}

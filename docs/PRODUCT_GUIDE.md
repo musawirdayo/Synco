@@ -117,7 +117,7 @@ This avoids device dependency. Results are tied to the Supabase user account, no
 
 The survey has:
 
-- 22 slider questions from `src/lib/questions.ts`.
+- 22 slider questions from `src/lib/questions.ts`, grouped into shorter visible parts.
 - Detail steps for availability, skills, planning, logistics, and preferences.
 - Optional text fields:
   - `wantToWorkWith`
@@ -229,7 +229,7 @@ Implemented:
 
 Future improvements:
 
-- Group the long survey into fewer visible steps.
+- Continue simplifying survey copy as real students use it.
 - Add lead-side filtering/search to large class pages.
 - Split very large route files into smaller components.
 - Add richer admin analytics and export tools.

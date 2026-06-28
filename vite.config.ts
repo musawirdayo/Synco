@@ -1,5 +1,9 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import react from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 const supabaseUrlEnvKeys = [
   "VITE_SUPABASE_URL",
@@ -49,18 +53,45 @@ function manualChunks(id: string) {
 }
 
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
+  define: supabaseEnvDefines,
+  resolve: {
+    alias: {
+      "@": `${process.cwd()}/src`,
+    },
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "@tanstack/react-query",
+      "@tanstack/query-core",
+    ],
   },
-  vite: {
-    define: supabaseEnvDefines,
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks,
-        },
+  server: {
+    host: "::",
+    port: 8080,
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks,
       },
     },
-    plugins: isVitest ? [] : [nitro()],
   },
+  plugins: [
+    tailwindcss(),
+    tsconfigPaths({ projects: ["./tsconfig.json"] }),
+    tanstackStart({
+      server: { entry: "server" },
+      importProtection: {
+        behavior: "error",
+        client: {
+          files: ["**/server/**"],
+          specifiers: ["server-only"],
+        },
+      },
+    }),
+    react(),
+    ...(isVitest ? [] : [nitro()]),
+  ],
 });

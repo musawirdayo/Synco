@@ -136,4 +136,4 @@ The core platform is implemented and connected:
 - Roster privacy.
 - Platform admin panel.
 
-Known areas for future improvement are listed in the docs, especially around survey UX grouping, large-route refactors, and deeper admin analytics.
+Known areas for future improvement are listed in the docs, especially around large-route refactors, richer analytics, and deeper validation.

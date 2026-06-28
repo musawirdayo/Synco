@@ -192,7 +192,7 @@ Verification passed after this cleanup:
 - `npm run build`
 - `git diff --check`
 
-Note: the build still emits `.output/public/wrangler.json` from the underlying TanStack/Nitro/Lovable tooling, but the repo no longer has a root Cloudflare deployment config or a direct Cloudflare Vite dependency.
+Note: the build still emits `.output/public/wrangler.json` from the underlying TanStack/Nitro tooling, but the repo no longer has a root Cloudflare deployment config or a direct Cloudflare Vite dependency.
 
 ## 2026-06-25 Matching Algorithm V2 Slice
 
@@ -736,3 +736,30 @@ Backend migration status:
 
 - `npm exec --yes supabase -- migration list --linked` could not authenticate because `SUPABASE_ACCESS_TOKEN` is not set in this shell.
 - The migration file is committed, but the remote Supabase project still needs `20260626002000_move_feedback_to_platform_scope.sql` applied.
+
+## 2026-06-28 Platform Polish And Survey Cleanup
+
+Cleanup/polish pass:
+
+- Removed tracked Lovable scaffold metadata (`.lovable/project.json`).
+- Removed `@lovable.dev/vite-tanstack-config` and replaced it with direct Vite plugins: Tailwind, tsconfig paths, TanStack Start, React, and Nitro.
+- Removed Lovable-hosted social preview image URLs from root metadata.
+- Restored the stronger landing headline: "Boost student productivity with fair class teams."
+- Simplified survey question wording while keeping stable `q1` through `q22` ids.
+- Grouped the survey into 5 behavior-question parts plus 5 detail parts, reducing the visible flow from 27 screens to 10 screens.
+- Updated survey guide/docs to match the grouped survey.
+- Added `supabase/migrations/20260628001000_make_demo_class_tryable.sql`.
+  - New demo setup creates 5 completed demo classmates and leaves 1 open seat for the tester to join through the invite link and complete the survey.
+- Updated the dashboard demo action to navigate directly to the created class.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm test` (99 passing)
+- `npm run build`
+- Local visual smoke checks for landing desktop/mobile and survey guide.
+
+Backend migration status:
+
+- This shell still has no `SUPABASE_ACCESS_TOKEN` or `SUPABASE_DB_PASSWORD`, so the remote Supabase database still needs `supabase db push --linked` run with credentials to apply `20260628001000_make_demo_class_tryable.sql`.

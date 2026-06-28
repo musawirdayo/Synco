@@ -308,7 +308,7 @@ function Landing() {
                 immediate
                 className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
-                Smarter project teams, with the reasons included.
+                Boost student productivity with fair class teams.
               </Reveal>
               <Reveal
                 as="p"
