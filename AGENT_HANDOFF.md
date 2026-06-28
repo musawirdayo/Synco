@@ -736,6 +736,24 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-28 Local Synco Brain
+
+Added a privacy-safe local intelligence layer inside Master Control:
+
+- Added `src/lib/local-ai.ts`.
+- Added a "Local Synco Brain" section to `/admin`.
+- The brain reads existing platform signals such as class count, publish status, survey completion, feedback counts, active users, and admin content readiness.
+- It produces prioritized operating recommendations without external AI calls or model downloads.
+- This is intentionally local-first and reviewable; it does not change matching weights or silently train on student data.
+
+Verified:
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm test` (99 passing)
+- `npm run build`
+- `git diff --check`
+
 ## 2026-06-28 Admin Dev Content Control
 
 Added an admin-editable public content system:

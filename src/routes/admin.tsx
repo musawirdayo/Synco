@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  BrainCircuit,
   Database,
   ExternalLink,
   FileText,
@@ -21,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 import type { Database as SupabaseDatabase, Json } from "@/integrations/supabase/types";
+import { generatePlatformBrainInsights } from "@/lib/local-ai";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPanel,
@@ -196,12 +198,20 @@ function AdminPanel() {
     void loadAll();
   }, [loadAll]);
 
-  const counts = overview?.counts ?? {};
+  const counts = useMemo(() => overview?.counts ?? {}, [overview?.counts]);
   const completionRate = useMemo(() => {
     const total = counts.survey_responses ?? 0;
     if (!total) return 0;
     return Math.round(((counts.completed_surveys ?? 0) / total) * 100);
   }, [counts.completed_surveys, counts.survey_responses]);
+
+  const brainInsights = useMemo(() => {
+    return generatePlatformBrainInsights({
+      contentPages: contentRows.length,
+      counts,
+      recentClasses: overview?.recent_classes ?? [],
+    });
+  }, [contentRows.length, counts, overview?.recent_classes]);
 
   const selectedContent = useMemo(() => {
     return (
@@ -381,6 +391,53 @@ where email = 'your-email@example.com';`}
           value={counts.platform_admins ?? 0}
           detail="Allowlisted platform admins"
         />
+      </section>
+
+      <section className="mt-8">
+        <Panel
+          icon={<BrainCircuit className="h-4 w-4" />}
+          title="Local Synco Brain"
+          detail="Privacy-safe operating intelligence from platform signals. No external AI calls."
+        >
+          <div className="grid gap-3 lg:grid-cols-5">
+            {brainInsights.map((insight) => (
+              <div
+                key={insight.id}
+                className={
+                  "rounded-xl border p-4 " +
+                  (insight.priority === "high"
+                    ? "border-destructive/30 bg-destructive/5"
+                    : insight.priority === "medium"
+                      ? "border-accent/30 bg-accent/5"
+                      : "border-border bg-background")
+                }
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className={
+                      "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider " +
+                      (insight.priority === "high"
+                        ? "bg-destructive/10 text-destructive"
+                        : insight.priority === "medium"
+                          ? "bg-accent/10 text-accent"
+                          : "bg-muted text-muted-foreground")
+                    }
+                  >
+                    {insight.priority}
+                  </span>
+                  <span className="truncate text-[10px] font-medium text-muted">
+                    {insight.signal}
+                  </span>
+                </div>
+                <h2 className="mt-3 text-sm font-semibold leading-5">{insight.title}</h2>
+                <p className="mt-2 text-xs leading-5 text-muted">{insight.body}</p>
+                <p className="mt-3 border-t border-border pt-3 text-xs font-medium leading-5">
+                  {insight.action}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
