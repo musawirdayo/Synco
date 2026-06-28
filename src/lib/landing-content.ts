@@ -1,0 +1,458 @@
+export type LandingCard = {
+  label?: string;
+  title: string;
+  text: string;
+  value?: string;
+};
+
+export type LandingFaqItem = {
+  id: string;
+  question: string;
+  answer: string;
+};
+
+export type LandingPreviewTeam = {
+  name: string;
+  members: string;
+  rationale: string;
+  fit?: string;
+};
+
+export type LandingPreview = {
+  badge: string;
+  graphBadge: string;
+  graphSubtitle: string;
+  graphTitle: string;
+  headerSubtitle: string;
+  headerTitle: string;
+  people: Array<[string, string]>;
+  peopleTitle: string;
+  stats: Array<[string, string]>;
+  teams: LandingPreviewTeam[];
+};
+
+export type LandingContent = {
+  audienceBenefits: LandingCard[];
+  classBenefits: LandingCard[];
+  faqIntroEyebrow: string;
+  faqIntroSubtitle: string;
+  faqIntroTitle: string;
+  faqs: LandingFaqItem[];
+  finalCtaEyebrow: string;
+  finalCtaTitle: string;
+  featuresEyebrow: string;
+  featuresSubtitle: string;
+  featuresTitle: string;
+  heroEyebrow: string;
+  heroPrimaryCta: string;
+  heroSecondaryCta: string;
+  heroSubtitle: string;
+  heroTitle: string;
+  howIntroEyebrow: string;
+  howIntroSubtitle: string;
+  howIntroTitle: string;
+  howSyncoWorks: LandingCard[];
+  matchingFactors: LandingCard[];
+  matchingIntroEyebrow: string;
+  matchingIntroSubtitle: string;
+  matchingIntroTitle: string;
+  matchingLead: string;
+  outputCards: LandingCard[];
+  preview: LandingPreview;
+  productivityBenefits: LandingCard[];
+  studentPayoffEyebrow: string;
+  studentPayoffSubtitle: string;
+  studentPayoffTitle: string;
+  workflowSteps: string[];
+};
+
+export const defaultLandingContent: LandingContent = {
+  heroEyebrow: "For class reps organizing project teams",
+  heroTitle: "Create better project teams from one class link.",
+  heroSubtitle:
+    "Synco helps you collect student work habits, form fair teams, and give every classmate a useful result they understand.",
+  heroPrimaryCta: "Create a class",
+  heroSecondaryCta: "See what students get",
+  workflowSteps: ["Create class", "Share link", "Collect surveys", "Publish teams"],
+  audienceBenefits: [
+    {
+      label: "Class reps",
+      title: "Stop sorting groups by hand",
+      text: "Create one class link, collect answers, and publish ready-made teams with reasons.",
+    },
+    {
+      label: "Students",
+      title: "A result they actually want",
+      text: "Students get their team, best-fit classmates, risky pairings, and proof in simple language.",
+    },
+    {
+      label: "Project leads",
+      title: "Start with less group drama",
+      text: "Use schedule fit, effort level, strengths, requests, and avoid rules before the project begins.",
+    },
+  ],
+  howIntroEyebrow: "Class workflow",
+  howIntroTitle: "How Synco works",
+  howIntroSubtitle: "A short flow from one invite link to teams your class can actually use.",
+  howSyncoWorks: [
+    {
+      title: "Create the class",
+      text: "Set the class name, team size, and join rules before you share anything.",
+    },
+    {
+      title: "Share one link",
+      text: "Students use the invite link to join, answer the survey, and keep results tied to their account.",
+    },
+    {
+      title: "Collect honest answers",
+      text: "Synco checks work habits, free time, goals, strengths, friend requests, and do-not-pair notes.",
+    },
+    {
+      title: "Publish useful results",
+      text: "The class gets teams with reasons, while each student gets a personal match profile.",
+    },
+  ],
+  studentPayoffEyebrow: "Why it helps",
+  studentPayoffTitle: "Students answer because the result helps them too.",
+  studentPayoffSubtitle:
+    "A class rep needs responses. Synco gives students a reason to complete the survey: their own team, best-fit classmates, risky pairings, and plain proof they can use.",
+  productivityBenefits: [
+    {
+      value: "Less",
+      title: "time wasted on group confusion",
+      text: "Synco helps the class spend less time arguing over teams and more time starting the actual work.",
+    },
+    {
+      value: "Top 5",
+      title: "classmates to consider",
+      text: "Each student gets a useful best-fit list with reasons based on schedule, effort, style, and strengths.",
+    },
+    {
+      value: "5",
+      title: "pairings to handle carefully",
+      text: "Synco also shows risky pairings so students can avoid repeat problems before deadlines get close.",
+    },
+  ],
+  matchingIntroEyebrow: "Upgraded matching engine",
+  matchingIntroTitle: "Built to find useful teams, not just similar people.",
+  matchingIntroSubtitle:
+    "The matcher looks for balance: people who can meet, work at a similar seriousness level, and bring different strengths to the same project.",
+  matchingLead:
+    "Synco checks pair fit and full-team balance together. It rewards complementary strengths, respects hard avoid rules, treats mutual requests carefully, and flags teams that need a plan before students start.",
+  matchingFactors: [
+    {
+      title: "Meeting reality",
+      text: "Shared free time and schedule habits matter because teams fail fast when they cannot actually meet.",
+    },
+    {
+      title: "Complementary strengths",
+      text: "Synco does not just stack the same strong students together. It looks for people who cover each other's gaps.",
+    },
+    {
+      title: "Thinking and work style",
+      text: "Planning style, communication pace, deadline habits, and effort level are checked before a pair is treated as strong.",
+    },
+    {
+      title: "Hard rules and requests",
+      text: "Do-not-pair notes are kept apart, mutual friend requests are honored up to team size, and one-sided requests stay as soft hints.",
+    },
+    {
+      title: "Team safety checks",
+      text: "Low schedule fit, weak role balance, duplicate strengths, and isolated teammates are flagged before teams are treated as safe.",
+    },
+    {
+      title: "Proof-based results",
+      text: "Students do not just get a score. They see the proof: meeting fit, skill coverage, work rhythm, and what to agree on first.",
+    },
+  ],
+  outputCards: [
+    {
+      label: "For each team",
+      title: "A team quality check",
+      text: "Synco scores the whole team, not only one pair at a time, so weak links and role gaps are easier to spot.",
+    },
+    {
+      label: "For each student",
+      title: "Best matches and watch-outs",
+      text: "Each student sees who may be easier to work with, who needs caution, and the reason behind both lists.",
+    },
+    {
+      label: "For the lead",
+      title: "Review flags before work starts",
+      text: "Teams that are legal but fragile are marked for review so the class can plan around risk early.",
+    },
+  ],
+  featuresEyebrow: "For the class",
+  featuresTitle: "Less sorting before group work starts.",
+  featuresSubtitle:
+    "Synco handles the repeated sorting work so class reps can move everyone into the project with fewer arguments and less guessing.",
+  classBenefits: [
+    {
+      title: "No sorting names by hand",
+      text: "Stop moving names around and hoping the teams still feel fair.",
+    },
+    {
+      title: "No checking every request by hand",
+      text: "Friend requests and do-not-pair notes are checked before teams are shared.",
+    },
+    {
+      title: "Fewer last-minute team changes",
+      text: "Make teams with enough context to avoid moving people around again and again.",
+    },
+    {
+      title: "A clear reason for each team",
+      text: "Each team includes a short explanation in plain language.",
+    },
+    {
+      title: "Know who fits you better",
+      text: "Each person can see classmates they may work well with.",
+    },
+    {
+      title: "Know who may be harder",
+      text: "Synco also shows pairings that may need more care or may be best avoided.",
+    },
+  ],
+  faqIntroEyebrow: "Practical details",
+  faqIntroTitle: "Questions before you start",
+  faqIntroSubtitle: "Simple answers for students joining a class and CRs setting one up.",
+  faqs: [
+    {
+      id: "join",
+      question: "I am a student. Can I use Synco without creating a class?",
+      answer:
+        "Yes. If your class rep or lead gives you a code, you can join the class, answer the survey, and see your result after teams are published.",
+    },
+    {
+      id: "questions",
+      question: "Will the survey feel boring or too personal?",
+      answer:
+        "The survey is split into shorter parts and uses simple questions about how you work: free time, work habits, goals, strengths, friend requests, and do-not-pair notes. It is for better teams, not judging people.",
+    },
+    {
+      id: "algorithm",
+      question: "Does Synco just match similar students together?",
+      answer:
+        "No. Similar schedules and goals help, but Synco also looks for complementary strengths, role balance, shared weak spots, and team safety. A strong team should cover more of the project, not just repeat the same strengths.",
+    },
+    {
+      id: "privacy",
+      question: "Will classmates see my private answers?",
+      answer:
+        "No. Raw answers are not shown to classmates. Results focus on your team, your closest matches, people you may want to avoid, and short reasons that explain the match.",
+    },
+    {
+      id: "individual",
+      question: "What do students get after results are published?",
+      answer:
+        "Students get their assigned team, teammates, a working-style profile, best classmates to consider, risky pairings to handle carefully, and plain reasons for the result.",
+    },
+    {
+      id: "avoid",
+      question: "Can Synco keep two people apart?",
+      answer:
+        "Yes. If someone lists a do-not-pair name, Synco treats that as a rule and avoids putting those people on the same team.",
+    },
+    {
+      id: "late",
+      question: "Can a class rep update teams later?",
+      answer:
+        "Teams work best when everyone answers before they are made. If someone joins late, the class can collect their answers and make or update the team plan before sharing results.",
+    },
+    {
+      id: "odd",
+      question: "What if the class number does not split evenly?",
+      answer:
+        "Synco still places everyone. If a perfect split is not possible, the leftover people are added to teams where they fit best.",
+    },
+  ],
+  finalCtaEyebrow: "Start with one class",
+  finalCtaTitle: "Ready to create your first class link?",
+  preview: {
+    headerTitle: "Class results preview",
+    headerSubtitle: "Teams + student match profiles",
+    badge: "Ready to publish",
+    stats: [
+      ["Invite code", "H7K2"],
+      ["Answers", "24 / 28"],
+      ["Team size", "4"],
+    ],
+    teams: [
+      {
+        name: "Team 1",
+        members: "Maya, Noor, Ezra, Jules",
+        rationale:
+          "Strong schedule overlap with mixed planning styles and different useful strengths.",
+        fit: "92% fit",
+      },
+      {
+        name: "Why it works",
+        members: "Planning, research, writing, review",
+        rationale: "The group covers more of the project instead of repeating one skill.",
+        fit: "92% fit",
+      },
+    ],
+    peopleTitle: "Personal match guide",
+    people: [
+      ["Best fits", "Noor, Ari, Lina"],
+      ["Be careful with", "Theo, Sam"],
+    ],
+    graphTitle: "Class team map",
+    graphSubtitle: "Classmates settle into balanced teams as fit and avoid rules are applied.",
+    graphBadge: "4 teams",
+  },
+};
+
+export function parseLandingContent(raw: string | null | undefined): LandingContent {
+  if (!raw) return defaultLandingContent;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<LandingContent>;
+    return mergeLandingContent(defaultLandingContent, parsed);
+  } catch (error) {
+    console.error("Landing content JSON is invalid. Falling back to built-in copy.", error);
+    return defaultLandingContent;
+  }
+}
+
+export function landingContentToJson(content: LandingContent = defaultLandingContent) {
+  return JSON.stringify(content, null, 2);
+}
+
+function mergeLandingContent(
+  fallback: LandingContent,
+  parsed: Partial<LandingContent>,
+): LandingContent {
+  return {
+    ...fallback,
+    ...pickStringFields(fallback, parsed),
+    audienceBenefits: mergeCards(fallback.audienceBenefits, parsed.audienceBenefits),
+    classBenefits: mergeCards(fallback.classBenefits, parsed.classBenefits),
+    faqs: mergeFaqs(fallback.faqs, parsed.faqs),
+    howSyncoWorks: mergeCards(fallback.howSyncoWorks, parsed.howSyncoWorks),
+    matchingFactors: mergeCards(fallback.matchingFactors, parsed.matchingFactors),
+    outputCards: mergeCards(fallback.outputCards, parsed.outputCards),
+    preview: mergePreview(fallback.preview, parsed.preview),
+    productivityBenefits: mergeCards(fallback.productivityBenefits, parsed.productivityBenefits),
+    workflowSteps: stringArray(parsed.workflowSteps, fallback.workflowSteps),
+  };
+}
+
+function pickStringFields(fallback: LandingContent, parsed: Partial<LandingContent>) {
+  const result: Partial<LandingContent> = {};
+  const keys = Object.keys(fallback) as Array<keyof LandingContent>;
+
+  keys.forEach((key) => {
+    if (typeof fallback[key] !== "string") return;
+    const value = parsed[key];
+    if (typeof value === "string" && value.trim()) {
+      (result as Record<string, string>)[key] = value.trim();
+    }
+  });
+
+  return result;
+}
+
+function mergeCards(fallback: LandingCard[], value: unknown) {
+  if (!Array.isArray(value)) return fallback;
+  const cards: LandingCard[] = [];
+
+  value.forEach((item) => {
+    if (!isRecord(item)) return;
+    const title = textValue(item.title);
+    const text = textValue(item.text);
+    if (!title || !text) return;
+    const card: LandingCard = { title, text };
+    const label = textValue(item.label);
+    const valueText = textValue(item.value);
+    if (label) card.label = label;
+    if (valueText) card.value = valueText;
+    cards.push(card);
+  });
+
+  return cards.length ? cards : fallback;
+}
+
+function mergeFaqs(fallback: LandingFaqItem[], value: unknown) {
+  if (!Array.isArray(value)) return fallback;
+  const faqs = value
+    .map((item, index) => {
+      if (!isRecord(item)) return null;
+      const question = textValue(item.question);
+      const answer = textValue(item.answer);
+      if (!question || !answer) return null;
+      return {
+        id: textValue(item.id) || `faq-${index + 1}`,
+        question,
+        answer,
+      };
+    })
+    .filter((item): item is LandingFaqItem => Boolean(item));
+
+  return faqs.length ? faqs : fallback;
+}
+
+function mergePreview(fallback: LandingPreview, value: unknown): LandingPreview {
+  if (!isRecord(value)) return fallback;
+  const teams = mergePreviewTeams(fallback.teams, value.teams);
+  return {
+    ...fallback,
+    badge: textValue(value.badge) || fallback.badge,
+    graphBadge: textValue(value.graphBadge) || fallback.graphBadge,
+    graphSubtitle: textValue(value.graphSubtitle) || fallback.graphSubtitle,
+    graphTitle: textValue(value.graphTitle) || fallback.graphTitle,
+    headerSubtitle: textValue(value.headerSubtitle) || fallback.headerSubtitle,
+    headerTitle: textValue(value.headerTitle) || fallback.headerTitle,
+    people: tupleArray(value.people, fallback.people),
+    peopleTitle: textValue(value.peopleTitle) || fallback.peopleTitle,
+    stats: tupleArray(value.stats, fallback.stats),
+    teams,
+  };
+}
+
+function mergePreviewTeams(fallback: LandingPreviewTeam[], value: unknown) {
+  if (!Array.isArray(value)) return fallback;
+  const teams: LandingPreviewTeam[] = [];
+
+  value.forEach((item) => {
+    if (!isRecord(item)) return;
+    const name = textValue(item.name);
+    const members = textValue(item.members);
+    const rationale = textValue(item.rationale);
+    if (!name || !members || !rationale) return;
+    const team: LandingPreviewTeam = { name, members, rationale };
+    const fit = textValue(item.fit);
+    if (fit) team.fit = fit;
+    teams.push(team);
+  });
+
+  return teams.length ? teams : fallback;
+}
+
+function stringArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return fallback;
+  const items = value.map((item) => textValue(item)).filter(Boolean);
+  return items.length ? items : fallback;
+}
+
+function tupleArray(value: unknown, fallback: Array<[string, string]>) {
+  if (!Array.isArray(value)) return fallback;
+  const items = value
+    .map((item) => {
+      if (!Array.isArray(item)) return null;
+      const label = textValue(item[0]);
+      const text = textValue(item[1]);
+      if (!label || !text) return null;
+      return [label, text] as [string, string];
+    })
+    .filter((item): item is [string, string] => Boolean(item));
+
+  return items.length ? items : fallback;
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

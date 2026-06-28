@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Reveal, ScrollProgress, StaggerContainer } from "@/components/animations/reveal";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  defaultLandingContent,
+  parseLandingContent,
+  type LandingContent,
+  type LandingFaqItem,
+  type LandingPreview,
+} from "@/lib/landing-content";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -10,210 +18,6 @@ const primaryButtonClass =
   "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]";
 const textLinkClass =
   "inline-flex h-11 items-center justify-center text-sm font-medium text-[color:var(--color-primary)] transition-colors hover:text-[color:var(--color-primary-hover)]";
-
-const workflowSteps = ["Create class", "Share link", "Collect surveys", "Publish teams"];
-
-const audienceBenefits = [
-  {
-    label: "Class reps",
-    title: "Stop sorting groups by hand",
-    text: "Create one class link, collect answers, and publish ready-made teams with reasons.",
-  },
-  {
-    label: "Students",
-    title: "A result they actually want",
-    text: "Students get their team, best-fit classmates, risky pairings, and proof in simple language.",
-  },
-  {
-    label: "Project leads",
-    title: "Start with less group drama",
-    text: "Use schedule fit, effort level, strengths, requests, and avoid rules before the project begins.",
-  },
-];
-
-const howSyncoWorks = [
-  {
-    title: "Create the class",
-    text: "Set the class name, team size, and join rules before you share anything.",
-  },
-  {
-    title: "Share one link",
-    text: "Students use the invite link to join, answer the survey, and keep results tied to their account.",
-  },
-  {
-    title: "Collect honest answers",
-    text: "Synco checks work habits, free time, goals, strengths, friend requests, and do-not-pair notes.",
-  },
-  {
-    title: "Publish useful results",
-    text: "The class gets teams with reasons, while each student gets a personal match profile.",
-  },
-];
-
-const productivityBenefits = [
-  {
-    value: "Less",
-    title: "time wasted on group confusion",
-    text: "Synco helps the class spend less time arguing over teams and more time starting the actual work.",
-  },
-  {
-    value: "Top 5",
-    title: "classmates to consider",
-    text: "Each student gets a useful best-fit list with reasons based on schedule, effort, style, and strengths.",
-  },
-  {
-    value: "5",
-    title: "pairings to handle carefully",
-    text: "Synco also shows risky pairings so students can avoid repeat problems before deadlines get close.",
-  },
-];
-
-const matchingFactors = [
-  {
-    title: "Meeting reality",
-    text: "Shared free time and schedule habits matter because teams fail fast when they cannot actually meet.",
-  },
-  {
-    title: "Complementary strengths",
-    text: "Synco does not just stack the same strong students together. It looks for people who cover each other's gaps.",
-  },
-  {
-    title: "Thinking and work style",
-    text: "Planning style, communication pace, deadline habits, and effort level are checked before a pair is treated as strong.",
-  },
-  {
-    title: "Hard rules and requests",
-    text: "Do-not-pair notes are kept apart, mutual friend requests are honored up to team size, and one-sided requests stay as soft hints.",
-  },
-  {
-    title: "Team safety checks",
-    text: "Low schedule fit, weak role balance, duplicate strengths, and isolated teammates are flagged before teams are treated as safe.",
-  },
-  {
-    title: "Proof-based results",
-    text: "Students do not just get a score. They see the proof: meeting fit, skill coverage, work rhythm, and what to agree on first.",
-  },
-];
-
-const algorithmOutputs = [
-  {
-    label: "For each team",
-    title: "A team quality check",
-    text: "Synco scores the whole team, not only one pair at a time, so weak links and role gaps are easier to spot.",
-  },
-  {
-    label: "For each student",
-    title: "Best matches and watch-outs",
-    text: "Each student sees who may be easier to work with, who needs caution, and the reason behind both lists.",
-  },
-  {
-    label: "For the lead",
-    title: "Review flags before work starts",
-    text: "Teams that are legal but fragile are marked for review so the class can plan around risk early.",
-  },
-];
-
-const classBenefits = [
-  {
-    title: "No sorting names by hand",
-    text: "Stop moving names around and hoping the teams still feel fair.",
-  },
-  {
-    title: "No checking every request by hand",
-    text: "Friend requests and do-not-pair notes are checked before teams are shared.",
-  },
-  {
-    title: "Fewer last-minute team changes",
-    text: "Make teams with enough context to avoid moving people around again and again.",
-  },
-  {
-    title: "A clear reason for each team",
-    text: "Each team includes a short explanation in plain language.",
-  },
-  {
-    title: "Know who fits you better",
-    text: "Each person can see classmates they may work well with.",
-  },
-  {
-    title: "Know who may be harder",
-    text: "Synco also shows pairings that may need more care or may be best avoided.",
-  },
-];
-
-const previewTeams = [
-  {
-    name: "Team 1",
-    members: "Maya, Noor, Ezra, Jules",
-    rationale: "Strong schedule overlap with mixed planning styles and different useful strengths.",
-  },
-  {
-    name: "Why it works",
-    members: "Planning, research, writing, review",
-    rationale: "The group covers more of the project instead of repeating one skill.",
-  },
-];
-
-const previewPeople = [
-  ["Best fits", "Noor, Ari, Lina"],
-  ["Be careful with", "Theo, Sam"],
-];
-
-const previewStats = [
-  ["Invite code", "H7K2"],
-  ["Answers", "24 / 28"],
-  ["Team size", "4"],
-];
-
-const faqs = [
-  {
-    id: "join",
-    question: "I am a student. Can I use Synco without creating a class?",
-    answer:
-      "Yes. If your class rep or lead gives you a code, you can join the class, answer the survey, and see your result after teams are published.",
-  },
-  {
-    id: "questions",
-    question: "Will the survey feel boring or too personal?",
-    answer:
-      "The survey is split into shorter parts and uses simple questions about how you work: free time, work habits, goals, strengths, friend requests, and do-not-pair notes. It is for better teams, not judging people.",
-  },
-  {
-    id: "algorithm",
-    question: "Does Synco just match similar students together?",
-    answer:
-      "No. Similar schedules and goals help, but Synco also looks for complementary strengths, role balance, shared weak spots, and team safety. A strong team should cover more of the project, not just repeat the same strengths.",
-  },
-  {
-    id: "privacy",
-    question: "Will classmates see my private answers?",
-    answer:
-      "No. Raw answers are not shown to classmates. Results focus on your team, your closest matches, people you may want to avoid, and short reasons that explain the match.",
-  },
-  {
-    id: "individual",
-    question: "What do students get after results are published?",
-    answer:
-      "Students get their assigned team, teammates, a working-style profile, best classmates to consider, risky pairings to handle carefully, and plain reasons for the result.",
-  },
-  {
-    id: "avoid",
-    question: "Can Synco keep two people apart?",
-    answer:
-      "Yes. If someone lists a do-not-pair name, Synco treats that as a rule and avoids putting those people on the same team.",
-  },
-  {
-    id: "late",
-    question: "Can a class rep update teams later?",
-    answer:
-      "Teams work best when everyone answers before they are made. If someone joins late, the class can collect their answers and make or update the team plan before sharing results.",
-  },
-  {
-    id: "odd",
-    question: "What if the class number does not split evenly?",
-    answer:
-      "Synco still places everyone. If a perfect split is not possible, the leftover people are added to teams where they fit best.",
-  },
-];
 
 const scatterPositions = [
   [285, 175],
@@ -301,6 +105,35 @@ const clusterConnections = [0, 1, 2, 3].flatMap((cluster) => {
 });
 
 function Landing() {
+  const [content, setContent] = useState<LandingContent>(defaultLandingContent);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLandingContent() {
+      const { data, error } = await supabase
+        .from("platform_content")
+        .select("body")
+        .eq("content_key", "landing_page")
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to load landing page content:", error);
+        return;
+      }
+
+      setContent(parseLandingContent(data?.body));
+    }
+
+    void loadLandingContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background font-sans text-foreground">
       <ScrollProgress />
@@ -318,7 +151,7 @@ function Landing() {
                 immediate
                 className="text-sm font-medium text-[color:var(--color-primary)]"
               >
-                For class reps organizing project teams
+                {content.heroEyebrow}
               </Reveal>
               <Reveal
                 as="h1"
@@ -326,7 +159,7 @@ function Landing() {
                 immediate
                 className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
               >
-                Create better project teams from one class link.
+                {content.heroTitle}
               </Reveal>
               <Reveal
                 as="p"
@@ -335,8 +168,7 @@ function Landing() {
                 immediate
                 className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
-                Synco helps you collect student work habits, form fair teams, and give every
-                classmate a useful result they understand.
+                {content.heroSubtitle}
               </Reveal>
 
               <Reveal
@@ -346,20 +178,20 @@ function Landing() {
                 className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
                 <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
-                  Create a class
+                  {content.heroPrimaryCta}
                 </Link>
                 <a href="#student-payoff" className={`${textLinkClass} sm:w-fit`}>
-                  See what students get
+                  {content.heroSecondaryCta}
                 </a>
               </Reveal>
 
               <Reveal blur={false} delay={0.32} immediate className="mt-7">
-                <WorkflowLine />
+                <WorkflowLine steps={content.workflowSteps} />
               </Reveal>
             </div>
 
             <Reveal delay={0.18} immediate mask scale={0.97}>
-              <MockMatchCard />
+              <MockMatchCard preview={content.preview} />
             </Reveal>
           </div>
         </section>
@@ -370,7 +202,7 @@ function Landing() {
         >
           <div className={pageContainer}>
             <StaggerContainer className="grid gap-4 md:grid-cols-3" immediate>
-              {audienceBenefits.map((benefit) => (
+              {content.audienceBenefits.map((benefit) => (
                 <Reveal
                   key={benefit.title}
                   staggerItem
@@ -394,18 +226,18 @@ function Landing() {
           <div className={`${pageContainer} grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-12`}>
             <Reveal className="max-w-md">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
-                Class workflow
+                {content.howIntroEyebrow}
               </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                How Synco works
+                {content.howIntroTitle}
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                A short flow from one invite link to teams your class can actually use.
+                {content.howIntroSubtitle}
               </p>
             </Reveal>
 
             <StaggerContainer as="ol" className="grid gap-4 sm:grid-cols-2">
-              {howSyncoWorks.map((step, index) => (
+              {content.howSyncoWorks.map((step, index) => (
                 <Reveal
                   as="li"
                   key={step.title}
@@ -430,18 +262,19 @@ function Landing() {
         <section className={`border-b border-border/70 bg-background ${sectionPadding}`}>
           <div className={pageContainer}>
             <Reveal className="max-w-2xl">
-              <p className="text-sm font-medium text-[color:var(--color-primary)]">Why it helps</p>
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                {content.studentPayoffEyebrow}
+              </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Students answer because the result helps them too.
+                {content.studentPayoffTitle}
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                A class rep needs responses. Synco gives students a reason to complete the survey:
-                their own team, best-fit classmates, risky pairings, and plain proof they can use.
+                {content.studentPayoffSubtitle}
               </p>
             </Reveal>
 
             <StaggerContainer className="mt-8 grid gap-4 md:grid-cols-3">
-              {productivityBenefits.map((benefit) => (
+              {content.productivityBenefits.map((benefit) => (
                 <Reveal
                   key={benefit.title}
                   staggerItem
@@ -467,24 +300,19 @@ function Landing() {
           >
             <Reveal className="max-w-md">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
-                Upgraded matching engine
+                {content.matchingIntroEyebrow}
               </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Built to find useful teams, not just similar people.
+                {content.matchingIntroTitle}
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                The matcher looks for balance: people who can meet, work at a similar seriousness
-                level, and bring different strengths to the same project.
+                {content.matchingIntroSubtitle}
               </p>
             </Reveal>
             <Reveal delay={0.08}>
-              <p className="max-w-2xl text-base leading-7 text-muted">
-                Synco checks pair fit and full-team balance together. It rewards complementary
-                strengths, respects hard avoid rules, treats mutual requests carefully, and flags
-                teams that need a plan before students start.
-              </p>
+              <p className="max-w-2xl text-base leading-7 text-muted">{content.matchingLead}</p>
               <StaggerContainer className="mt-6 grid gap-3 sm:grid-cols-2" delay={0.08}>
-                {matchingFactors.map((factor) => (
+                {content.matchingFactors.map((factor) => (
                   <Reveal
                     key={factor.title}
                     staggerItem
@@ -497,7 +325,7 @@ function Landing() {
               </StaggerContainer>
 
               <StaggerContainer className="mt-6 grid gap-3 lg:grid-cols-3" delay={0.12}>
-                {algorithmOutputs.map((item) => (
+                {content.outputCards.map((item) => (
                   <Reveal
                     key={item.title}
                     staggerItem
@@ -523,18 +351,19 @@ function Landing() {
             className={`${pageContainer} grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-12`}
           >
             <Reveal className="max-w-md">
-              <p className="text-sm font-medium text-[color:var(--color-primary)]">For the class</p>
+              <p className="text-sm font-medium text-[color:var(--color-primary)]">
+                {content.featuresEyebrow}
+              </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Less sorting before group work starts.
+                {content.featuresTitle}
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                Synco handles the repeated sorting work so class reps can move everyone into the
-                project with fewer arguments and less guessing.
+                {content.featuresSubtitle}
               </p>
             </Reveal>
 
             <StaggerContainer className="grid gap-4 sm:grid-cols-2">
-              {classBenefits.map((benefit) => (
+              {content.classBenefits.map((benefit) => (
                 <Reveal
                   key={benefit.title}
                   staggerItem
@@ -552,17 +381,17 @@ function Landing() {
           <div className="mx-auto max-w-3xl">
             <Reveal className="text-center">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
-                Practical details
+                {content.faqIntroEyebrow}
               </p>
               <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                Questions before you start
+                {content.faqIntroTitle}
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
-                Simple answers for students joining a class and CRs setting one up.
+                {content.faqIntroSubtitle}
               </p>
             </Reveal>
             <Reveal blur={false} delay={0.08} className="mt-8">
-              <LandingFaq />
+              <LandingFaq faqs={content.faqs} />
             </Reveal>
           </div>
         </section>
@@ -572,10 +401,10 @@ function Landing() {
             <Reveal className="flex flex-col items-start justify-between gap-6 rounded-[8px] border border-border bg-card p-6 sm:p-8 md:flex-row md:items-center">
               <div>
                 <p className="text-sm font-medium text-[color:var(--color-primary)]">
-                  Start with one class
+                  {content.finalCtaEyebrow}
                 </p>
                 <h2 className="mt-2 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
-                  Ready to create your first class link?
+                  {content.finalCtaTitle}
                 </h2>
               </div>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -596,14 +425,14 @@ function Landing() {
   );
 }
 
-function WorkflowLine() {
+function WorkflowLine({ steps }: { steps: string[] }) {
   return (
     <div className="rounded-[8px] border border-border bg-card px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-        {workflowSteps.map((step, index) => (
+        {steps.map((step, index) => (
           <span key={step} className="inline-flex items-center gap-2">
             <span className="font-medium text-foreground">{step}</span>
-            {index < workflowSteps.length - 1 ? (
+            {index < steps.length - 1 ? (
               <span className="text-muted" aria-hidden="true">
                 &rarr;
               </span>
@@ -615,7 +444,7 @@ function WorkflowLine() {
   );
 }
 
-function LandingFaq() {
+function LandingFaq({ faqs }: { faqs: LandingFaqItem[] }) {
   return (
     <div className="overflow-hidden rounded-[8px] border border-border bg-card">
       {faqs.map((faq) => (
@@ -686,7 +515,7 @@ function LandingHeader() {
   );
 }
 
-function MockMatchCard() {
+function MockMatchCard({ preview }: { preview: LandingPreview }) {
   return (
     <div
       className="rounded-[8px] border border-border bg-card shadow-[0_12px_36px_oklch(0.18_0_0_/_0.05)]"
@@ -694,18 +523,18 @@ function MockMatchCard() {
     >
       <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
         <div>
-          <p className="text-sm font-semibold">Class results preview</p>
-          <p className="text-xs text-muted">Teams + student match profiles</p>
+          <p className="text-sm font-semibold">{preview.headerTitle}</p>
+          <p className="text-xs text-muted">{preview.headerSubtitle}</p>
         </div>
         <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-[color:var(--color-primary)]">
-          Ready to publish
+          {preview.badge}
         </span>
       </div>
 
       <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-4">
           <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-background">
-            {previewStats.map(([label, value]) => (
+            {preview.stats.map(([label, value]) => (
               <div key={label} className="min-w-0 px-3 py-3">
                 <p className="text-[0.7rem] font-medium leading-4 text-muted">{label}</p>
                 <p className="mt-1 text-sm font-semibold">{value}</p>
@@ -714,12 +543,12 @@ function MockMatchCard() {
           </div>
 
           <div className="space-y-3">
-            {previewTeams.map((team) => (
+            {preview.teams.map((team) => (
               <div key={team.name} className="rounded-[8px] border border-border bg-background p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-sans text-sm font-semibold">{team.name}</h3>
                   <span className="text-xs font-medium text-[color:var(--color-accent)]">
-                    92% fit
+                    {team.fit ?? "92% fit"}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-foreground">{team.members}</p>
@@ -729,9 +558,9 @@ function MockMatchCard() {
           </div>
 
           <div className="rounded-[8px] border border-border bg-background p-4">
-            <h3 className="font-sans text-sm font-semibold">Personal match guide</h3>
+            <h3 className="font-sans text-sm font-semibold">{preview.peopleTitle}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
-              {previewPeople.map(([label, names]) => (
+              {preview.people.map(([label, names]) => (
                 <div key={label}>
                   <p className="text-xs font-medium text-muted">{label}</p>
                   <p className="mt-1 text-sm font-semibold">{names}</p>
@@ -744,13 +573,11 @@ function MockMatchCard() {
         <div className="flex min-h-[280px] flex-col rounded-[8px] border border-border bg-background p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-sans text-sm font-semibold">Class team map</h3>
-              <p className="mt-1 text-xs leading-5 text-muted">
-                Classmates settle into balanced teams as fit and avoid rules are applied.
-              </p>
+              <h3 className="font-sans text-sm font-semibold">{preview.graphTitle}</h3>
+              <p className="mt-1 text-xs leading-5 text-muted">{preview.graphSubtitle}</p>
             </div>
             <span className="shrink-0 rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium text-accent-foreground">
-              4 teams
+              {preview.graphBadge}
             </span>
           </div>
 

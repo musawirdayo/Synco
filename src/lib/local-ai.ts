@@ -112,15 +112,15 @@ export function generatePlatformBrainInsights(input: PlatformBrainInput): LocalA
     });
   }
 
-  if ((input.contentPages ?? 0) < 3) {
+  if ((input.contentPages ?? 0) < 4) {
     insights.push({
       id: "content-control",
       priority: "medium",
       title: "Public page controls are not fully ready",
-      body: "Contact, Privacy, and Terms should all be editable from Master Control before you rely on the platform without code help.",
+      body: "Landing, Contact, Privacy, and Terms should all be editable from Master Control before you rely on the platform without code help.",
       action:
-        "Apply the latest migration and confirm all three pages appear in Dev Content Control.",
-      signal: `${input.contentPages ?? 0}/3 content pages loaded`,
+        "Apply the latest migration and confirm all four pages appear in Dev Content Control.",
+      signal: `${input.contentPages ?? 0}/4 content pages loaded`,
     });
   }
 

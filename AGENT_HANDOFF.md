@@ -736,6 +736,29 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-28 Final Premium Landing Control
+
+Added full admin-controlled landing content:
+
+- Added `src/lib/landing-content.ts` with structured fallback content and a safe JSON parser.
+- Landing page now loads `platform_content.content_key = 'landing_page'` and falls back to built-in premium copy if the row is missing, incomplete, or invalid.
+- Master Control can edit the Landing Page JSON, validate it before saving, preview `/`, and load the default template.
+- Added `supabase/migrations/20260628003000_add_landing_page_content_control.sql`.
+- Updated the Local Synco Brain readiness check to expect Landing, Contact, Privacy, and Terms as editable public content.
+- Added `vitest.config.ts` with a 15 second test timeout so the existing 24-person team-scaling test does not fail on slower local runs.
+
+Verified:
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm test` (99 passing)
+- `npm run build`
+- `git diff --check`
+
+Backend migration status:
+
+- Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
+
 ## 2026-06-28 Local Synco Brain
 
 Added a privacy-safe local intelligence layer inside Master Control:

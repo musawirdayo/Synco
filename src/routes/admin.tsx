@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { RouteErrorFallback } from "@/components/route-error-boundary";
 import type { Database as SupabaseDatabase, Json } from "@/integrations/supabase/types";
+import { defaultLandingContent, landingContentToJson } from "@/lib/landing-content";
 import { generatePlatformBrainInsights } from "@/lib/local-ai";
 
 export const Route = createFileRoute("/admin")({
@@ -250,6 +251,10 @@ function AdminPanel() {
     setError("");
     setContentStatus("");
     try {
+      if (selectedContent.content_key === "landing_page") {
+        JSON.parse(contentDraft.body);
+      }
+
       const { error: saveError } = await supabase.rpc("admin_upsert_platform_content", {
         _content_key: selectedContent.content_key,
         _title: contentDraft.title,
@@ -523,12 +528,30 @@ where email = 'your-email@example.com';`}
               <div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Page body
+                    {selectedContent?.content_key === "landing_page" ? "Landing JSON" : "Page body"}
                   </label>
-                  <p className="text-xs text-muted">
-                    Use <span className="font-mono">## Heading</span> and{" "}
-                    <span className="font-mono">- bullet</span> lines.
-                  </p>
+                  {selectedContent?.content_key === "landing_page" ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-xs text-muted">Edit valid JSON. Bad JSON will not save.</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setContentDraft((draft) => ({
+                            ...draft,
+                            body: landingContentToJson(defaultLandingContent),
+                          }))
+                        }
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Load default template
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted">
+                      Use <span className="font-mono">## Heading</span> and{" "}
+                      <span className="font-mono">- bullet</span> lines.
+                    </p>
+                  )}
                 </div>
                 <textarea
                   value={contentDraft.body}
@@ -1111,6 +1134,7 @@ const devToolLinks: Array<{ label: string; href: string; external?: boolean }> =
 ];
 
 function contentLabel(key: string) {
+  if (key === "landing_page") return "Landing Page";
   if (key === "privacy_policy") return "Privacy Policy";
   if (key === "terms_of_service") return "Terms of Service";
   if (key === "contact_page") return "Contact Page";
@@ -1118,6 +1142,7 @@ function contentLabel(key: string) {
 }
 
 function contentPagePath(key: string) {
+  if (key === "landing_page") return "/";
   if (key === "privacy_policy") return "/privacy";
   if (key === "terms_of_service") return "/terms";
   if (key === "contact_page") return "/contact";
