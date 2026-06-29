@@ -12,12 +12,17 @@ import {
 
 export const Route = createFileRoute("/")({ component: Landing });
 
-const pageContainer = "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8";
-const sectionPadding = "py-10 sm:py-14 lg:py-20";
+const pageContainer = "mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8";
+const sectionPadding = "py-14 sm:py-16 lg:py-24";
+const sectionIntroClass = "max-w-xl";
+const cardClass =
+  "rounded-[8px] border border-border bg-card shadow-[0_14px_42px_oklch(0.18_0_0_/_0.045)]";
+const quietCardClass =
+  "rounded-[8px] border border-border bg-card shadow-[0_10px_30px_oklch(0.18_0_0_/_0.035)]";
 const primaryButtonClass =
-  "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]";
+  "inline-flex h-12 items-center justify-center rounded-[8px] bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_oklch(0.33_0.045_155_/_0.18)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--color-primary-hover)]";
 const textLinkClass =
-  "inline-flex h-11 items-center justify-center text-sm font-medium text-[color:var(--color-primary)] transition-colors hover:text-[color:var(--color-primary-hover)]";
+  "inline-flex h-12 items-center justify-center rounded-[8px] border border-border bg-card px-5 text-sm font-semibold text-[color:var(--color-primary)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-primary)]/30 hover:text-[color:var(--color-primary-hover)] hover:shadow-[0_10px_24px_oklch(0.18_0_0_/_0.045)]";
 
 const scatterPositions = [
   [285, 175],
@@ -140,16 +145,16 @@ function Landing() {
       <LandingHeader />
 
       <main className="relative z-10">
-        <section className="border-b border-border/70 bg-background">
+        <section className="relative border-b border-border/70 bg-background">
           <div
-            className={`${pageContainer} grid gap-10 py-10 sm:py-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20`}
+            className={`${pageContainer} grid gap-12 py-12 sm:py-16 lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-14 lg:py-16`}
           >
-            <div className="max-w-xl">
+            <div className="min-w-0 max-w-2xl">
               <Reveal
                 as="p"
                 blur={false}
                 immediate
-                className="text-sm font-medium text-[color:var(--color-primary)]"
+                className="inline-flex rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--color-primary)] shadow-[0_8px_22px_oklch(0.18_0_0_/_0.035)]"
               >
                 {content.heroEyebrow}
               </Reveal>
@@ -157,7 +162,7 @@ function Landing() {
                 as="h1"
                 delay={0.08}
                 immediate
-                className="mt-4 font-sans text-4xl font-semibold leading-[1.08] tracking-normal sm:text-5xl"
+                className="mt-5 max-w-[13ch] font-display text-[2.75rem] font-medium leading-[0.98] tracking-normal text-balance sm:text-6xl lg:text-[4rem]"
               >
                 {content.heroTitle}
               </Reveal>
@@ -166,7 +171,7 @@ function Landing() {
                 blur={false}
                 delay={0.16}
                 immediate
-                className="mt-5 max-w-lg text-base leading-7 text-muted"
+                className="mt-6 max-w-xl text-lg leading-8 text-muted"
               >
                 {content.heroSubtitle}
               </Reveal>
@@ -175,7 +180,7 @@ function Landing() {
                 blur={false}
                 delay={0.24}
                 immediate
-                className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
+                className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
                 <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
                   {content.heroPrimaryCta}
@@ -185,33 +190,33 @@ function Landing() {
                 </a>
               </Reveal>
 
-              <Reveal blur={false} delay={0.32} immediate className="mt-7">
+              <Reveal blur={false} delay={0.32} immediate className="mt-8">
                 <WorkflowLine steps={content.workflowSteps} />
               </Reveal>
             </div>
 
-            <Reveal delay={0.18} immediate mask scale={0.97}>
+            <Reveal delay={0.18} immediate mask scale={0.97} className="min-w-0">
               <MockMatchCard preview={content.preview} />
             </Reveal>
           </div>
         </section>
 
-        <section
-          id="student-payoff"
-          className={`border-b border-border/70 bg-secondary py-8 sm:py-10 lg:py-12`}
-        >
+        <section id="student-payoff" className="border-b border-border/70 bg-background py-8">
           <div className={pageContainer}>
-            <StaggerContainer className="grid gap-4 md:grid-cols-3" immediate>
+            <StaggerContainer
+              className={`${cardClass} grid overflow-hidden md:grid-cols-3`}
+              immediate
+            >
               {content.audienceBenefits.map((benefit) => (
                 <Reveal
                   key={benefit.title}
                   staggerItem
-                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                  className="motion-lift border-b border-border p-6 last:border-b-0 hover:bg-secondary/70 md:border-b-0 md:border-r md:last:border-r-0 lg:p-7"
                 >
                   <p className="text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--color-primary)]">
                     {benefit.label}
                   </p>
-                  <h2 className="mt-3 font-sans text-base font-semibold">{benefit.title}</h2>
+                  <h2 className="mt-3 font-sans text-lg font-semibold">{benefit.title}</h2>
                   <p className="mt-2 text-sm leading-6 text-muted">{benefit.text}</p>
                 </Reveal>
               ))}
@@ -223,17 +228,15 @@ function Landing() {
           id="how-it-works"
           className={`border-b border-border/70 bg-background ${sectionPadding}`}
         >
-          <div className={`${pageContainer} grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-12`}>
-            <Reveal className="max-w-md">
+          <div className={`${pageContainer} grid gap-10 lg:grid-cols-[0.68fr_1.32fr] lg:gap-14`}>
+            <Reveal className={`${sectionIntroClass} lg:sticky lg:top-28`}>
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
                 {content.howIntroEyebrow}
               </p>
-              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                 {content.howIntroTitle}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                {content.howIntroSubtitle}
-              </p>
+              <p className="mt-4 text-base leading-7 text-muted">{content.howIntroSubtitle}</p>
             </Reveal>
 
             <StaggerContainer as="ol" className="grid gap-4 sm:grid-cols-2">
@@ -242,48 +245,50 @@ function Landing() {
                   as="li"
                   key={step.title}
                   staggerItem
-                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                  className={`${quietCardClass} motion-lift p-6 hover:border-[color:var(--color-primary)]/25`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <h3 className="max-w-[13rem] font-sans text-base font-semibold leading-6">
+                    <h3 className="max-w-[15rem] font-sans text-lg font-semibold leading-7">
                       {step.title}
                     </h3>
-                    <span className="font-mono text-xs font-medium text-[color:var(--color-accent)]">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[color:var(--color-accent-light)] font-mono text-xs font-semibold text-accent-foreground">
                       0{index + 1}
                     </span>
                   </div>
-                  <p className="mt-4 text-sm leading-6 text-muted">{step.text}</p>
+                  <p className="mt-5 text-sm leading-6 text-muted">{step.text}</p>
                 </Reveal>
               ))}
             </StaggerContainer>
           </div>
         </section>
 
-        <section className={`border-b border-border/70 bg-background ${sectionPadding}`}>
+        <section className={`border-b border-border/70 bg-secondary ${sectionPadding}`}>
           <div className={pageContainer}>
-            <Reveal className="max-w-2xl">
+            <Reveal className="max-w-3xl">
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
                 {content.studentPayoffEyebrow}
               </p>
-              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                 {content.studentPayoffTitle}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
                 {content.studentPayoffSubtitle}
               </p>
             </Reveal>
 
-            <StaggerContainer className="mt-8 grid gap-4 md:grid-cols-3">
+            <StaggerContainer className="mt-9 grid gap-4 md:grid-cols-3">
               {content.productivityBenefits.map((benefit) => (
                 <Reveal
                   key={benefit.title}
                   staggerItem
-                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                  className={`${cardClass} motion-lift p-6 hover:border-[color:var(--color-primary)]/25 lg:p-7`}
                 >
-                  <div className="font-sans text-3xl font-semibold text-[color:var(--color-primary)]">
+                  <div className="font-display text-4xl font-medium leading-none text-[color:var(--color-primary)]">
                     {benefit.value}
                   </div>
-                  <h3 className="mt-3 font-sans text-base font-semibold">{benefit.title}</h3>
+                  <h3 className="mt-4 font-sans text-lg font-semibold leading-7">
+                    {benefit.title}
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-muted">{benefit.text}</p>
                 </Reveal>
               ))}
@@ -296,27 +301,25 @@ function Landing() {
           className={`border-b border-border/70 bg-background ${sectionPadding}`}
         >
           <div
-            className={`${pageContainer} grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-12`}
+            className={`${pageContainer} grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start lg:gap-14`}
           >
-            <Reveal className="max-w-md">
+            <Reveal className={`${sectionIntroClass} lg:sticky lg:top-28`}>
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
                 {content.matchingIntroEyebrow}
               </p>
-              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                 {content.matchingIntroTitle}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                {content.matchingIntroSubtitle}
-              </p>
+              <p className="mt-4 text-base leading-7 text-muted">{content.matchingIntroSubtitle}</p>
             </Reveal>
-            <Reveal delay={0.08}>
-              <p className="max-w-2xl text-base leading-7 text-muted">{content.matchingLead}</p>
-              <StaggerContainer className="mt-6 grid gap-3 sm:grid-cols-2" delay={0.08}>
+            <Reveal delay={0.08} className={`${cardClass} p-5 sm:p-6 lg:p-7`}>
+              <p className="max-w-3xl text-base leading-7 text-muted">{content.matchingLead}</p>
+              <StaggerContainer className="mt-7 grid gap-3 sm:grid-cols-2" delay={0.08}>
                 {content.matchingFactors.map((factor) => (
                   <Reveal
                     key={factor.title}
                     staggerItem
-                    className="motion-lift rounded-[8px] border border-border bg-card p-4 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                    className="rounded-[8px] border border-border bg-background p-4 transition-colors hover:border-[color:var(--color-primary)]/25 hover:bg-card"
                   >
                     <h3 className="font-sans text-sm font-semibold">{factor.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted">{factor.text}</p>
@@ -324,7 +327,7 @@ function Landing() {
                 ))}
               </StaggerContainer>
 
-              <StaggerContainer className="mt-6 grid gap-3 lg:grid-cols-3" delay={0.12}>
+              <StaggerContainer className="mt-5 grid gap-3 lg:grid-cols-3" delay={0.12}>
                 {content.outputCards.map((item) => (
                   <Reveal
                     key={item.title}
@@ -345,21 +348,19 @@ function Landing() {
 
         <section
           id="features"
-          className={`border-b border-border/70 bg-secondary ${sectionPadding}`}
+          className={`border-b border-border/70 bg-background ${sectionPadding}`}
         >
           <div
-            className={`${pageContainer} grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-12`}
+            className={`${pageContainer} grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-start lg:gap-14`}
           >
-            <Reveal className="max-w-md">
+            <Reveal className={`${sectionIntroClass} lg:sticky lg:top-28`}>
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
                 {content.featuresEyebrow}
               </p>
-              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                 {content.featuresTitle}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                {content.featuresSubtitle}
-              </p>
+              <p className="mt-4 text-base leading-7 text-muted">{content.featuresSubtitle}</p>
             </Reveal>
 
             <StaggerContainer className="grid gap-4 sm:grid-cols-2">
@@ -367,7 +368,7 @@ function Landing() {
                 <Reveal
                   key={benefit.title}
                   staggerItem
-                  className="motion-lift rounded-[8px] border border-border bg-card p-5 hover:border-[color:var(--color-primary)]/25 hover:shadow-[0_12px_30px_oklch(0.18_0_0_/_0.05)]"
+                  className={`${quietCardClass} motion-lift p-6 hover:border-[color:var(--color-primary)]/25`}
                 >
                   <h3 className="font-sans text-base font-semibold">{benefit.title}</h3>
                   <p className="mt-3 text-sm leading-6 text-muted">{benefit.text}</p>
@@ -383,10 +384,10 @@ function Landing() {
               <p className="text-sm font-medium text-[color:var(--color-primary)]">
                 {content.faqIntroEyebrow}
               </p>
-              <h2 className="mt-3 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                 {content.faqIntroTitle}
               </h2>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
+              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted">
                 {content.faqIntroSubtitle}
               </p>
             </Reveal>
@@ -396,14 +397,16 @@ function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-border/70 bg-secondary py-8 sm:py-10 lg:py-14">
+        <section className="border-t border-border/70 bg-secondary py-10 sm:py-12 lg:py-16">
           <div className={pageContainer}>
-            <Reveal className="flex flex-col items-start justify-between gap-6 rounded-[8px] border border-border bg-card p-6 sm:p-8 md:flex-row md:items-center">
+            <Reveal
+              className={`${cardClass} flex flex-col items-start justify-between gap-7 p-7 sm:p-9 md:flex-row md:items-center`}
+            >
               <div>
                 <p className="text-sm font-medium text-[color:var(--color-primary)]">
                   {content.finalCtaEyebrow}
                 </p>
-                <h2 className="mt-2 font-sans text-2xl font-semibold tracking-normal sm:text-3xl">
+                <h2 className="mt-2 font-display text-3xl font-medium tracking-normal sm:text-4xl">
                   {content.finalCtaTitle}
                 </h2>
               </div>
@@ -427,16 +430,17 @@ function Landing() {
 
 function WorkflowLine({ steps }: { steps: string[] }) {
   return (
-    <div className="rounded-[8px] border border-border bg-card px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+    <div className={`${quietCardClass} px-4 py-3.5`}>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted sm:text-sm">
         {steps.map((step, index) => (
-          <span key={step} className="inline-flex items-center gap-2">
-            <span className="font-medium text-foreground">{step}</span>
-            {index < steps.length - 1 ? (
-              <span className="text-muted" aria-hidden="true">
-                &rarr;
-              </span>
-            ) : null}
+          <span
+            key={step}
+            className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 font-medium text-foreground"
+          >
+            <span className="font-mono text-[0.62rem] font-semibold text-[color:var(--color-primary)]">
+              0{index + 1}
+            </span>
+            <span className="whitespace-nowrap">{step}</span>
           </span>
         ))}
       </div>
@@ -446,16 +450,19 @@ function WorkflowLine({ steps }: { steps: string[] }) {
 
 function LandingFaq({ faqs }: { faqs: LandingFaqItem[] }) {
   return (
-    <div className="overflow-hidden rounded-[8px] border border-border bg-card">
+    <div className={`${cardClass} overflow-hidden`}>
       {faqs.map((faq) => (
-        <details key={faq.id} className="group border-b border-border last:border-b-0">
+        <details
+          key={faq.id}
+          className="group border-b border-border transition-colors open:bg-secondary/65 last:border-b-0"
+        >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-5 px-5 py-4 text-left text-sm font-semibold transition-colors hover:text-primary sm:px-6 sm:py-5 [&::-webkit-details-marker]:hidden">
             <span>{faq.question}</span>
             <span
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border text-xs text-muted transition-transform duration-200 group-open:rotate-180"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border bg-card text-base leading-none text-muted transition-transform duration-200 group-open:rotate-45"
               aria-hidden="true"
             >
-              v
+              +
             </span>
           </summary>
           <div className="max-w-2xl px-5 pb-5 text-sm leading-7 text-muted sm:px-6">
@@ -470,10 +477,10 @@ function LandingFaq({ faqs }: { faqs: LandingFaqItem[] }) {
 function LandingHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 backdrop-blur-md">
-      <div className={`${pageContainer} flex items-center justify-between py-4`}>
+      <div className={`${pageContainer} flex items-center justify-between py-3.5`}>
         <Link
           to="/"
-          className="text-base font-semibold tracking-normal transition-colors hover:text-[color:var(--color-primary)]"
+          className="text-lg font-semibold tracking-normal transition-colors hover:text-[color:var(--color-primary)]"
         >
           Synco
         </Link>
@@ -505,7 +512,7 @@ function LandingHeader() {
           </Link>
           <Link
             to="/auth/signup"
-            className="inline-flex h-10 items-center rounded-[8px] bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]"
+            className="inline-flex h-10 items-center rounded-[8px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_8px_18px_oklch(0.33_0.045_155_/_0.14)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--color-primary-hover)]"
           >
             Try Synco
           </Link>
@@ -518,36 +525,41 @@ function LandingHeader() {
 function MockMatchCard({ preview }: { preview: LandingPreview }) {
   return (
     <div
-      className="rounded-[8px] border border-border bg-card shadow-[0_12px_36px_oklch(0.18_0_0_/_0.05)]"
+      className={`${cardClass} w-full min-w-0 overflow-hidden p-2`}
       aria-label="Preview of class team results"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-[8px] bg-secondary px-4 py-3 sm:flex-nowrap sm:px-5">
+        <div className="min-w-0">
           <p className="text-sm font-semibold">{preview.headerTitle}</p>
           <p className="text-xs text-muted">{preview.headerSubtitle}</p>
         </div>
-        <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-[color:var(--color-primary)]">
+        <span className="shrink-0 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-[color:var(--color-primary)]">
           {preview.badge}
         </span>
       </div>
 
-      <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-[0.92fr_1.08fr]">
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-background">
+      <div className="grid min-w-0 gap-4 p-3 sm:p-4 md:grid-cols-[0.86fr_1.14fr]">
+        <div className="min-w-0 space-y-4">
+          <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-card">
             {preview.stats.map(([label, value]) => (
-              <div key={label} className="min-w-0 px-3 py-3">
-                <p className="text-[0.7rem] font-medium leading-4 text-muted">{label}</p>
-                <p className="mt-1 text-sm font-semibold">{value}</p>
+              <div key={label} className="min-w-0 px-3 py-3.5">
+                <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted">
+                  {label}
+                </p>
+                <p className="mt-1.5 truncate text-base font-semibold">{value}</p>
               </div>
             ))}
           </div>
 
           <div className="space-y-3">
             {preview.teams.map((team) => (
-              <div key={team.name} className="rounded-[8px] border border-border bg-background p-4">
+              <div
+                key={team.name}
+                className="min-w-0 rounded-[8px] border border-border bg-background p-4"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-sans text-sm font-semibold">{team.name}</h3>
-                  <span className="text-xs font-medium text-[color:var(--color-accent)]">
+                  <span className="rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-semibold text-accent-foreground">
                     {team.fit ?? "92% fit"}
                   </span>
                 </div>
@@ -561,7 +573,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
             <h3 className="font-sans text-sm font-semibold">{preview.peopleTitle}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
               {preview.people.map(([label, names]) => (
-                <div key={label}>
+                <div key={label} className="rounded-[8px] bg-card px-3 py-2.5">
                   <p className="text-xs font-medium text-muted">{label}</p>
                   <p className="mt-1 text-sm font-semibold">{names}</p>
                 </div>
@@ -570,7 +582,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
           </div>
         </div>
 
-        <div className="flex min-h-[280px] flex-col rounded-[8px] border border-border bg-background p-4">
+        <div className="flex min-w-0 flex-col rounded-[8px] border border-border bg-background p-4 sm:min-h-[320px]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-sans text-sm font-semibold">{preview.graphTitle}</h3>

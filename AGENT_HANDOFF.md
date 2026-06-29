@@ -736,6 +736,24 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-29 Landing Formatting Polish
+
+Refined the public landing page formatting without changing the admin-controlled copy:
+
+- Tightened the hero layout, headline scale, CTA styling, and desktop section height so the next content band peeks into the first viewport.
+- Reworked the workflow strip into numbered pills to avoid awkward arrow wrapping.
+- Changed the first benefit row into a unified segmented card instead of three repetitive standalone cards.
+- Added clearer card hierarchy across payoff, matching, features, FAQ, CTA, and the preview mockup.
+- Fixed mobile width behavior with `min-w-0` constraints on the hero and preview card.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- Local visual screenshots at 1440x900 desktop and 390px mobile; mobile measured `scrollWidth = viewportWidth`.
+
 ## 2026-06-28 Final Premium Landing Control
 
 Added full admin-controlled landing content:
