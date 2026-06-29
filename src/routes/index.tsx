@@ -12,17 +12,15 @@ import {
 
 export const Route = createFileRoute("/")({ component: Landing });
 
-const pageContainer = "mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8";
+const pageContainer = "mx-auto w-full max-w-6xl px-5 sm:px-6 lg:px-8";
 const sectionPadding = "py-14 sm:py-16 lg:py-24";
 const sectionIntroClass = "max-w-xl";
-const cardClass =
-  "rounded-[8px] border border-border bg-card shadow-[0_14px_42px_oklch(0.18_0_0_/_0.045)]";
-const quietCardClass =
-  "rounded-[8px] border border-border bg-card shadow-[0_10px_30px_oklch(0.18_0_0_/_0.035)]";
+const cardClass = "rounded-[8px] border border-border bg-card";
+const quietCardClass = "rounded-[8px] border border-border bg-card";
 const primaryButtonClass =
-  "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_oklch(0.33_0.045_155_/_0.16)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--color-primary-hover)]";
+  "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color:var(--color-primary-hover)]";
 const textLinkClass =
-  "inline-flex h-11 items-center justify-center rounded-[8px] border border-border bg-card px-5 text-sm font-semibold text-[color:var(--color-primary)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-primary)]/30 hover:text-[color:var(--color-primary-hover)] hover:shadow-[0_10px_24px_oklch(0.18_0_0_/_0.045)]";
+  "inline-flex h-11 items-center justify-center rounded-[8px] border border-border bg-card px-5 text-sm font-semibold text-[color:var(--color-primary)] transition-colors hover:border-[color:var(--color-primary)]/35 hover:text-[color:var(--color-primary-hover)]";
 
 const scatterPositions = [
   [285, 175],
@@ -147,14 +145,14 @@ function Landing() {
       <main className="relative z-10">
         <section className="relative border-b border-border/70 bg-background">
           <div
-            className={`${pageContainer} grid gap-10 py-10 sm:py-12 lg:grid-cols-[0.84fr_1.16fr] lg:items-center lg:gap-12 lg:py-12`}
+            className={`${pageContainer} grid gap-9 py-10 sm:py-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-10 lg:py-12`}
           >
             <div className="min-w-0 max-w-2xl">
               <Reveal
                 as="p"
                 blur={false}
                 immediate
-                className="inline-flex rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--color-primary)] shadow-[0_8px_22px_oklch(0.18_0_0_/_0.035)]"
+                className="border-l-2 border-[color:var(--color-primary)] pl-3 text-sm font-medium text-muted"
               >
                 {content.heroEyebrow}
               </Reveal>
@@ -162,7 +160,7 @@ function Landing() {
                 as="h1"
                 delay={0.08}
                 immediate
-                className="mt-5 max-w-[13ch] font-display text-[2.65rem] font-medium leading-[1.01] tracking-normal text-balance sm:text-5xl md:text-[3.35rem] lg:text-[3.45rem] xl:text-[3.75rem]"
+                className="mt-5 max-w-xl font-sans text-4xl font-semibold leading-[1.08] tracking-normal text-balance sm:text-5xl lg:text-[3.25rem]"
               >
                 {content.heroTitle}
               </Reveal>
@@ -171,7 +169,7 @@ function Landing() {
                 blur={false}
                 delay={0.16}
                 immediate
-                className="mt-5 max-w-xl text-base leading-7 text-muted"
+                className="mt-5 max-w-lg text-base leading-7 text-muted"
               >
                 {content.heroSubtitle}
               </Reveal>
@@ -430,17 +428,14 @@ function Landing() {
 
 function WorkflowLine({ steps }: { steps: string[] }) {
   return (
-    <div className={`${quietCardClass} px-4 py-3.5`}>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted sm:text-sm">
+    <div className={`${quietCardClass} px-4 py-3`}>
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
         {steps.map((step, index) => (
-          <span
-            key={step}
-            className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 font-medium text-foreground"
-          >
-            <span className="font-mono text-[0.62rem] font-semibold text-[color:var(--color-primary)]">
+          <span key={step} className="inline-flex items-center gap-2">
+            <span className="font-mono text-[0.68rem] font-semibold text-[color:var(--color-primary)]">
               0{index + 1}
             </span>
-            <span className="whitespace-nowrap">{step}</span>
+            <span className="font-medium text-foreground">{step}</span>
           </span>
         ))}
       </div>
@@ -525,24 +520,24 @@ function LandingHeader() {
 function MockMatchCard({ preview }: { preview: LandingPreview }) {
   return (
     <div
-      className={`${cardClass} w-full min-w-0 overflow-hidden p-2`}
+      className={`${cardClass} w-full min-w-0 overflow-hidden`}
       aria-label="Preview of class team results"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-[8px] bg-secondary px-4 py-3 sm:flex-nowrap sm:px-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:flex-nowrap sm:px-5">
         <div className="min-w-0">
           <p className="text-sm font-semibold">{preview.headerTitle}</p>
           <p className="text-xs text-muted">{preview.headerSubtitle}</p>
         </div>
-        <span className="shrink-0 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-[color:var(--color-primary)]">
+        <span className="shrink-0 text-xs font-semibold text-[color:var(--color-primary)]">
           {preview.badge}
         </span>
       </div>
 
-      <div className="grid min-w-0 gap-4 p-3 sm:p-4 md:grid-cols-[0.9fr_1.1fr] md:items-start">
-        <div className="min-w-0 space-y-4">
+      <div className="grid min-w-0 gap-4 p-4 md:grid-cols-[0.95fr_1.05fr] md:items-start">
+        <div className="min-w-0 space-y-3">
           <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-card">
             {preview.stats.map(([label, value]) => (
-              <div key={label} className="min-w-0 px-3 py-3.5">
+              <div key={label} className="min-w-0 px-3 py-3">
                 <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted">
                   {label}
                 </p>
@@ -555,7 +550,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
             {preview.teams.map((team) => (
               <div
                 key={team.name}
-                className="min-w-0 rounded-[8px] border border-border bg-background p-4"
+                className="min-w-0 rounded-[8px] border border-border bg-background p-3.5"
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-sans text-sm font-semibold">{team.name}</h3>
@@ -569,7 +564,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
             ))}
           </div>
 
-          <div className="rounded-[8px] border border-border bg-background p-4">
+          <div className="rounded-[8px] border border-border bg-background p-3.5">
             <h3 className="font-sans text-sm font-semibold">{preview.peopleTitle}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
               {preview.people.map(([label, names]) => (
@@ -582,13 +577,13 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col rounded-[8px] border border-border bg-background p-4 sm:h-[360px] md:h-[390px]">
+        <div className="flex min-w-0 flex-col rounded-[8px] border border-border bg-background p-4 sm:h-[330px] md:h-[350px]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-sans text-sm font-semibold">{preview.graphTitle}</h3>
               <p className="mt-1 text-xs leading-5 text-muted">{preview.graphSubtitle}</p>
             </div>
-            <span className="shrink-0 rounded-full bg-[color:var(--color-accent-light)] px-2.5 py-1 text-xs font-medium text-accent-foreground">
+            <span className="shrink-0 text-xs font-semibold text-accent-foreground">
               {preview.graphBadge}
             </span>
           </div>

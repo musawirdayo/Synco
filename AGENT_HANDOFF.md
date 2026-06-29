@@ -736,6 +736,23 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-29 Landing De-Templatized
+
+Reduced the "AI-generated landing page" feel after reviewing the live screenshot:
+
+- Replaced the giant editorial hero headline styling with calmer app-like sans typography.
+- Removed the all-caps pill eyebrow and replaced it with a plain left-accent label.
+- Reduced heavy shadows and hover lifts on primary landing cards/buttons.
+- Simplified the workflow row from rounded chips into a plain numbered sequence.
+- Flattened the hero preview mockup so it reads more like an app panel and less like a decorative fake dashboard.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm run build`
+- Local wide screenshot at `1584x950`.
+
 ## 2026-06-29 Landing Hero Scale Follow-Up
 
 Tightened the landing hero after checking the live wide-browser screenshot:
