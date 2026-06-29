@@ -20,9 +20,9 @@ const cardClass =
 const quietCardClass =
   "rounded-[8px] border border-border bg-card shadow-[0_10px_30px_oklch(0.18_0_0_/_0.035)]";
 const primaryButtonClass =
-  "inline-flex h-12 items-center justify-center rounded-[8px] bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_oklch(0.33_0.045_155_/_0.18)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--color-primary-hover)]";
+  "inline-flex h-11 items-center justify-center rounded-[8px] bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_oklch(0.33_0.045_155_/_0.16)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--color-primary-hover)]";
 const textLinkClass =
-  "inline-flex h-12 items-center justify-center rounded-[8px] border border-border bg-card px-5 text-sm font-semibold text-[color:var(--color-primary)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-primary)]/30 hover:text-[color:var(--color-primary-hover)] hover:shadow-[0_10px_24px_oklch(0.18_0_0_/_0.045)]";
+  "inline-flex h-11 items-center justify-center rounded-[8px] border border-border bg-card px-5 text-sm font-semibold text-[color:var(--color-primary)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--color-primary)]/30 hover:text-[color:var(--color-primary-hover)] hover:shadow-[0_10px_24px_oklch(0.18_0_0_/_0.045)]";
 
 const scatterPositions = [
   [285, 175],
@@ -147,7 +147,7 @@ function Landing() {
       <main className="relative z-10">
         <section className="relative border-b border-border/70 bg-background">
           <div
-            className={`${pageContainer} grid gap-12 py-12 sm:py-16 lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-14 lg:py-16`}
+            className={`${pageContainer} grid gap-10 py-10 sm:py-12 lg:grid-cols-[0.84fr_1.16fr] lg:items-center lg:gap-12 lg:py-12`}
           >
             <div className="min-w-0 max-w-2xl">
               <Reveal
@@ -162,7 +162,7 @@ function Landing() {
                 as="h1"
                 delay={0.08}
                 immediate
-                className="mt-5 max-w-[13ch] font-display text-[2.75rem] font-medium leading-[0.98] tracking-normal text-balance sm:text-6xl lg:text-[4rem]"
+                className="mt-5 max-w-[13ch] font-display text-[2.65rem] font-medium leading-[1.01] tracking-normal text-balance sm:text-5xl md:text-[3.35rem] lg:text-[3.45rem] xl:text-[3.75rem]"
               >
                 {content.heroTitle}
               </Reveal>
@@ -171,7 +171,7 @@ function Landing() {
                 blur={false}
                 delay={0.16}
                 immediate
-                className="mt-6 max-w-xl text-lg leading-8 text-muted"
+                className="mt-5 max-w-xl text-base leading-7 text-muted"
               >
                 {content.heroSubtitle}
               </Reveal>
@@ -180,7 +180,7 @@ function Landing() {
                 blur={false}
                 delay={0.24}
                 immediate
-                className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
+                className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
               >
                 <Link to="/auth/signup" className={`${primaryButtonClass} sm:w-fit`}>
                   {content.heroPrimaryCta}
@@ -190,7 +190,7 @@ function Landing() {
                 </a>
               </Reveal>
 
-              <Reveal blur={false} delay={0.32} immediate className="mt-8">
+              <Reveal blur={false} delay={0.32} immediate className="mt-7">
                 <WorkflowLine steps={content.workflowSteps} />
               </Reveal>
             </div>
@@ -538,7 +538,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
         </span>
       </div>
 
-      <div className="grid min-w-0 gap-4 p-3 sm:p-4 md:grid-cols-[0.86fr_1.14fr]">
+      <div className="grid min-w-0 gap-4 p-3 sm:p-4 md:grid-cols-[0.9fr_1.1fr] md:items-start">
         <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-card">
             {preview.stats.map(([label, value]) => (
@@ -582,7 +582,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col rounded-[8px] border border-border bg-background p-4 sm:min-h-[320px]">
+        <div className="flex min-w-0 flex-col rounded-[8px] border border-border bg-background p-4 sm:h-[360px] md:h-[390px]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-sans text-sm font-semibold">{preview.graphTitle}</h3>
@@ -596,7 +596,7 @@ function MockMatchCard({ preview }: { preview: LandingPreview }) {
           <svg
             viewBox="0 0 600 320"
             role="img"
-            className="mt-4 h-auto w-full flex-1"
+            className="mt-4 h-full min-h-0 w-full flex-1"
             preserveAspectRatio="xMidYMid meet"
           >
             <style>

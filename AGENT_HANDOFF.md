@@ -736,6 +736,22 @@ Backend migration status:
 
 - Applied to the linked Supabase project on 2026-06-28 with `npm exec --yes supabase -- db push --linked`.
 
+## 2026-06-29 Landing Hero Scale Follow-Up
+
+Tightened the landing hero after checking the live wide-browser screenshot:
+
+- Reduced hero top/bottom padding and headline scale.
+- Reduced CTA height/shadow so the hero feels less oversized.
+- Prevented the preview graph panel from stretching to match the taller left preview column.
+- Rechecked a wide/zoom-like desktop screenshot and production build.
+
+Verified:
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm run build`
+- Local wide screenshot at `1584x950`.
+
 ## 2026-06-29 Landing Formatting Polish
 
 Refined the public landing page formatting without changing the admin-controlled copy:
